@@ -11,31 +11,32 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import AppNav from '../components/AppNav';
+import BottomTabBar from '../components/BottomTabBar';
 import CommentModal from '../components/CommentModal';
 import PressableScale from '../components/PressableScale';
 import TierScrubber from '../components/TierScrubber';
-import { colors } from '../constants/theme';
+import { colors, images } from '../constants/theme';
 import { TIERS, tierForScore, tierIndexForScore } from '../constants/tiers';
 import { api, photoUrl, type Photo } from '../lib/api';
 import { useLocalStorage } from '../lib/useLocalStorage';
 
-const CARD_WIDTH = 400;
-const CARD_HEIGHT = 480;
+const TAB_BAR_HEIGHT = 64;
 
 export default function RatePhotosScreen() {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const [raterName, setRaterName] = useLocalStorage('afterlight.rater', '');
   const [nameDraft, setNameDraft] = useState('');
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [tab, setTab] = useState<'rate' | 'results'>('rate');
+  const [view, setView] = useState<'rate' | 'results'>('rate');
   const [pageIndex, setPageIndex] = useState(0);
   const [commentPhotoId, setCommentPhotoId] = useState<string | null>(null);
 
   const scrollRef = useRef<ScrollView>(null);
-  const pageWidth = Math.min(CARD_WIDTH, width - 40) + 24;
+
+  const availableHeight = height - TAB_BAR_HEIGHT;
+  const heroHeight = Math.min(480, Math.max(320, availableHeight * 0.58));
 
   const refresh = async () => {
     const data = await api.getPhotos();
@@ -54,15 +55,15 @@ export default function RatePhotosScreen() {
     photo?.ratings.find((r) => r.rater.toLowerCase() === raterName.toLowerCase())?.score ?? null;
 
   const onScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const index = Math.round(event.nativeEvent.contentOffset.x / pageWidth);
+    const index = Math.round(event.nativeEvent.contentOffset.x / width);
     setPageIndex(Math.max(0, Math.min(photos.length - 1, index)));
   };
 
   const jumpTo = (index: number) => {
-    setTab('rate');
+    setView('rate');
     setPageIndex(index);
     requestAnimationFrame(() => {
-      scrollRef.current?.scrollTo({ x: index * pageWidth, animated: false });
+      scrollRef.current?.scrollTo({ x: index * width, animated: false });
     });
   };
 
@@ -127,7 +128,6 @@ export default function RatePhotosScreen() {
   if (!raterName) {
     return (
       <View style={styles.page}>
-        <AppNav />
         <View style={styles.gate}>
           <Text style={styles.gateTitle}>Who&rsquo;s rating today?</Text>
           <Text style={styles.gateSubtitle}>
@@ -149,114 +149,124 @@ export default function RatePhotosScreen() {
             <Text style={styles.gateButtonText}>Continue</Text>
           </PressableScale>
         </View>
+        <BottomTabBar />
       </View>
     );
   }
 
+  const myTier = currentPhoto ? tierForScore(myRating(currentPhoto)) : null;
+
   return (
     <View style={styles.page}>
-      <AppNav />
-      <ScrollView contentContainerStyle={styles.body}>
-        <View style={styles.topRow}>
-          <View>
-            <Text style={styles.heading}>Rate Photos</Text>
-            <Text style={styles.subheading}>Rating as {raterName}</Text>
-          </View>
-          <View style={styles.tabs}>
-            <PressableScale
-              style={[styles.tabButton, tab === 'rate' && styles.tabButtonActive]}
-              onPress={() => setTab('rate')}
-              scaleTo={0.97}
-            >
-              <Text style={[styles.tabText, tab === 'rate' && styles.tabTextActive]}>Swipe & Rate</Text>
-            </PressableScale>
-            <PressableScale
-              style={[styles.tabButton, tab === 'results' && styles.tabButtonActive]}
-              onPress={() => setTab('results')}
-              scaleTo={0.97}
-            >
-              <Text style={[styles.tabText, tab === 'results' && styles.tabTextActive]}>Results</Text>
-            </PressableScale>
-          </View>
+      <View style={styles.header}>
+        <View style={styles.brand}>
+          <Image source={{ uri: images.logo }} style={styles.logo} resizeMode="contain" />
+          <Text style={styles.brandText}>Afterlight</Text>
         </View>
+        <View style={styles.headerActions}>
+          <PressableScale style={styles.headerPill} onPress={handleUpload} scaleTo={0.95}>
+            <Text style={styles.headerPillText}>{uploading ? '...' : '+ Upload'}</Text>
+          </PressableScale>
+          <PressableScale
+            style={styles.headerPill}
+            onPress={() => setView(view === 'rate' ? 'results' : 'rate')}
+            scaleTo={0.95}
+          >
+            <Text style={styles.headerPillText}>{view === 'rate' ? 'Results' : 'Rate'}</Text>
+          </PressableScale>
+        </View>
+      </View>
 
-        <PressableScale style={styles.uploadButton} onPress={handleUpload} scaleTo={0.97}>
-          <Text style={styles.uploadButtonText}>{uploading ? 'Uploading...' : '+ Upload photos'}</Text>
-        </PressableScale>
-
-        {loading ? (
-          <Text style={styles.emptyText}>Loading...</Text>
-        ) : photos.length === 0 ? (
-          <Text style={styles.emptyText}>No photos yet — upload some to get started.</Text>
-        ) : tab === 'rate' ? (
-          <View style={styles.rateArea}>
-            <View style={{ width: pageWidth * Math.min(photos.length, 1) || pageWidth }}>
-              <ScrollView
-                ref={scrollRef}
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                onMomentumScrollEnd={onScrollEnd}
-                snapToInterval={pageWidth}
-                decelerationRate="fast"
-              >
-                {photos.map((photo) => (
-                  <View key={photo.id} style={[styles.pageSlot, { width: pageWidth }]}>
-                    <View style={styles.card}>
-                      <Image source={{ uri: photoUrl(photo) }} style={styles.cardImage} resizeMode="cover" />
-                      <View style={styles.cardFooter}>
-                        <Text style={styles.cardMeta}>
-                          {photo.avgRating != null
-                            ? `${tierForScore(photo.avgRating)?.key} avg · ${photo.ratingCount} rating${photo.ratingCount === 1 ? '' : 's'}`
-                            : 'Not yet rated'}
-                        </Text>
-                        <PressableScale onPress={() => setCommentPhotoId(photo.id)} scaleTo={0.95}>
-                          <Text style={styles.commentLink}>
-                            {photo.comments.length > 0 ? `${photo.comments.length} comment${photo.comments.length === 1 ? '' : 's'}` : 'Add comment'}
-                          </Text>
-                        </PressableScale>
-                      </View>
-                    </View>
+      {loading ? (
+        <Text style={styles.emptyText}>Loading...</Text>
+      ) : photos.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyTitle}>No photos yet</Text>
+          <Text style={styles.emptySubtitle}>Upload photos to start rating them together.</Text>
+          <PressableScale style={styles.emptyUploadButton} onPress={handleUpload} scaleTo={0.97}>
+            <Text style={styles.emptyUploadText}>{uploading ? 'Uploading...' : '+ Upload photos'}</Text>
+          </PressableScale>
+        </View>
+      ) : view === 'rate' ? (
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={onScrollEnd}
+        >
+          {photos.map((photo) => {
+            const tier = tierForScore(photo.avgRating);
+            const myScore = myRating(photo);
+            return (
+              <View key={photo.id} style={{ width }}>
+                <View style={[styles.heroWrap, { height: heroHeight }]}>
+                  <Image source={{ uri: photoUrl(photo) }} style={styles.hero} resizeMode="cover" />
+                  <View style={styles.heroOverlay} />
+                  <View style={styles.scrubberOverlay}>
+                    <TierScrubber
+                      tierIndex={tierIndexForScore(myScore)}
+                      onChange={(index) => handleTierChange(photo, index)}
+                    />
                   </View>
-                ))}
-              </ScrollView>
-            </View>
+                </View>
 
-            {currentPhoto && (
-              <TierScrubber
-                tierIndex={tierIndexForScore(myRating(currentPhoto))}
-                onChange={(index) => handleTierChange(currentPhoto, index)}
-              />
-            )}
-          </View>
-        ) : (
-          <View style={styles.grid}>
-            {sortedForResults.map((photo) => {
-              const tier = tierForScore(photo.avgRating);
-              return (
-                <PressableScale
-                  key={photo.id}
-                  style={styles.gridItem}
-                  onPress={() => jumpTo(photos.findIndex((p) => p.id === photo.id))}
-                  scaleTo={0.97}
-                >
-                  <Image source={{ uri: photoUrl(photo) }} style={styles.gridImage} resizeMode="cover" />
-                  {tier && (
-                    <View style={[styles.gridBadge, { backgroundColor: tier.color }]}>
-                      <Text style={styles.gridBadgeText}>{tier.key}</Text>
-                    </View>
-                  )}
-                  {photo.comments.length > 0 && (
-                    <View style={styles.gridCommentBadge}>
-                      <Text style={styles.gridCommentText}>{photo.comments.length}</Text>
-                    </View>
-                  )}
-                </PressableScale>
-              );
-            })}
-          </View>
-        )}
-      </ScrollView>
+                <View style={[styles.content, { height: availableHeight - heroHeight }]}>
+                  <Text style={styles.tierHeadline}>
+                    {myScore != null
+                      ? `You rated this ${tierForScore(myScore)?.key}`
+                      : 'Drag the scrubber to rate'}
+                  </Text>
+                  <Text style={styles.tierSubtext}>
+                    {tier != null
+                      ? `${tier.key} average · ${photo.ratingCount} rating${photo.ratingCount === 1 ? '' : 's'}`
+                      : 'Not yet rated by anyone'}
+                  </Text>
+
+                  <PressableScale
+                    style={styles.commentCta}
+                    onPress={() => setCommentPhotoId(photo.id)}
+                    scaleTo={0.97}
+                  >
+                    <Text style={styles.commentCtaText}>
+                      {photo.comments.length > 0
+                        ? `${photo.comments.length} comment${photo.comments.length === 1 ? '' : 's'}`
+                        : 'Add a comment'}
+                    </Text>
+                    <Text style={styles.commentCtaArrow}>&rarr;</Text>
+                  </PressableScale>
+                </View>
+              </View>
+            );
+          })}
+        </ScrollView>
+      ) : (
+        <ScrollView contentContainerStyle={styles.grid}>
+          {sortedForResults.map((photo) => {
+            const tier = tierForScore(photo.avgRating);
+            return (
+              <PressableScale
+                key={photo.id}
+                style={styles.gridItem}
+                onPress={() => jumpTo(photos.findIndex((p) => p.id === photo.id))}
+                scaleTo={0.97}
+              >
+                <Image source={{ uri: photoUrl(photo) }} style={styles.gridImage} resizeMode="cover" />
+                {tier && (
+                  <View style={[styles.gridBadge, { backgroundColor: tier.color }]}>
+                    <Text style={styles.gridBadgeText}>{tier.key}</Text>
+                  </View>
+                )}
+                {photo.comments.length > 0 && (
+                  <View style={styles.gridCommentBadge}>
+                    <Text style={styles.gridCommentText}>{photo.comments.length}</Text>
+                  </View>
+                )}
+              </PressableScale>
+            );
+          })}
+        </ScrollView>
+      )}
 
       <CommentModal
         visible={!!commentPhoto}
@@ -264,6 +274,8 @@ export default function RatePhotosScreen() {
         onClose={() => setCommentPhotoId(null)}
         onSubmit={handleAddComment}
       />
+
+      <BottomTabBar />
     </View>
   );
 }
@@ -271,127 +283,158 @@ export default function RatePhotosScreen() {
 const styles = StyleSheet.create({
   page: {
     flex: 1,
-    backgroundColor: colors.pageBg,
+    backgroundColor: colors.dark,
   },
-  body: {
-    padding: 32,
-    gap: 24,
-    alignItems: 'center',
-  },
-  topRow: {
-    width: '100%',
-    maxWidth: 900,
+  header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    flexWrap: 'wrap',
-    gap: 16,
+    paddingTop: 20,
+    paddingHorizontal: 19,
   },
-  heading: {
-    fontFamily: 'Manrope_500Medium',
-    fontSize: 28,
-    color: colors.white,
+  brand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-  subheading: {
+  logo: {
+    width: 32,
+    height: 32,
+    borderRadius: 7,
+  },
+  brandText: {
     fontFamily: 'Manrope_400Regular',
     fontSize: 15,
-    color: colors.textFainter,
-    marginTop: 4,
+    color: colors.white,
   },
-  tabs: {
+  headerActions: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 12,
-    padding: 4,
-    gap: 4,
+    gap: 8,
   },
-  tabButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+  headerPill: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
-  tabButtonActive: {
-    backgroundColor: colors.gold,
-  },
-  tabText: {
+  headerPillText: {
     fontFamily: 'Manrope_500Medium',
-    fontSize: 14,
-    color: colors.textFainter,
-  },
-  tabTextActive: {
-    color: colors.ink,
-  },
-  uploadButton: {
-    alignSelf: 'flex-start',
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.gold,
-  },
-  uploadButtonText: {
-    fontFamily: 'Manrope_500Medium',
-    fontSize: 14,
-    color: colors.gold,
+    fontSize: 12,
+    color: colors.white,
   },
   emptyText: {
     fontFamily: 'Manrope_400Regular',
     fontSize: 15,
     color: colors.textFaintest,
-    marginTop: 40,
+    marginTop: 100,
+    textAlign: 'center',
   },
-  rateArea: {
-    flexDirection: 'row',
-    gap: 32,
+  emptyState: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingHorizontal: 32,
   },
-  pageSlot: {
-    paddingHorizontal: 12,
-    alignItems: 'center',
-  },
-  card: {
-    width: CARD_WIDTH,
-    height: CARD_HEIGHT,
-    borderRadius: 20,
-    overflow: 'hidden',
-    backgroundColor: colors.dark,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.3,
-    shadowRadius: 24,
-  },
-  cardImage: {
-    width: '100%',
-    height: CARD_HEIGHT - 56,
-  },
-  cardFooter: {
-    height: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-  },
-  cardMeta: {
-    fontFamily: 'Manrope_400Regular',
-    fontSize: 13,
-    color: colors.textFainter,
-  },
-  commentLink: {
+  emptyTitle: {
     fontFamily: 'Manrope_500Medium',
-    fontSize: 13,
+    fontSize: 22,
+    color: colors.white,
+  },
+  emptySubtitle: {
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 14,
+    color: colors.textFainter,
+    textAlign: 'center',
+  },
+  emptyUploadButton: {
+    marginTop: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 26,
+    backgroundColor: colors.gold,
+  },
+  emptyUploadText: {
+    fontFamily: 'Manrope_500Medium',
+    fontSize: 15,
+    color: colors.ink,
+  },
+  heroWrap: {
+    width: '100%',
+  },
+  hero: {
+    width: '100%',
+    height: '100%',
+  },
+  heroOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  scrubberOverlay: {
+    position: 'absolute',
+    right: 16,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+  },
+  content: {
+    paddingTop: 24,
+    paddingHorizontal: 19,
+  },
+  tierHeadline: {
+    fontFamily: 'Manrope_300Light',
+    fontSize: 30,
+    lineHeight: 34,
+    letterSpacing: -1,
     color: colors.gold,
   },
+  tierSubtext: {
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 16,
+    lineHeight: 22,
+    color: colors.textFainter,
+    marginTop: 10,
+  },
+  commentCta: {
+    marginTop: 24,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.gold,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  commentCtaText: {
+    fontFamily: 'Manrope_500Medium',
+    fontSize: 17,
+    color: colors.ink,
+  },
+  commentCtaArrow: {
+    fontSize: 16,
+    color: colors.ink,
+  },
   grid: {
-    width: '100%',
-    maxWidth: 900,
+    paddingTop: 84,
+    paddingHorizontal: 19,
+    paddingBottom: 24,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 16,
+    gap: 10,
   },
   gridItem: {
-    width: 160,
-    height: 160,
-    borderRadius: 14,
+    width: '31.5%',
+    aspectRatio: 1,
+    borderRadius: 12,
     overflow: 'hidden',
   },
   gridImage: {
@@ -400,34 +443,34 @@ const styles = StyleSheet.create({
   },
   gridBadge: {
     position: 'absolute',
-    top: 8,
-    left: 8,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    top: 6,
+    left: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   gridBadgeText: {
     fontFamily: 'Manrope_500Medium',
-    fontSize: 14,
+    fontSize: 12,
     color: colors.ink,
   },
   gridCommentBadge: {
     position: 'absolute',
-    bottom: 8,
-    right: 8,
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
-    paddingHorizontal: 6,
+    bottom: 6,
+    right: 6,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 5,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.6)',
   },
   gridCommentText: {
     fontFamily: 'Manrope_500Medium',
-    fontSize: 12,
+    fontSize: 11,
     color: colors.white,
   },
   gate: {
@@ -435,11 +478,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 16,
-    padding: 32,
+    padding: 24,
   },
   gateTitle: {
     fontFamily: 'Manrope_500Medium',
-    fontSize: 28,
+    fontSize: 26,
     color: colors.white,
     textAlign: 'center',
   },
@@ -448,10 +491,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.textFainter,
     textAlign: 'center',
-    maxWidth: 360,
+    maxWidth: 320,
   },
   gateInput: {
-    width: 280,
+    width: '100%',
+    maxWidth: 320,
     height: 48,
     borderRadius: 12,
     backgroundColor: 'rgba(255,255,255,0.08)',
@@ -461,7 +505,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   gateButton: {
-    width: 280,
+    width: '100%',
+    maxWidth: 320,
     height: 48,
     borderRadius: 12,
     backgroundColor: colors.gold,

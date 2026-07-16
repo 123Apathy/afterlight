@@ -52,7 +52,8 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export function photoUrl(photo: Photo) {
-  return `${API_BASE}${photo.url}`;
+  // photo.url is already a full Supabase signed URL, not a relative path.
+  return photo.url;
 }
 
 export const api = {
