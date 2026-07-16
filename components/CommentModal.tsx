@@ -1,17 +1,35 @@
 import React, { useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors } from '../constants/theme';
-import type { Comment } from '../lib/api';
 import PressableScale from './PressableScale';
+
+// Structurally generic so it works for both photo comments and kanban card
+// notes -- both are just { id, author, text } threads under a parent.
+type ThreadEntry = {
+  id: string;
+  author: string;
+  text: string;
+};
 
 type CommentModalProps = {
   visible: boolean;
-  comments: Comment[];
+  comments: ThreadEntry[];
   onSubmit: (text: string) => void;
   onClose: () => void;
+  title?: string;
+  placeholder?: string;
+  emptyText?: string;
 };
 
-export default function CommentModal({ visible, comments, onSubmit, onClose }: CommentModalProps) {
+export default function CommentModal({
+  visible,
+  comments,
+  onSubmit,
+  onClose,
+  title = 'Comments',
+  placeholder = 'Add a comment...',
+  emptyText = 'No comments yet.',
+}: CommentModalProps) {
   const [draft, setDraft] = useState('');
 
   const submit = () => {
@@ -25,14 +43,14 @@ export default function CommentModal({ visible, comments, onSubmit, onClose }: C
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
           <View style={styles.header}>
-            <Text style={styles.title}>Comments</Text>
+            <Text style={styles.title}>{title}</Text>
             <PressableScale onPress={onClose} hitSlop={12} style={styles.closeButton}>
               <Text style={styles.closeText}>&times;</Text>
             </PressableScale>
           </View>
 
           <ScrollView style={styles.commentList} contentContainerStyle={{ gap: 12 }}>
-            {comments.length === 0 && <Text style={styles.empty}>No comments yet.</Text>}
+            {comments.length === 0 && <Text style={styles.empty}>{emptyText}</Text>}
             {comments.map((comment) => (
               <View key={comment.id} style={styles.commentRow}>
                 <Text style={styles.commentAuthor}>{comment.author}</Text>
@@ -45,7 +63,7 @@ export default function CommentModal({ visible, comments, onSubmit, onClose }: C
             <TextInput
               value={draft}
               onChangeText={setDraft}
-              placeholder="Add a comment about this photo..."
+              placeholder={placeholder}
               placeholderTextColor={colors.textFaintest}
               style={styles.input}
               multiline

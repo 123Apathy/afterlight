@@ -16,12 +16,66 @@ const upload = multer({
   limits: { fileSize: 25 * 1024 * 1024 },
 });
 
+const KANBAN_TEMPLATE = [
+  { column: 'todo', title: 'Choose & confirm venue', description: 'Church, funeral home, or outdoor site — check availability and capacity.' },
+  { column: 'todo', title: 'Select officiant / celebrant', description: 'Confirm who will lead the service.' },
+  { column: 'todo', title: 'Write the obituary', description: 'Draft and approve wording, then submit to publications.' },
+  { column: 'todo', title: 'Choose casket/urn or cremation option', description: '' },
+  { column: 'todo', title: 'Set date & time', description: 'Coordinate with venue, officiant, and immediate family.' },
+  { column: 'todo', title: 'Notify immediate family', description: 'Phone calls before any public notice goes out.' },
+  { column: 'progress', title: 'Order flowers', description: 'Casket spray, family flowers, and any donation-in-lieu arrangement.' },
+  { column: 'progress', title: 'Arrange catering for reception', description: '' },
+  { column: 'progress', title: 'Book transport / hearse', description: '' },
+  { column: 'progress', title: 'Prepare order of service / program', description: 'Hymns, readings, eulogy speakers.' },
+  { column: 'progress', title: 'Select music & readings', description: '' },
+  { column: 'confirmed', title: 'Book photographer/videographer for tribute', description: 'Coordinate with the Afterlight tribute video team.' },
+  { column: 'confirmed', title: 'Confirm guest list & send notices', description: '' },
+  { column: 'confirmed', title: 'Arrange venue for reception', description: '' },
+];
+
+function slugify(name) {
+  return (
+    String(name)
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'project'
+  );
+}
+
+function randomCode(bytes = 6) {
+  return crypto.randomBytes(bytes).toString('base64url');
+}
+
+function mapProject(row) {
+  return { id: row.id, name: row.name, slug: row.slug, inviteCode: row.invite_code, createdAt: row.created_at };
+}
+
 function mapRating(row) {
   return { id: row.id, photoId: row.photo_id, rater: row.rater, score: row.score, createdAt: row.created_at };
 }
 
 function mapComment(row) {
   return { id: row.id, photoId: row.photo_id, author: row.author, text: row.body, createdAt: row.created_at };
+}
+
+function mapColumn(row) {
+  return { id: row.id, title: row.title, order: row.order };
+}
+
+function mapCard(row, notes = []) {
+  return {
+    id: row.id,
+    columnId: row.column_id,
+    title: row.title,
+    description: row.description,
+    order: row.order,
+    notes: notes.map(mapNote),
+  };
+}
+
+function mapNote(row) {
+  return { id: row.id, cardId: row.card_id, author: row.author, text: row.body, createdAt: row.created_at };
 }
 
 async function signPhotoUrl(storagePath) {
@@ -36,17 +90,109 @@ function assertOk(error) {
   if (error) throw Object.assign(new Error(error.message), { status: 500 });
 }
 
-// --- Photos ---
+async function seedProjectKanban(projectId) {
+  const columnIds = {
+    todo: `${projectId}-todo`,
+    progress: `${projectId}-progress`,
+    confirmed: `${projectId}-confirmed`,
+  };
+  const { error: columnsError } = await supabase.from('afterlight_kanban_columns').insert([
+    { id: columnIds.todo, project_id: projectId, title: 'To Do', order: 0 },
+    { id: columnIds.progress, project_id: projectId, title: 'In Progress', order: 1 },
+    { id: columnIds.confirmed, project_id: projectId, title: 'Confirmed', order: 2 },
+  ]);
+  assertOk(columnsError);
 
-app.get('/api/photos', async (req, res, next) => {
+  const counters = { todo: 0, progress: 0, confirmed: 0 };
+  const cardRows = KANBAN_TEMPLATE.map((item) => ({
+    column_id: columnIds[item.column],
+    title: item.title,
+    description: item.description,
+    order: counters[item.column]++,
+  }));
+  const { error: cardsError } = await supabase.from('afterlight_kanban_cards').insert(cardRows);
+  assertOk(cardsError);
+}
+
+// --- Projects ---
+
+app.post('/api/projects', async (req, res, next) => {
   try {
-    const [{ data: photos, error: photosError }, { data: ratings, error: ratingsError }, { data: comments, error: commentsError }] =
-      await Promise.all([
-        supabase.from('afterlight_photos').select('*').order('created_at', { ascending: true }),
-        supabase.from('afterlight_ratings').select('*'),
-        supabase.from('afterlight_comments').select('*').order('created_at', { ascending: true }),
-      ]);
+    const { name } = req.body || {};
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ error: 'name is required' });
+    }
+
+    let project;
+    for (let attempt = 0; attempt < 5 && !project; attempt++) {
+      const slug = attempt === 0 ? slugify(name) : `${slugify(name)}-${randomCode(2)}`;
+      const { data, error } = await supabase
+        .from('afterlight_projects')
+        .insert({ name: name.trim(), slug, invite_code: randomCode() })
+        .select()
+        .single();
+      if (!error) {
+        project = data;
+      } else if (error.code !== '23505') {
+        throw Object.assign(new Error(error.message), { status: 500 });
+      }
+    }
+    if (!project) throw Object.assign(new Error('could not allocate a unique project slug'), { status: 500 });
+
+    await seedProjectKanban(project.id);
+    res.status(201).json(mapProject(project));
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get('/api/projects/:projectId', async (req, res, next) => {
+  try {
+    const { data, error } = await supabase
+      .from('afterlight_projects')
+      .select('*')
+      .eq('id', req.params.projectId)
+      .single();
+    if (error || !data) return res.status(404).json({ error: 'project not found' });
+    res.json(mapProject(data));
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get('/api/projects/by-invite/:inviteCode', async (req, res, next) => {
+  try {
+    const { data, error } = await supabase
+      .from('afterlight_projects')
+      .select('*')
+      .eq('invite_code', req.params.inviteCode)
+      .single();
+    if (error || !data) return res.status(404).json({ error: 'invite not found' });
+    res.json(mapProject(data));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// --- Photos (project-scoped) ---
+
+app.get('/api/projects/:projectId/photos', async (req, res, next) => {
+  try {
+    const { projectId } = req.params;
+    const { data: photos, error: photosError } = await supabase
+      .from('afterlight_photos')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: true });
     assertOk(photosError);
+
+    const photoIds = photos.map((p) => p.id);
+    const [{ data: ratings, error: ratingsError }, { data: comments, error: commentsError }] = photoIds.length
+      ? await Promise.all([
+          supabase.from('afterlight_ratings').select('*').in('photo_id', photoIds),
+          supabase.from('afterlight_comments').select('*').in('photo_id', photoIds).order('created_at', { ascending: true }),
+        ])
+      : [{ data: [], error: null }, { data: [], error: null }];
     assertOk(ratingsError);
     assertOk(commentsError);
 
@@ -75,12 +221,13 @@ app.get('/api/photos', async (req, res, next) => {
   }
 });
 
-app.post('/api/photos', upload.array('photos', 40), async (req, res, next) => {
+app.post('/api/projects/:projectId/photos', upload.array('photos', 40), async (req, res, next) => {
   try {
+    const { projectId } = req.params;
     const created = [];
     for (const file of req.files || []) {
       const ext = path.extname(file.originalname) || '.jpg';
-      const storagePath = `${crypto.randomUUID()}${ext}`;
+      const storagePath = `${projectId}/${crypto.randomUUID()}${ext}`;
       const { error: uploadError } = await supabase.storage
         .from(PHOTOS_BUCKET)
         .upload(storagePath, file.buffer, { contentType: file.mimetype });
@@ -88,7 +235,7 @@ app.post('/api/photos', upload.array('photos', 40), async (req, res, next) => {
 
       const { data: row, error: insertError } = await supabase
         .from('afterlight_photos')
-        .insert({ storage_path: storagePath, original_name: file.originalname })
+        .insert({ storage_path: storagePath, original_name: file.originalname, project_id: projectId })
         .select()
         .single();
       assertOk(insertError);
@@ -199,25 +346,33 @@ app.delete('/api/comments/:commentId', async (req, res, next) => {
   }
 });
 
-// --- Kanban ---
+// --- Kanban (project-scoped) ---
 
-app.get('/api/kanban', async (req, res, next) => {
+app.get('/api/projects/:projectId/kanban', async (req, res, next) => {
   try {
-    const [{ data: columns, error: columnsError }, { data: cards, error: cardsError }] = await Promise.all([
-      supabase.from('afterlight_kanban_columns').select('*').order('order', { ascending: true }),
-      supabase.from('afterlight_kanban_cards').select('*').order('order', { ascending: true }),
-    ]);
+    const { projectId } = req.params;
+    const { data: columns, error: columnsError } = await supabase
+      .from('afterlight_kanban_columns')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('order', { ascending: true });
     assertOk(columnsError);
+
+    const columnIds = columns.map((c) => c.id);
+    const { data: cards, error: cardsError } = columnIds.length
+      ? await supabase.from('afterlight_kanban_cards').select('*').in('column_id', columnIds).order('order', { ascending: true })
+      : { data: [], error: null };
     assertOk(cardsError);
+
+    const cardIds = cards.map((c) => c.id);
+    const { data: notes, error: notesError } = cardIds.length
+      ? await supabase.from('afterlight_card_notes').select('*').in('card_id', cardIds).order('created_at', { ascending: true })
+      : { data: [], error: null };
+    assertOk(notesError);
+
     res.json({
-      columns: columns.map((c) => ({ id: c.id, title: c.title, order: c.order })),
-      cards: cards.map((c) => ({
-        id: c.id,
-        columnId: c.column_id,
-        title: c.title,
-        description: c.description,
-        order: c.order,
-      })),
+      columns: columns.map(mapColumn),
+      cards: cards.map((card) => mapCard(card, notes.filter((n) => n.card_id === card.id))),
     });
   } catch (err) {
     next(err);
@@ -251,13 +406,7 @@ app.post('/api/kanban/cards', async (req, res, next) => {
       if (error.code === '23503') return res.status(400).json({ error: 'invalid columnId' });
       throw Object.assign(new Error(error.message), { status: 500 });
     }
-    res.status(201).json({
-      id: data.id,
-      columnId: data.column_id,
-      title: data.title,
-      description: data.description,
-      order: data.order,
-    });
+    res.status(201).json(mapCard(data));
   } catch (err) {
     next(err);
   }
@@ -280,13 +429,7 @@ app.patch('/api/kanban/cards/:cardId', async (req, res, next) => {
       .single();
 
     if (error || !data) return res.status(404).json({ error: 'card not found' });
-    res.json({
-      id: data.id,
-      columnId: data.column_id,
-      title: data.title,
-      description: data.description,
-      order: data.order,
-    });
+    res.json(mapCard(data));
   } catch (err) {
     next(err);
   }
@@ -295,6 +438,45 @@ app.patch('/api/kanban/cards/:cardId', async (req, res, next) => {
 app.delete('/api/kanban/cards/:cardId', async (req, res, next) => {
   try {
     const { error } = await supabase.from('afterlight_kanban_cards').delete().eq('id', req.params.cardId);
+    assertOk(error);
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
+
+// --- Card notes ---
+
+app.post('/api/kanban/cards/:cardId/notes', async (req, res, next) => {
+  try {
+    const { author, text } = req.body || {};
+    if (!text || typeof text !== 'string' || !text.trim()) {
+      return res.status(400).json({ error: 'text is required' });
+    }
+
+    const { data, error } = await supabase
+      .from('afterlight_card_notes')
+      .insert({
+        card_id: req.params.cardId,
+        author: (author || 'Anonymous').trim() || 'Anonymous',
+        body: text.trim(),
+      })
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23503') return res.status(404).json({ error: 'card not found' });
+      throw Object.assign(new Error(error.message), { status: 500 });
+    }
+    res.status(201).json(mapNote(data));
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.delete('/api/kanban/notes/:noteId', async (req, res, next) => {
+  try {
+    const { error } = await supabase.from('afterlight_card_notes').delete().eq('id', req.params.noteId);
     assertOk(error);
     res.status(204).end();
   } catch (err) {

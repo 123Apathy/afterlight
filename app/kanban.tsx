@@ -1,46 +1,45 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import BottomTabBar from '../components/BottomTabBar';
+import CommentModal from '../components/CommentModal';
+import HamburgerButton from '../components/HamburgerButton';
+import MenuOverlay from '../components/MenuOverlay';
 import PressableScale from '../components/PressableScale';
 import { colors, images } from '../constants/theme';
 import { api, type KanbanCard, type KanbanColumn } from '../lib/api';
+import { useActiveProject } from '../lib/useActiveProject';
+import { useLocalStorage } from '../lib/useLocalStorage';
+
+const STATUS_LABELS: Record<number, string> = { 0: 'TO DO', 1: 'WIP', 2: 'DONE' };
 
 export default function KanbanScreen() {
+  const { projectId } = useActiveProject();
+  const [raterName] = useLocalStorage('afterlight.rater', '');
   const [columns, setColumns] = useState<KanbanColumn[]>([]);
   const [cards, setCards] = useState<KanbanCard[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
-  const [addingCard, setAddingCard] = useState(false);
+  const [addingToColumn, setAddingToColumn] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [notesCardId, setNotesCardId] = useState<string | null>(null);
 
   const refresh = async () => {
-    const data = await api.getKanban();
+    if (!projectId) return;
+    const data = await api.getKanban(projectId);
     setColumns(data.columns);
     setCards(data.cards);
-    setActiveColumnId((current) => current || data.columns[0]?.id || null);
     setLoading(false);
   };
 
   useEffect(() => {
     refresh();
-  }, []);
+  }, [projectId]);
 
-  const totalCount = cards.length;
-  const doneColumnId = columns[columns.length - 1]?.id;
-  const doneCount = cards.filter((c) => c.columnId === doneColumnId).length;
-
-  const visibleCards = useMemo(
-    () =>
-      cards
-        .filter((c) => c.columnId === activeColumnId)
-        .sort((a, b) => a.order - b.order),
-    [cards, activeColumnId]
-  );
-
-  const columnIndex = columns.findIndex((c) => c.id === activeColumnId);
+  const notesCard = cards.find((c) => c.id === notesCardId) || null;
 
   const moveCard = async (card: KanbanCard, direction: -1 | 1) => {
+    const columnIndex = columns.findIndex((c) => c.id === card.columnId);
     const targetColumn = columns[columnIndex + direction];
     if (!targetColumn) return;
     setCards((prev) => prev.map((c) => (c.id === card.id ? { ...c, columnId: targetColumn.id } : c)));
@@ -52,131 +51,181 @@ export default function KanbanScreen() {
     await api.deleteCard(card.id);
   };
 
-  const submitNewCard = async () => {
-    if (!draftTitle.trim() || !activeColumnId) {
-      setAddingCard(false);
+  const submitNewCard = async (columnId: string) => {
+    if (!draftTitle.trim()) {
+      setAddingToColumn(null);
       return;
     }
-    const card = await api.createCard(activeColumnId, draftTitle.trim(), '');
+    const card = await api.createCard(columnId, draftTitle.trim(), '');
     setCards((prev) => [...prev, card]);
     setDraftTitle('');
-    setAddingCard(false);
+    setAddingToColumn(null);
   };
+
+  const handleAddNote = async (text: string) => {
+    if (!notesCard) return;
+    const note = await api.addCardNote(notesCard.id, raterName || 'Anonymous', text);
+    setCards((prev) => prev.map((c) => (c.id === notesCard.id ? { ...c, notes: [...c.notes, note] } : c)));
+  };
+
+  if (!projectId) {
+    return (
+      <View style={styles.screen}>
+        <View style={styles.noProjectGate}>
+          <Text style={styles.noProjectTitle}>No project selected</Text>
+          <Text style={styles.noProjectSubtitle}>
+            Go to Home to create a project or join one via an invite link.
+          </Text>
+        </View>
+        <BottomTabBar />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.screen}>
       <View style={styles.heroWrap}>
         <Image source={{ uri: images.portrait }} style={styles.hero} resizeMode="cover" />
         <View style={styles.heroOverlay} />
-        <View style={styles.progressRing}>
-          <Text style={styles.progressCount}>
-            {doneCount}/{totalCount}
-          </Text>
-          <Text style={styles.progressLabel}>confirmed</Text>
+        <View style={styles.heroHeader}>
+          <HamburgerButton onPress={() => setMenuOpen(true)} />
         </View>
       </View>
+
+      <MenuOverlay visible={menuOpen} onClose={() => setMenuOpen(false)} />
 
       <View style={styles.body}>
         <View style={styles.darkBand}>
           <Text style={styles.sectionTitle}>Arrangements</Text>
-          <View style={styles.pills}>
-            {columns.map((column) => (
-              <PressableScale
-                key={column.id}
-                style={[styles.pill, activeColumnId === column.id && styles.pillActive]}
-                onPress={() => setActiveColumnId(column.id)}
-                scaleTo={0.95}
-              >
-                <Text style={[styles.pillText, activeColumnId === column.id && styles.pillTextActive]}>
-                  {column.title}
-                </Text>
-              </PressableScale>
-            ))}
-          </View>
         </View>
 
         {loading ? (
           <Text style={styles.emptyText}>Loading...</Text>
         ) : (
           <ScrollView contentContainerStyle={styles.cardsList}>
-            {visibleCards.map((card, index) => (
-              <Animated.View key={card.id} entering={FadeIn.duration(200).delay(index * 40)} style={styles.cardRow}>
-                <View style={styles.statusBox}>
-                  <Text style={styles.statusIndex}>{index + 1}</Text>
-                  <Text style={styles.statusLabel}>
-                    {columns.find((c) => c.id === card.columnId)?.title.slice(0, 4).toUpperCase()}
-                  </Text>
-                </View>
-                <View style={styles.cardInfo}>
-                  <Text style={styles.cardTitle}>{card.title}</Text>
-                  {!!card.description && (
-                    <Text style={styles.cardDescription} numberOfLines={2}>
-                      {card.description}
-                    </Text>
-                  )}
-                  <View style={styles.cardActions}>
-                    <PressableScale
-                      onPress={() => moveCard(card, -1)}
-                      style={[styles.moveButton, columnIndex === 0 && styles.moveButtonDisabled]}
-                      scaleTo={0.9}
-                      disabled={columnIndex === 0}
-                    >
-                      <Text style={styles.moveButtonText}>&larr;</Text>
-                    </PressableScale>
-                    <PressableScale
-                      onPress={() => moveCard(card, 1)}
-                      style={[
-                        styles.moveButton,
-                        columnIndex === columns.length - 1 && styles.moveButtonDisabled,
-                      ]}
-                      scaleTo={0.9}
-                      disabled={columnIndex === columns.length - 1}
-                    >
-                      <Text style={styles.moveButtonText}>&rarr;</Text>
-                    </PressableScale>
-                    <PressableScale onPress={() => deleteCard(card)} hitSlop={8} scaleTo={0.9}>
-                      <Text style={styles.cardDelete}>&times;</Text>
-                    </PressableScale>
+            {columns.map((column, columnIndex) => {
+              const columnCards = cards.filter((c) => c.columnId === column.id).sort((a, b) => a.order - b.order);
+              return (
+                <View key={column.id} style={styles.columnSection}>
+                  <View style={styles.columnHeaderRow}>
+                    <Text style={styles.columnHeaderText}>{column.title}</Text>
+                    <Text style={styles.columnHeaderCount}>{columnCards.length}</Text>
                   </View>
-                </View>
-              </Animated.View>
-            ))}
 
-            {addingCard ? (
-              <View style={styles.addForm}>
-                <TextInput
-                  value={draftTitle}
-                  onChangeText={setDraftTitle}
-                  placeholder="Task title..."
-                  placeholderTextColor={colors.textFaintest}
-                  style={styles.addInput}
-                  autoFocus
-                  onSubmitEditing={submitNewCard}
-                />
-                <View style={styles.addFormButtons}>
-                  <PressableScale
-                    onPress={() => {
-                      setAddingCard(false);
-                      setDraftTitle('');
-                    }}
-                    style={styles.addFormCancel}
-                    scaleTo={0.95}
-                  >
-                    <Text style={styles.addFormCancelText}>Cancel</Text>
-                  </PressableScale>
-                  <PressableScale onPress={submitNewCard} style={styles.addFormConfirm} scaleTo={0.95}>
-                    <Text style={styles.addFormConfirmText}>Add</Text>
-                  </PressableScale>
+                  {columnCards.map((card, index) => (
+                    <Animated.View
+                      key={card.id}
+                      entering={FadeIn.duration(200).delay(index * 40)}
+                      style={styles.cardRow}
+                    >
+                      <View
+                        style={[styles.statusBox, columnIndex === 0 ? styles.statusBoxWhite : styles.statusBoxCream]}
+                      >
+                        <Text style={styles.statusTitle}>{STATUS_LABELS[columnIndex] ?? column.title}</Text>
+                      </View>
+                      <View style={styles.cardInfo}>
+                        <Text style={styles.cardTitle}>{card.title}</Text>
+                        {!!card.description && (
+                          <Text style={styles.cardDescription} numberOfLines={2}>
+                            {card.description}
+                          </Text>
+                        )}
+                        <View style={styles.cardActions}>
+                          <PressableScale
+                            onPress={() => moveCard(card, -1)}
+                            style={[styles.moveButton, columnIndex === 0 && styles.moveButtonDisabled]}
+                            scaleTo={0.9}
+                            disabled={columnIndex === 0}
+                          >
+                            <Text style={styles.moveButtonText}>&larr;</Text>
+                          </PressableScale>
+                          <PressableScale
+                            onPress={() => moveCard(card, 1)}
+                            style={[
+                              styles.moveButton,
+                              columnIndex === columns.length - 1 && styles.moveButtonDisabled,
+                            ]}
+                            scaleTo={0.9}
+                            disabled={columnIndex === columns.length - 1}
+                          >
+                            <Text style={styles.moveButtonText}>&rarr;</Text>
+                          </PressableScale>
+                          <PressableScale
+                            onPress={() => setNotesCardId(card.id)}
+                            style={styles.notesButton}
+                            scaleTo={0.95}
+                          >
+                            <Text style={styles.notesButtonText}>
+                              {card.notes.length > 0 ? `${card.notes.length} note${card.notes.length === 1 ? '' : 's'}` : '+ Note'}
+                            </Text>
+                          </PressableScale>
+                          <PressableScale onPress={() => deleteCard(card)} hitSlop={8} scaleTo={0.9}>
+                            <Text style={styles.cardDelete}>&times;</Text>
+                          </PressableScale>
+                        </View>
+                      </View>
+                    </Animated.View>
+                  ))}
+
+                  {addingToColumn === column.id ? (
+                    <View style={styles.addForm}>
+                      <TextInput
+                        value={draftTitle}
+                        onChangeText={setDraftTitle}
+                        placeholder="Task title..."
+                        placeholderTextColor={colors.textFaintest}
+                        style={styles.addInput}
+                        autoFocus
+                        onSubmitEditing={() => submitNewCard(column.id)}
+                      />
+                      <View style={styles.addFormButtons}>
+                        <PressableScale
+                          onPress={() => {
+                            setAddingToColumn(null);
+                            setDraftTitle('');
+                          }}
+                          style={styles.addFormCancel}
+                          scaleTo={0.95}
+                        >
+                          <Text style={styles.addFormCancelText}>Cancel</Text>
+                        </PressableScale>
+                        <PressableScale
+                          onPress={() => submitNewCard(column.id)}
+                          style={styles.addFormConfirm}
+                          scaleTo={0.95}
+                        >
+                          <Text style={styles.addFormConfirmText}>Add</Text>
+                        </PressableScale>
+                      </View>
+                    </View>
+                  ) : (
+                    <PressableScale
+                      onPress={() => {
+                        setAddingToColumn(column.id);
+                        setDraftTitle('');
+                      }}
+                      style={styles.addCardButton}
+                      scaleTo={0.97}
+                    >
+                      <Text style={styles.addCardButtonText}>+ Add to {column.title}</Text>
+                    </PressableScale>
+                  )}
                 </View>
-              </View>
-            ) : (
-              <PressableScale onPress={() => setAddingCard(true)} style={styles.addCardButton} scaleTo={0.97}>
-                <Text style={styles.addCardButtonText}>+ Add card</Text>
-              </PressableScale>
-            )}
+              );
+            })}
           </ScrollView>
         )}
       </View>
+
+      <CommentModal
+        visible={!!notesCard}
+        comments={notesCard?.notes || []}
+        onClose={() => setNotesCardId(null)}
+        onSubmit={handleAddNote}
+        title="Notes"
+        placeholder="Add a note about this task..."
+        emptyText="No notes yet."
+      />
 
       <BottomTabBar />
     </View>
@@ -188,8 +237,35 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.white,
   },
+  noProjectGate: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    padding: 24,
+    backgroundColor: colors.dark,
+  },
+  noProjectTitle: {
+    fontFamily: 'Manrope_500Medium',
+    fontSize: 22,
+    color: colors.white,
+    textAlign: 'center',
+  },
+  noProjectSubtitle: {
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 15,
+    color: colors.textFainter,
+    textAlign: 'center',
+    maxWidth: 300,
+  },
   heroWrap: {
     height: 260,
+  },
+  heroHeader: {
+    position: 'absolute',
+    top: 20,
+    right: 19,
+    zIndex: 5,
   },
   hero: {
     width: '100%',
@@ -201,30 +277,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-  },
-  progressRing: {
-    position: 'absolute',
-    top: 130,
-    alignSelf: 'center',
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    borderWidth: 3,
-    borderColor: colors.gold,
-    backgroundColor: 'rgba(22,19,18,0.7)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  progressCount: {
-    fontFamily: 'Manrope_500Medium',
-    fontSize: 20,
-    color: colors.white,
-  },
-  progressLabel: {
-    fontFamily: 'Manrope_400Regular',
-    fontSize: 11,
-    color: colors.textFainter,
+    backgroundColor: 'rgba(0,0,0,0.3)',
   },
   body: {
     flex: 1,
@@ -239,37 +292,14 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 18,
-    gap: 14,
+    paddingTop: 28,
+    paddingBottom: 20,
   },
   sectionTitle: {
     fontFamily: 'Manrope_400Regular',
-    fontSize: 30,
+    fontSize: 32,
     letterSpacing: -0.6,
     color: colors.white,
-  },
-  pills: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  pill: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    alignItems: 'center',
-  },
-  pillActive: {
-    backgroundColor: colors.gold,
-  },
-  pillText: {
-    fontFamily: 'Manrope_500Medium',
-    fontSize: 12,
-    color: colors.textFainter,
-  },
-  pillTextActive: {
-    color: colors.ink,
   },
   emptyText: {
     fontFamily: 'Manrope_400Regular',
@@ -281,32 +311,60 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 24,
-    gap: 18,
+  },
+  columnSection: {
+    marginBottom: 28,
+  },
+  columnHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  columnHeaderText: {
+    fontFamily: 'Manrope_500Medium',
+    fontSize: 15,
+    letterSpacing: 0.4,
+    color: '#1a1a1a',
+    textTransform: 'uppercase',
+  },
+  columnHeaderCount: {
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 13,
+    color: '#999999',
   },
   cardRow: {
     flexDirection: 'row',
     gap: 14,
+    marginBottom: 18,
   },
   statusBox: {
-    width: 60,
-    height: 68,
-    borderRadius: 14,
-    backgroundColor: '#F6F1EA',
+    width: 68,
+    height: 90,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  statusIndex: {
-    fontFamily: 'Manrope_500Medium',
-    fontSize: 22,
-    color: '#1a1a1a',
+  statusBoxWhite: {
+    backgroundColor: colors.white,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
   },
-  statusLabel: {
-    fontFamily: 'Manrope_400Regular',
-    fontSize: 11,
-    color: '#888888',
+  statusBoxCream: {
+    backgroundColor: '#F1EDE6',
+  },
+  statusTitle: {
+    fontFamily: 'Manrope_500Medium',
+    fontSize: 12,
+    letterSpacing: 0.3,
+    color: '#1a1a1a',
+    textAlign: 'center',
   },
   cardInfo: {
     flex: 1,
+    justifyContent: 'center',
   },
   cardTitle: {
     fontFamily: 'Manrope_400Regular',
@@ -340,6 +398,19 @@ const styles = StyleSheet.create({
   },
   moveButtonText: {
     fontSize: 13,
+    color: '#888888',
+  },
+  notesButton: {
+    height: 26,
+    paddingHorizontal: 10,
+    borderRadius: 7,
+    backgroundColor: '#F1EDE6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notesButtonText: {
+    fontFamily: 'Manrope_500Medium',
+    fontSize: 12,
     color: '#888888',
   },
   cardDelete: {

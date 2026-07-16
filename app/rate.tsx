@@ -13,17 +13,21 @@ import {
 } from 'react-native';
 import BottomTabBar from '../components/BottomTabBar';
 import CommentModal from '../components/CommentModal';
+import HamburgerButton from '../components/HamburgerButton';
+import MenuOverlay from '../components/MenuOverlay';
 import PressableScale from '../components/PressableScale';
 import TierScrubber from '../components/TierScrubber';
 import { colors, images } from '../constants/theme';
 import { TIERS, tierForScore, tierIndexForScore } from '../constants/tiers';
 import { api, photoUrl, type Photo } from '../lib/api';
+import { useActiveProject } from '../lib/useActiveProject';
 import { useLocalStorage } from '../lib/useLocalStorage';
 
 const TAB_BAR_HEIGHT = 64;
 
 export default function RatePhotosScreen() {
   const { width, height } = useWindowDimensions();
+  const { projectId, projectName } = useActiveProject();
   const [raterName, setRaterName] = useLocalStorage('afterlight.rater', '');
   const [nameDraft, setNameDraft] = useState('');
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -32,6 +36,7 @@ export default function RatePhotosScreen() {
   const [view, setView] = useState<'rate' | 'results'>('rate');
   const [pageIndex, setPageIndex] = useState(0);
   const [commentPhotoId, setCommentPhotoId] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const scrollRef = useRef<ScrollView>(null);
 
@@ -39,14 +44,15 @@ export default function RatePhotosScreen() {
   const heroHeight = Math.min(480, Math.max(320, availableHeight * 0.58));
 
   const refresh = async () => {
-    const data = await api.getPhotos();
+    if (!projectId) return;
+    const data = await api.getPhotos(projectId);
     setPhotos(data);
     setLoading(false);
   };
 
   useEffect(() => {
     refresh();
-  }, []);
+  }, [projectId]);
 
   const currentPhoto = photos[pageIndex];
   const commentPhoto = photos.find((p) => p.id === commentPhotoId) || null;
@@ -85,6 +91,7 @@ export default function RatePhotosScreen() {
   };
 
   const handleUpload = async () => {
+    if (!projectId) return;
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
@@ -94,6 +101,7 @@ export default function RatePhotosScreen() {
     setUploading(true);
     try {
       await api.uploadPhotos(
+        projectId,
         result.assets.map((asset, i) => ({
           uri: asset.uri,
           name: asset.fileName || `photo-${Date.now()}-${i}.jpg`,
@@ -124,6 +132,18 @@ export default function RatePhotosScreen() {
       }),
     [photos]
   );
+
+  if (!projectId) {
+    return (
+      <View style={styles.page}>
+        <View style={styles.gate}>
+          <Text style={styles.gateTitle}>No project selected</Text>
+          <Text style={styles.gateSubtitle}>Go to Home to create a project or join one via an invite link.</Text>
+        </View>
+        <BottomTabBar />
+      </View>
+    );
+  }
 
   if (!raterName) {
     return (
@@ -174,8 +194,11 @@ export default function RatePhotosScreen() {
           >
             <Text style={styles.headerPillText}>{view === 'rate' ? 'Results' : 'Rate'}</Text>
           </PressableScale>
+          <HamburgerButton onPress={() => setMenuOpen(true)} />
         </View>
       </View>
+
+      <MenuOverlay visible={menuOpen} onClose={() => setMenuOpen(false)} />
 
       {loading ? (
         <Text style={styles.emptyText}>Loading...</Text>
@@ -203,20 +226,14 @@ export default function RatePhotosScreen() {
                 <View style={[styles.heroWrap, { height: heroHeight }]}>
                   <Image source={{ uri: photoUrl(photo) }} style={styles.hero} resizeMode="cover" />
                   <View style={styles.heroOverlay} />
-                  <View style={styles.scrubberOverlay}>
-                    <TierScrubber
-                      tierIndex={tierIndexForScore(myScore)}
-                      onChange={(index) => handleTierChange(photo, index)}
-                    />
-                  </View>
                 </View>
 
                 <View style={[styles.content, { height: availableHeight - heroHeight }]}>
-                  <Text style={styles.tierHeadline}>
-                    {myScore != null
-                      ? `You rated this ${tierForScore(myScore)?.key}`
-                      : 'Drag the scrubber to rate'}
-                  </Text>
+                  <TierScrubber
+                    tierIndex={tierIndexForScore(myScore)}
+                    onChange={(index) => handleTierChange(photo, index)}
+                    width={width - 38}
+                  />
                   <Text style={styles.tierSubtext}>
                     {tier != null
                       ? `${tier.key} average · ${photo.ratingCount} rating${photo.ratingCount === 1 ? '' : 's'}`
@@ -273,6 +290,9 @@ export default function RatePhotosScreen() {
         comments={commentPhoto?.comments || []}
         onClose={() => setCommentPhotoId(null)}
         onSubmit={handleAddComment}
+        title="Comments"
+        placeholder="Add a comment about this photo..."
+        emptyText="No comments yet."
       />
 
       <BottomTabBar />
@@ -379,30 +399,17 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.1)',
   },
-  scrubberOverlay: {
-    position: 'absolute',
-    right: 16,
-    top: 0,
-    bottom: 0,
-    justifyContent: 'center',
-  },
   content: {
-    paddingTop: 24,
+    paddingTop: 28,
     paddingHorizontal: 19,
-  },
-  tierHeadline: {
-    fontFamily: 'Manrope_300Light',
-    fontSize: 30,
-    lineHeight: 34,
-    letterSpacing: -1,
-    color: colors.gold,
   },
   tierSubtext: {
     fontFamily: 'Manrope_400Regular',
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 20,
     color: colors.textFainter,
-    marginTop: 10,
+    marginTop: 14,
+    textAlign: 'center',
   },
   commentCta: {
     marginTop: 24,

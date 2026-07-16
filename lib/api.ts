@@ -1,5 +1,13 @@
 export const API_BASE = 'http://localhost:4400';
 
+export type Project = {
+  id: string;
+  name: string;
+  slug: string;
+  inviteCode: string;
+  createdAt: string;
+};
+
 export type Comment = {
   id: string;
   photoId: string;
@@ -33,12 +41,21 @@ export type KanbanColumn = {
   order: number;
 };
 
+export type CardNote = {
+  id: string;
+  cardId: string;
+  author: string;
+  text: string;
+  createdAt: string;
+};
+
 export type KanbanCard = {
   id: string;
   columnId: string;
   title: string;
   description: string;
   order: number;
+  notes: CardNote[];
 };
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -56,10 +73,26 @@ export function photoUrl(photo: Photo) {
   return photo.url;
 }
 
-export const api = {
-  getPhotos: () => request<Photo[]>('/api/photos'),
+export function inviteUrl(project: Project) {
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  return `${origin}/join/${project.inviteCode}`;
+}
 
-  uploadPhotos: async (files: { uri: string; name: string; type: string }[]) => {
+export const api = {
+  createProject: (name: string) =>
+    request<Project>('/api/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    }),
+
+  getProject: (projectId: string) => request<Project>(`/api/projects/${projectId}`),
+
+  getProjectByInvite: (inviteCode: string) => request<Project>(`/api/projects/by-invite/${inviteCode}`),
+
+  getPhotos: (projectId: string) => request<Photo[]>(`/api/projects/${projectId}/photos`),
+
+  uploadPhotos: async (projectId: string, files: { uri: string; name: string; type: string }[]) => {
     const form = new FormData();
     for (const file of files) {
       // Fetching the picker's uri to a real Blob works uniformly on both web
@@ -69,7 +102,7 @@ export const api = {
       const blob = await (await fetch(file.uri)).blob();
       form.append('photos', blob, file.name);
     }
-    return request<Photo[]>('/api/photos', { method: 'POST', body: form });
+    return request<Photo[]>(`/api/projects/${projectId}/photos`, { method: 'POST', body: form });
   },
 
   deletePhoto: (photoId: string) => request<void>(`/api/photos/${photoId}`, { method: 'DELETE' }),
@@ -88,7 +121,8 @@ export const api = {
       body: JSON.stringify({ author, text }),
     }),
 
-  getKanban: () => request<{ columns: KanbanColumn[]; cards: KanbanCard[] }>('/api/kanban'),
+  getKanban: (projectId: string) =>
+    request<{ columns: KanbanColumn[]; cards: KanbanCard[] }>(`/api/projects/${projectId}/kanban`),
 
   createCard: (columnId: string, title: string, description: string) =>
     request<KanbanCard>('/api/kanban/cards', {
@@ -105,4 +139,13 @@ export const api = {
     }),
 
   deleteCard: (cardId: string) => request<void>(`/api/kanban/cards/${cardId}`, { method: 'DELETE' }),
+
+  addCardNote: (cardId: string, author: string, text: string) =>
+    request<CardNote>(`/api/kanban/cards/${cardId}/notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ author, text }),
+    }),
+
+  deleteCardNote: (noteId: string) => request<void>(`/api/kanban/notes/${noteId}`, { method: 'DELETE' }),
 };

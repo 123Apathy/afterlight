@@ -11,24 +11,26 @@ import Animated, {
 import { colors } from '../constants/theme';
 import { TIERS } from '../constants/tiers';
 
-const TRACK_HEIGHT = 220;
-const THUMB_SIZE = 40;
-const STEP = TRACK_HEIGHT / (TIERS.length - 1);
+const TRACK_HEIGHT = 52;
+const THUMB_SIZE = 44;
 
 type TierScrubberProps = {
-  tierIndex: number; // 0 = S (top) .. 4 = D (bottom)
+  tierIndex: number; // 0 = S (left, best) .. 4 = D (right, skip)
   onChange: (tierIndex: number) => void;
+  width: number;
 };
 
-export default function TierScrubber({ tierIndex, onChange }: TierScrubberProps) {
-  const y = useSharedValue(tierIndex * STEP);
+export default function TierScrubber({ tierIndex, onChange, width }: TierScrubberProps) {
+  const trackWidth = width;
+  const step = trackWidth / (TIERS.length - 1);
+  const x = useSharedValue(tierIndex * step);
   const dragging = useSharedValue(false);
 
   useEffect(() => {
     if (!dragging.value) {
-      y.value = withSpring(tierIndex * STEP, { damping: 18 });
+      x.value = withSpring(tierIndex * step, { damping: 18 });
     }
-  }, [tierIndex]);
+  }, [tierIndex, trackWidth]);
 
   const commitIndex = (index: number) => {
     onChange(index);
@@ -39,44 +41,53 @@ export default function TierScrubber({ tierIndex, onChange }: TierScrubberProps)
       dragging.value = true;
     })
     .onUpdate((event) => {
-      y.value = Math.max(0, Math.min(TRACK_HEIGHT, event.y));
+      x.value = Math.max(0, Math.min(trackWidth, event.x));
     })
     .onEnd(() => {
-      const nearest = Math.round(y.value / STEP);
-      y.value = withSpring(nearest * STEP, { damping: 18 });
+      const nearest = Math.round(x.value / step);
+      x.value = withSpring(nearest * step, { damping: 18 });
       dragging.value = false;
       runOnJS(commitIndex)(nearest);
     });
 
   useAnimatedReaction(
-    () => Math.round(y.value / STEP),
+    () => Math.round(x.value / step),
     (current, previous) => {
       if (current !== previous && dragging.value) {
         runOnJS(commitIndex)(current);
       }
     },
-    []
+    [step]
   );
 
   const thumbStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: y.value - THUMB_SIZE / 2 }],
+    transform: [{ translateX: x.value - THUMB_SIZE / 2 }],
+  }));
+
+  const fillStyle = useAnimatedStyle(() => ({
+    width: Math.max(THUMB_SIZE / 2, x.value + THUMB_SIZE / 2),
   }));
 
   const currentTier = TIERS[Math.max(0, Math.min(TIERS.length - 1, tierIndex))];
 
   return (
-    <View style={styles.wrap}>
-      <View style={styles.labelWrap}>
-        <Text style={[styles.tierLabel, { color: currentTier.color }]}>{currentTier.key}</Text>
+    <View style={[styles.wrap, { width: trackWidth }]}>
+      <View style={styles.tickRow}>
+        {TIERS.map((tier, index) => (
+          <Text
+            key={tier.key}
+            style={[styles.tickLabel, index === tierIndex && { color: tier.color, fontFamily: 'Manrope_500Medium' }]}
+          >
+            {tier.key}
+          </Text>
+        ))}
       </View>
       <GestureDetector gesture={pan}>
         <View style={styles.track} testID="tier-scrubber-track">
-          {TIERS.map((tier, index) => (
-            <View key={tier.key} style={[styles.tick, { top: index * STEP - 1 }]}>
-              <Text style={styles.tickLabel}>{tier.key}</Text>
-            </View>
-          ))}
-          <Animated.View style={[styles.thumb, thumbStyle, { backgroundColor: currentTier.color }]} />
+          <Animated.View style={[styles.fill, fillStyle, { backgroundColor: currentTier.color }]} />
+          <Animated.View style={[styles.thumb, thumbStyle]}>
+            <Text style={styles.thumbLabel}>{currentTier.key}</Text>
+          </Animated.View>
         </View>
       </GestureDetector>
     </View>
@@ -85,47 +96,50 @@ export default function TierScrubber({ tierIndex, onChange }: TierScrubberProps)
 
 const styles = StyleSheet.create({
   wrap: {
-    alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
-  labelWrap: {
-    height: 32,
-    justifyContent: 'center',
-  },
-  tierLabel: {
-    fontFamily: 'Manrope_500Medium',
-    fontSize: 24,
-  },
-  track: {
-    width: 40,
-    height: TRACK_HEIGHT,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    justifyContent: 'flex-start',
-  },
-  tick: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 2,
-    alignItems: 'center',
+  tickRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
   },
   tickLabel: {
-    position: 'absolute',
-    left: 48,
-    top: -8,
     fontFamily: 'Manrope_400Regular',
-    fontSize: 12,
+    fontSize: 13,
     color: colors.textFaintest,
-    width: 20,
+  },
+  track: {
+    height: TRACK_HEIGHT,
+    borderRadius: TRACK_HEIGHT / 2,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    overflow: 'hidden',
+    justifyContent: 'center',
+  },
+  fill: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    borderRadius: TRACK_HEIGHT / 2,
+    opacity: 0.22,
   },
   thumb: {
     position: 'absolute',
-    left: -4,
+    top: (TRACK_HEIGHT - THUMB_SIZE) / 2,
     width: THUMB_SIZE,
     height: THUMB_SIZE,
     borderRadius: THUMB_SIZE / 2,
-    borderWidth: 3,
-    borderColor: colors.dark,
+    backgroundColor: colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+  },
+  thumbLabel: {
+    fontFamily: 'Manrope_500Medium',
+    fontSize: 16,
+    color: colors.ink,
   },
 });
