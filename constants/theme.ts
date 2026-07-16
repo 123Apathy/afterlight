@@ -1,5 +1,4 @@
 export const colors = {
-  pageBg: '#3A342F',
   dark: 'rgb(22, 19, 18)',
   gold: '#E4B778',
   white: '#FFFFFF',

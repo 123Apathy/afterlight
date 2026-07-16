@@ -43,7 +43,7 @@ export default function RootLayout() {
   });
 
   if (!fontsLoaded) {
-    return <View style={{ flex: 1, backgroundColor: colors.pageBg }} />;
+    return <View style={{ flex: 1, backgroundColor: colors.dark }} />;
   }
 
   return (
