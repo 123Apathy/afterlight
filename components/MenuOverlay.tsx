@@ -9,6 +9,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { colors } from '../constants/theme';
+import { DEMO } from '../constants/demo';
 import { API_BASE, api, inviteUrl, type Project } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
 import PressableScale from './PressableScale';
@@ -135,6 +136,18 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
         </PressableScale>
       </View>
 
+      {DEMO && (
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>PREVIEW BUILD</Text>
+          <Text style={styles.demoNote}>
+            You&rsquo;re browsing a local preview with sample photos. Favourites and comments
+            you add here stay on this device. Uploading, invites, and the results report need
+            the live server, which isn&rsquo;t part of this preview.
+          </Text>
+        </View>
+      )}
+
+      {!DEMO && (
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>PROJECT</Text>
         <Text style={styles.raterName}>{projectName || 'No project selected'}</Text>
@@ -178,8 +191,9 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
           </PressableScale>
         )}
       </View>
+      )}
 
-      {!!projectId && (
+      {!DEMO && !!projectId && (
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>PHOTOS</Text>
           <PressableScale style={styles.rowButton} onPress={handleUpload} scaleTo={0.97}>
@@ -265,6 +279,12 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: colors.white,
     marginBottom: 4,
+  },
+  demoNote: {
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 14,
+    lineHeight: 22,
+    color: colors.textFainter,
   },
   rowButton: {
     height: 46,

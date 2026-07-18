@@ -38,6 +38,8 @@ export type Photo = {
   comments: Comment[];
   avgRating: number | null;
   ratingCount: number;
+  // Offline demo build only: a bundled require()'d image instead of a URL.
+  localSource?: number;
 };
 
 export type KanbanColumn = {

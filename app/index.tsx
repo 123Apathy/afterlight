@@ -15,6 +15,7 @@ import MenuOverlay from '../components/MenuOverlay';
 import CommentSheet from '../components/CommentSheet';
 import PressableScale from '../components/PressableScale';
 import { colors, copy, images } from '../constants/theme';
+import { DEMO, DEMO_PHOTOS } from '../constants/demo';
 import { api, heartCount, isFavoritedBy, photoUrl, type Photo } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
 import { useLocalStorage } from '../lib/useLocalStorage';
@@ -39,6 +40,13 @@ export default function SwipeScreen() {
   const [commentPhotoId, setCommentPhotoId] = useState<string | null>(null);
 
   const refresh = async () => {
+    if (DEMO) {
+      // Seed once; keep the reviewer's in-memory favourites/comments across
+      // menu opens instead of resetting them.
+      setPhotos((prev) => (prev.length ? prev : DEMO_PHOTOS));
+      setLoading(false);
+      return;
+    }
     if (!projectId) return;
     try {
       const data = await api.getPhotos(projectId);
@@ -85,6 +93,7 @@ export default function SwipeScreen() {
         return { ...p, ratings: nextRatings, ratingCount: nextRatings.length };
       })
     );
+    if (DEMO) return; // in-memory only, no backend
     try {
       if (alreadyFavorited) {
         await api.unfavoritePhoto(photo.id, raterName);
@@ -110,6 +119,7 @@ export default function SwipeScreen() {
     setPhotos((prev) =>
       prev.map((p) => (p.id === photo.id ? { ...p, comments: [...p.comments, optimistic] } : p))
     );
+    if (DEMO) return; // in-memory only, no backend
     try {
       await api.addComment(photo.id, raterName, text);
     } catch {
@@ -120,7 +130,7 @@ export default function SwipeScreen() {
     }
   };
 
-  if (!projectId) {
+  if (!projectId && !DEMO) {
     return (
       <View style={styles.page}>
         <HorizonGlow />
@@ -515,7 +525,11 @@ function PhotoSlide({
 
   return (
     <Pressable onPress={handleTap} style={{ width, height }}>
-      <Image source={{ uri: photoUrl(photo) }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      <Image
+        source={photo.localSource ?? { uri: photoUrl(photo) }}
+        style={StyleSheet.absoluteFill}
+        resizeMode="cover"
+      />
       <LinearGradient colors={['rgba(0,0,0,0.4)', 'transparent']} style={styles.topScrim} pointerEvents="none" />
       <LinearGradient
         colors={['transparent', 'rgba(16, 14, 12, 0.75)']}
