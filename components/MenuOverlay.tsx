@@ -22,7 +22,7 @@ type MenuOverlayProps = {
 export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
   const reduceMotion = useReducedMotion();
   const progress = useSharedValue(0);
-  const { projectId, projectName, clearProject } = useActiveProject();
+  const { projectId, projectName, clearProject, remember } = useActiveProject();
   const [project, setProjectDetails] = useState<Project | null>(null);
   const [copied, setCopied] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -37,7 +37,13 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
 
   useEffect(() => {
     if (visible && projectId) {
-      api.getProject(projectId).then(setProjectDetails).catch(() => setProjectDetails(null));
+      api
+        .getProject(projectId)
+        .then((p) => {
+          setProjectDetails(p);
+          remember(p); // keep this memorial reopenable after a switch
+        })
+        .catch(() => setProjectDetails(null));
     }
   }, [visible, projectId]);
 

@@ -28,7 +28,7 @@ const STAGGER_DELAY = 45;
 export default function SwipeScreen() {
   const { width, height } = useWindowDimensions();
   const reduceMotion = useReducedMotion();
-  const { projectId, setProject } = useActiveProject();
+  const { projectId, setProject, known } = useActiveProject();
   const [raterName, setRaterName] = useLocalStorage('afterlight.rater', '');
   const [nameDraft, setNameDraft] = useState('');
   const [newProjectName, setNewProjectName] = useState('');
@@ -165,6 +165,23 @@ export default function SwipeScreen() {
           <PressableScale style={styles.gateButton} onPress={handleCreateProject} scaleTo={0.97}>
             <Text style={styles.gateButtonText}>{creatingProject ? 'Creating...' : 'Begin'}</Text>
           </PressableScale>
+
+          {known.length > 0 && (
+            <View style={styles.knownBlock}>
+              <Text style={styles.knownLabel}>Or open one you&rsquo;re already part of</Text>
+              {known.map((k) => (
+                <PressableScale
+                  key={k.id}
+                  style={styles.knownRow}
+                  onPress={() => setProject(k)}
+                  scaleTo={0.98}
+                >
+                  <Text style={styles.knownName}>{k.name}</Text>
+                  <Text style={styles.knownChevron}>›</Text>
+                </PressableScale>
+              ))}
+            </View>
+          )}
         </View>
         <MenuOverlay
           visible={menuOpen}
@@ -676,6 +693,40 @@ const styles = StyleSheet.create({
     fontSize: 16,
     letterSpacing: 0.3,
     color: colors.ink,
+  },
+  knownBlock: {
+    width: '100%',
+    maxWidth: 340,
+    marginTop: 24,
+    gap: 10,
+  },
+  knownLabel: {
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 14,
+    color: colors.textFaintest,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  knownRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 56,
+    paddingHorizontal: 18,
+    borderRadius: 14,
+    backgroundColor: colors.darkWarmLight,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+  knownName: {
+    fontFamily: 'Manrope_500Medium',
+    fontSize: 17,
+    color: colors.white,
+  },
+  knownChevron: {
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 26,
+    color: colors.textFaintest,
   },
   loadingDot: {
     fontSize: 64,
