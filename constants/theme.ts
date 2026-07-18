@@ -1,11 +1,19 @@
 export const colors = {
-  dark: 'rgb(22, 19, 18)',
-  gold: '#E4B778',
+  dark: 'rgb(25, 20, 19)',
+  darkWarm: 'rgb(32, 26, 24)',
+  darkWarmLight: 'rgb(42, 35, 33)',
+  gold: '#D4A976',
+  goldWarm: '#C49A6C',
   white: '#FFFFFF',
+  cream: '#F5F0EB',
   textFaint: 'rgba(255, 255, 255, 0.77)',
   textFainter: 'rgba(255, 255, 255, 0.6)',
-  textFaintest: 'rgba(255, 255, 255, 0.5)',
+  textFaintest: 'rgba(255, 255, 255, 0.48)',
   ink: '#1A1613',
+  glassLight: 'rgba(255, 255, 255, 0.08)',
+  glassMedium: 'rgba(255, 255, 255, 0.12)',
+  glassStrong: 'rgba(255, 255, 255, 0.16)',
+  accent: 'rgba(212, 169, 118, 0.4)',
 };
 
 export const images = {
@@ -15,4 +23,8 @@ export const images = {
 
 export const copy = {
   slogan: 'A memory you can hold.',
+  landing: {
+    title: "We're sorry for your loss.",
+    subtitle: "Afterlight gathers photos from everyone who knew them—a digital space where their life can be honored, one favorite at a time. Not a eulogy. Just the moments that mattered.",
+  },
 };

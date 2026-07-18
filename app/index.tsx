@@ -1,7 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring } from 'react-native-reanimated';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+  Easing,
+  useReducedMotion,
+} from 'react-native-reanimated';
 import HamburgerButton from '../components/HamburgerButton';
 import MenuOverlay from '../components/MenuOverlay';
 import PressableScale from '../components/PressableScale';
@@ -11,9 +19,13 @@ import { useActiveProject } from '../lib/useActiveProject';
 import { useLocalStorage } from '../lib/useLocalStorage';
 
 const DOUBLE_TAP_MS = 280;
+const MOTION_DURATION = 240;
+const ENTRANCE_DURATION = 360;
+const STAGGER_DELAY = 45;
 
 export default function SwipeScreen() {
   const { width, height } = useWindowDimensions();
+  const reduceMotion = useReducedMotion();
   const { projectId, setProject } = useActiveProject();
   const [raterName, setRaterName] = useLocalStorage('afterlight.rater', '');
   const [nameDraft, setNameDraft] = useState('');
@@ -91,8 +103,6 @@ export default function SwipeScreen() {
     const last = lastTapRef.current;
     if (last && last.id === photo.id && now - last.time < DOUBLE_TAP_MS) {
       lastTapRef.current = null;
-      // Double-tap always favorites (never un-favorites), matching the
-      // Instagram gesture everyone already knows.
       if (!isFavoritedBy(photo, raterName)) toggleFavorite(photo);
     } else {
       lastTapRef.current = { id: photo.id, time: now };
@@ -102,29 +112,38 @@ export default function SwipeScreen() {
   if (!projectId) {
     return (
       <View style={styles.page}>
-        <View style={styles.header}>
-          <View style={styles.brand}>
-            <Image source={images.logo} style={styles.logo} resizeMode="contain" />
-            <Text style={styles.brandText}>Afterlight</Text>
+        <HorizonGlow />
+        <View style={styles.headerOverlay} pointerEvents="box-none">
+          <View style={styles.header}>
+            <View style={styles.brand}>
+              <Image source={images.logo} style={styles.logo} resizeMode="contain" />
+              <Text style={styles.brandText}>Afterlight</Text>
+            </View>
+            <HamburgerButton onPress={() => setMenuOpen(true)} />
           </View>
-          <HamburgerButton onPress={() => setMenuOpen(true)} />
         </View>
         <View style={styles.gate}>
+          <View style={styles.heroMark}>
+            <View style={[styles.glowRing, styles.glowRingOuter]} />
+            <View style={[styles.glowRing, styles.glowRingMid]} />
+            <View style={[styles.glowRing, styles.glowRingInner]} />
+            <Image source={images.logo} style={styles.heroLogo} resizeMode="contain" />
+          </View>
           <Text style={styles.gateTagline}>{copy.slogan}</Text>
-          <Text style={styles.gateTitle}>Start a project</Text>
+          <Text style={styles.gateTitle}>{copy.landing.title}</Text>
           <Text style={styles.gateSubtitle}>
-            Create a project for the person you&rsquo;re honoring, or use an invite link someone shared with you.
+            {copy.landing.subtitle}
           </Text>
           <TextInput
             value={newProjectName}
             onChangeText={setNewProjectName}
-            placeholder="e.g. Brenda's tribute"
+            placeholder="Person's name or occasion…"
             placeholderTextColor={colors.textFaintest}
             style={styles.gateInput}
             onSubmitEditing={handleCreateProject}
           />
           <PressableScale style={styles.gateButton} onPress={handleCreateProject} scaleTo={0.97}>
-            <Text style={styles.gateButtonText}>{creatingProject ? 'Creating...' : 'Create project'}</Text>
+            <Text style={styles.gateButtonText}>{creatingProject ? 'Creating...' : 'Begin'}</Text>
           </PressableScale>
         </View>
         <MenuOverlay
@@ -141,10 +160,19 @@ export default function SwipeScreen() {
   if (!raterName) {
     return (
       <View style={styles.page}>
+        <HorizonGlow />
+        <View style={styles.headerOverlay} pointerEvents="box-none">
+          <View style={styles.header}>
+            <View style={styles.brand}>
+              <Image source={images.logo} style={styles.logo} resizeMode="contain" />
+              <Text style={styles.brandText}>Afterlight</Text>
+            </View>
+          </View>
+        </View>
         <View style={styles.gate}>
-          <Text style={styles.gateTitle}>Who&rsquo;s browsing today?</Text>
+          <Text style={styles.gateTitle}>Who&rsquo;s here?</Text>
           <Text style={styles.gateSubtitle}>
-            Enter your name so everyone&rsquo;s favourites are tracked separately.
+            Your name will appear with your favorites so we can see whose moments resonated most.
           </Text>
           <TextInput
             value={nameDraft}
@@ -159,7 +187,7 @@ export default function SwipeScreen() {
             onPress={() => nameDraft.trim() && setRaterName(nameDraft.trim())}
             scaleTo={0.97}
           >
-            <Text style={styles.gateButtonText}>Continue</Text>
+            <Text style={styles.gateButtonText}>Enter</Text>
           </PressableScale>
         </View>
       </View>
@@ -169,27 +197,16 @@ export default function SwipeScreen() {
   return (
     <View style={styles.page}>
       {loading ? (
-        <Text style={styles.emptyText}>Loading...</Text>
+        <LoadingState reduceMotion={reduceMotion} />
       ) : loadError ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyTitle}>Connection trouble</Text>
-          <Text style={styles.emptySubtitle}>We couldn&rsquo;t load the photos. Check your internet and try again.</Text>
-          <PressableScale
-            style={styles.emptyButton}
-            onPress={() => {
-              setLoading(true);
-              refresh();
-            }}
-            scaleTo={0.97}
-          >
-            <Text style={styles.emptyButtonText}>Try again</Text>
-          </PressableScale>
-        </View>
+        <ErrorState
+          onRetry={() => {
+            setLoading(true);
+            refresh();
+          }}
+        />
       ) : photos.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyTitle}>No photos yet</Text>
-          <Text style={styles.emptySubtitle}>Open the menu to upload photos and start browsing together.</Text>
-        </View>
+        <EmptyState onUpload={() => setMenuOpen(true)} />
       ) : (
         <PhotoDeck
           photos={photos}
@@ -198,15 +215,18 @@ export default function SwipeScreen() {
           raterName={raterName}
           onToggleFavorite={toggleFavorite}
           onDoubleTap={handleDoubleTap}
+          reduceMotion={reduceMotion}
         />
       )}
 
-      <View style={styles.header}>
-        <View style={styles.brand}>
-          <Image source={images.logo} style={styles.logo} resizeMode="contain" />
-          <Text style={styles.brandText}>Afterlight</Text>
+      <View style={styles.headerOverlay} pointerEvents="box-none">
+        <View style={styles.header}>
+          <View style={styles.brand}>
+            <Image source={images.logo} style={styles.logo} resizeMode="contain" />
+            <Text style={styles.brandText}>Afterlight</Text>
+          </View>
+          <HamburgerButton onPress={() => setMenuOpen(true)} />
         </View>
-        <HamburgerButton onPress={() => setMenuOpen(true)} />
       </View>
 
       <MenuOverlay
@@ -220,6 +240,121 @@ export default function SwipeScreen() {
   );
 }
 
+function LoadingState({ reduceMotion }: { reduceMotion: boolean }) {
+  const opacity = useSharedValue(0.5);
+
+  useEffect(() => {
+    if (reduceMotion) return;
+    opacity.value = withSequence(
+      withTiming(1, { duration: 800, easing: Easing.bezier(0.25, 0.46, 0.45, 0.94) }),
+      withTiming(0.5, { duration: 800, easing: Easing.bezier(0.25, 0.46, 0.45, 0.94) })
+    );
+  }, []);
+
+  const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
+
+  return (
+    <View style={styles.pageContent}>
+      <View style={styles.emptyState}>
+        <View style={styles.emptyCard}>
+          <Animated.Text style={[styles.loadingDot, style]}>•</Animated.Text>
+          <Text style={styles.emptySubtitle}>Opening the space…</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+// The empty state is a preview of the real swipe screen — same chrome
+// (counter, scrims, heart row) with the first-photo invitation where the
+// photo will be. The screen never looks unfinished, just unfilled.
+function EmptyState({ onUpload }: { onUpload: () => void }) {
+  return (
+    <View style={styles.pageContent}>
+      <HorizonGlow />
+      <LinearGradient colors={['rgba(0,0,0,0.4)', 'transparent']} style={styles.topScrim} pointerEvents="none" />
+      <LinearGradient
+        colors={['transparent', 'rgba(16, 14, 12, 0.75)']}
+        style={styles.bottomScrim}
+        pointerEvents="none"
+      />
+
+      <View style={styles.counter}>
+        <Text style={styles.counterText}>00</Text>
+        <Text style={styles.counterSeparator}>/</Text>
+        <Text style={styles.counterText}>00</Text>
+      </View>
+
+      <View style={styles.emptyState}>
+        <View style={styles.heroMark}>
+          <View style={[styles.glowRing, styles.glowRingOuter]} />
+          <View style={[styles.glowRing, styles.glowRingMid]} />
+          <View style={[styles.glowRing, styles.glowRingInner]} />
+          <Image source={images.logo} style={styles.heroLogo} resizeMode="contain" />
+        </View>
+        <Text style={styles.emptyTitle}>The first photo goes here</Text>
+        <Text style={styles.emptySubtitle}>
+          Add the photos you have — everyone you invite swipes through them and keeps their favourites.
+        </Text>
+        <PressableScale style={styles.emptyButton} onPress={onUpload} scaleTo={0.97}>
+          <Text style={styles.emptyButtonText}>Upload photos</Text>
+        </PressableScale>
+      </View>
+
+      <View style={styles.heartRow} pointerEvents="none">
+        <View>
+          <Text style={styles.heartCountLabel}>Tap ♡ to keep a moment</Text>
+          <Text style={styles.heartRaters}>the favourites gather here</Text>
+        </View>
+        <View style={styles.heartButtonContainer}>
+          <Text style={[styles.heartIcon, styles.heartIconGhost]}>♡</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+// Cheap re-impl of the reference "blur-halo vignette": layered gradients +
+// concentric rings instead of a filter blur, so it costs nothing on mobile.
+function HorizonGlow() {
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <LinearGradient
+        colors={['#181310', '#261D17', '#171210']}
+        locations={[0, 0.45, 1]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <LinearGradient
+        colors={['transparent', 'rgba(212, 169, 118, 0.07)', 'transparent']}
+        locations={[0.25, 0.5, 0.75]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+    </View>
+  );
+}
+
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <View style={styles.pageContent}>
+      <View style={styles.emptyState}>
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyTitle}>Something shifted</Text>
+          <Text style={styles.emptySubtitle}>
+            We couldn&rsquo;t load the photos. Check your connection and try again.
+          </Text>
+          <PressableScale style={styles.emptyButton} onPress={onRetry} scaleTo={0.97}>
+            <Text style={styles.emptyButtonText}>Try again</Text>
+          </PressableScale>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 type PhotoDeckProps = {
   photos: Photo[];
   width: number;
@@ -227,9 +362,10 @@ type PhotoDeckProps = {
   raterName: string;
   onToggleFavorite: (photo: Photo) => void;
   onDoubleTap: (photo: Photo) => void;
+  reduceMotion: boolean;
 };
 
-function PhotoDeck({ photos, width, height, raterName, onToggleFavorite, onDoubleTap }: PhotoDeckProps) {
+function PhotoDeck({ photos, width, height, raterName, onToggleFavorite, onDoubleTap, reduceMotion }: PhotoDeckProps) {
   return (
     <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={StyleSheet.absoluteFill}>
       {photos.map((photo, index) => (
@@ -243,6 +379,7 @@ function PhotoDeck({ photos, width, height, raterName, onToggleFavorite, onDoubl
           raterName={raterName}
           onToggleFavorite={onToggleFavorite}
           onDoubleTap={onDoubleTap}
+          reduceMotion={reduceMotion}
         />
       ))}
     </ScrollView>
@@ -258,39 +395,74 @@ type PhotoSlideProps = {
   raterName: string;
   onToggleFavorite: (photo: Photo) => void;
   onDoubleTap: (photo: Photo) => void;
+  reduceMotion: boolean;
 };
 
-function PhotoSlide({ photo, index, total, width, height, raterName, onToggleFavorite, onDoubleTap }: PhotoSlideProps) {
+function PhotoSlide({
+  photo,
+  index,
+  total,
+  width,
+  height,
+  raterName,
+  onToggleFavorite,
+  onDoubleTap,
+  reduceMotion,
+}: PhotoSlideProps) {
   const favorited = isFavoritedBy(photo, raterName);
   const count = heartCount(photo);
   const scale = useSharedValue(1);
+  const glowOpacity = useSharedValue(0);
 
   const heartStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const glowStyle = useAnimatedStyle(() => ({ opacity: glowOpacity.value }));
 
   const handleHeartPress = () => {
-    scale.value = withSequence(withSpring(1.3, { damping: 6 }), withSpring(1, { damping: 8 }));
+    if (!reduceMotion) {
+      scale.value = withSequence(withSpring(1.28, { damping: 5 }), withSpring(1, { damping: 8 }));
+      glowOpacity.value = withSequence(
+        withTiming(0.6, { duration: 120 }),
+        withTiming(0, { duration: 240, easing: Easing.out(Easing.cubic) })
+      );
+    }
     onToggleFavorite(photo);
   };
 
   return (
     <Pressable onPress={() => onDoubleTap(photo)} style={{ width, height }}>
       <Image source={{ uri: photoUrl(photo) }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-      <LinearGradient colors={['rgba(0,0,0,0.5)', 'transparent']} style={styles.topScrim} pointerEvents="none" />
-      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.6)']} style={styles.bottomScrim} pointerEvents="none" />
+      <LinearGradient colors={['rgba(0,0,0,0.4)', 'transparent']} style={styles.topScrim} pointerEvents="none" />
+      <LinearGradient
+        colors={['transparent', 'rgba(16, 14, 12, 0.75)']}
+        style={styles.bottomScrim}
+        pointerEvents="none"
+      />
 
       <View style={styles.counter}>
-        <Text style={styles.counterText}>
-          {index + 1} / {total}
-        </Text>
+        <Text style={styles.counterText}>{String(index + 1).padStart(2, '0')}</Text>
+        <Text style={styles.counterSeparator}>/</Text>
+        <Text style={styles.counterText}>{String(total).padStart(2, '0')}</Text>
       </View>
 
       <View style={styles.heartRow}>
-        <Text style={styles.heartCount}>{count > 0 ? `${count} favourite${count === 1 ? '' : 's'}` : 'Be the first to favourite'}</Text>
-        <PressableScale onPress={handleHeartPress} scaleTo={0.85} hitSlop={12}>
-          <Animated.Text style={[styles.heartIcon, favorited && styles.heartIconActive, heartStyle]}>
-            {favorited ? '♥' : '♡'}
-          </Animated.Text>
-        </PressableScale>
+        <View style={styles.heartLabels}>
+          <Text style={styles.heartCountLabel}>
+            {count > 0 ? `${count} favourite${count === 1 ? '' : 's'}` : 'Tap ♡ to keep this one'}
+          </Text>
+          {count > 0 && (
+            <Text style={styles.heartRaters} numberOfLines={1}>
+              {photo.ratings.map((r) => r.rater).join(' · ')}
+            </Text>
+          )}
+        </View>
+        <View style={styles.heartButtonContainer}>
+          <Animated.View style={[styles.glowPulse, glowStyle]} pointerEvents="none" />
+          <PressableScale onPress={handleHeartPress} scaleTo={0.82} hitSlop={16}>
+            <Animated.Text style={[styles.heartIcon, favorited && styles.heartIconActive, heartStyle]}>
+              {favorited ? '♥' : '♡'}
+            </Animated.Text>
+          </PressableScale>
+        </View>
       </View>
     </Pressable>
   );
@@ -301,17 +473,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.dark,
   },
-  header: {
+  headerOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    zIndex: 10,
+    zIndex: 20,
+  },
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingTop: 20,
     paddingHorizontal: 19,
+    paddingBottom: 12,
   },
   brand: {
     flexDirection: 'row',
@@ -324,100 +499,153 @@ const styles = StyleSheet.create({
     borderRadius: 7,
   },
   brandText: {
-    fontFamily: 'Manrope_400Regular',
-    fontSize: 15,
+    fontFamily: 'Manrope_500Medium',
+    fontSize: 14,
+    letterSpacing: 0.3,
     color: colors.white,
   },
   gate: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 14,
-    paddingHorizontal: 24,
+    gap: 18,
+    paddingHorizontal: 28,
+    paddingBottom: 80,
   },
   gateTagline: {
     fontFamily: 'Manrope_400Regular',
-    fontSize: 15,
+    fontSize: 14,
     fontStyle: 'italic',
-    color: colors.gold,
+    letterSpacing: 0.4,
+    color: colors.goldWarm,
     textAlign: 'center',
-    marginBottom: 2,
   },
   gateTitle: {
     fontFamily: 'Manrope_500Medium',
-    fontSize: 28,
+    fontSize: 34,
+    letterSpacing: -0.6,
+    lineHeight: 42,
     color: colors.white,
     textAlign: 'center',
+    marginBottom: 8,
   },
   gateSubtitle: {
     fontFamily: 'Manrope_400Regular',
     fontSize: 15,
+    lineHeight: 26,
     color: colors.textFainter,
     textAlign: 'center',
-    maxWidth: 320,
+    maxWidth: 360,
+    marginVertical: 4,
   },
   gateInput: {
     width: '100%',
-    maxWidth: 320,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    paddingHorizontal: 16,
+    maxWidth: 340,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.09)',
+    borderWidth: 1,
+    borderColor: 'rgba(212, 169, 118, 0.2)',
+    paddingHorizontal: 18,
     color: colors.white,
     fontFamily: 'Manrope_400Regular',
     fontSize: 16,
-    marginTop: 8,
+    marginTop: 12,
   },
   gateButton: {
     width: '100%',
-    maxWidth: 320,
-    height: 48,
+    maxWidth: 340,
+    height: 52,
     borderRadius: 12,
-    backgroundColor: colors.gold,
+    backgroundColor: colors.goldWarm,
     alignItems: 'center',
     justifyContent: 'center',
   },
   gateButtonText: {
     fontFamily: 'Manrope_500Medium',
     fontSize: 16,
+    letterSpacing: 0.3,
     color: colors.ink,
   },
-  emptyText: {
+  loadingDot: {
+    fontSize: 64,
+    color: colors.goldWarm,
+    lineHeight: 64,
+  },
+  heroMark: {
+    width: 180,
+    height: 180,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  glowRing: {
+    position: 'absolute',
+    borderRadius: 999,
+    backgroundColor: colors.goldWarm,
+  },
+  glowRingOuter: { width: 180, height: 180, opacity: 0.05 },
+  glowRingMid: { width: 132, height: 132, opacity: 0.09 },
+  glowRingInner: { width: 92, height: 92, opacity: 0.14 },
+  heroLogo: {
+    width: 64,
+    height: 64,
+    borderRadius: 14,
+  },
+  heartLabels: {
     flex: 1,
-    fontFamily: 'Manrope_400Regular',
-    fontSize: 15,
-    color: colors.textFaintest,
-    textAlign: 'center',
-    textAlignVertical: 'center',
+    marginRight: 16,
+  },
+  heartIconGhost: {
+    color: 'rgba(255, 255, 255, 0.35)',
+  },
+  pageContent: {
+    flex: 1,
+    backgroundColor: colors.dark,
   },
   emptyState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
+    gap: 16,
+    paddingHorizontal: 24,
+    paddingBottom: 80,
+  },
+  emptyCard: {
+    backgroundColor: colors.darkWarmLight,
+    borderRadius: 20,
     paddingHorizontal: 32,
+    paddingVertical: 48,
+    alignItems: 'center',
+    gap: 16,
   },
   emptyTitle: {
     fontFamily: 'Manrope_500Medium',
-    fontSize: 22,
+    fontSize: 26,
+    letterSpacing: -0.3,
     color: colors.white,
+    textAlign: 'center',
+    marginTop: 16,
   },
   emptySubtitle: {
     fontFamily: 'Manrope_400Regular',
-    fontSize: 14,
+    fontSize: 15,
+    lineHeight: 24,
     color: colors.textFainter,
     textAlign: 'center',
+    maxWidth: 300,
   },
   emptyButton: {
-    marginTop: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+    marginTop: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
     borderRadius: 26,
-    backgroundColor: colors.gold,
+    backgroundColor: colors.goldWarm,
   },
   emptyButtonText: {
     fontFamily: 'Manrope_500Medium',
     fontSize: 15,
+    letterSpacing: 0.2,
     color: colors.ink,
   },
   topScrim: {
@@ -432,39 +660,71 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 180,
+    height: 200,
   },
   counter: {
     position: 'absolute',
-    top: 24,
+    top: 32,
     alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
   },
   counterText: {
-    fontFamily: 'Manrope_500Medium',
-    fontSize: 13,
-    letterSpacing: 0.5,
-    color: 'rgba(255,255,255,0.8)',
+    fontFamily: 'Courier New',
+    fontSize: 12,
+    letterSpacing: 1,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.75)',
+  },
+  counterSeparator: {
+    fontFamily: 'Courier New',
+    fontSize: 10,
+    letterSpacing: 1,
+    color: 'rgba(255, 255, 255, 0.5)',
   },
   heartRow: {
     position: 'absolute',
-    left: 20,
-    right: 20,
-    bottom: 32,
+    left: 24,
+    right: 24,
+    bottom: 40,
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     justifyContent: 'space-between',
   },
-  heartCount: {
+  heartCountLabel: {
     fontFamily: 'Manrope_400Regular',
     fontSize: 15,
-    color: 'rgba(255,255,255,0.85)',
+    color: 'rgba(255, 255, 255, 0.88)',
+    lineHeight: 20,
+  },
+  heartRaters: {
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 13,
+    color: colors.goldWarm,
+    marginTop: 4,
+  },
+  heartButtonContainer: {
+    position: 'relative',
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  glowPulse: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.goldWarm,
   },
   heartIcon: {
-    fontSize: 44,
-    lineHeight: 44,
-    color: 'rgba(255,255,255,0.9)',
+    fontSize: 42,
+    lineHeight: 46,
+    color: 'rgba(255, 255, 255, 0.85)',
+    zIndex: 2,
   },
   heartIconActive: {
-    color: colors.gold,
+    color: colors.goldWarm,
   },
 });
