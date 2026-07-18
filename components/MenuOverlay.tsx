@@ -224,8 +224,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   title: {
-    fontFamily: 'Manrope_500Medium',
-    fontSize: 24,
+    fontFamily: 'PlayfairDisplay_500Medium',
+    fontSize: 26,
     color: colors.white,
   },
   closeButton: {
@@ -246,13 +246,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   closeText: {
-    fontFamily: 'Manrope_500Medium',
+    fontFamily: 'Poppins_500Medium',
     fontSize: 15,
     color: colors.white,
     marginLeft: 18,
   },
   contextLine: {
-    fontFamily: 'Manrope_400Regular',
+    fontFamily: 'Poppins_400Regular',
     fontSize: 16,
     color: colors.goldWarm,
     marginTop: 8,
@@ -327,18 +327,18 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   cardTitle: {
-    fontFamily: 'Manrope_500Medium',
+    fontFamily: 'Poppins_500Medium',
     fontSize: 18,
     color: colors.white,
   },
   cardSubtitle: {
-    fontFamily: 'Manrope_400Regular',
+    fontFamily: 'Poppins_400Regular',
     fontSize: 14,
     lineHeight: 20,
     color: colors.textFainter,
   },
   chevron: {
-    fontFamily: 'Manrope_400Regular',
+    fontFamily: 'Poppins_400Regular',
     fontSize: 28,
     color: colors.textFaintest,
     marginLeft: 4,
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   switchText: {
-    fontFamily: 'Manrope_400Regular',
+    fontFamily: 'Poppins_400Regular',
     fontSize: 15,
     color: colors.textFainter,
     textDecorationLine: 'underline',
@@ -363,12 +363,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   demoTitle: {
-    fontFamily: 'Manrope_500Medium',
+    fontFamily: 'Poppins_500Medium',
     fontSize: 18,
     color: colors.white,
   },
   demoNote: {
-    fontFamily: 'Manrope_400Regular',
+    fontFamily: 'Poppins_400Regular',
     fontSize: 15,
     lineHeight: 23,
     color: colors.textFainter,

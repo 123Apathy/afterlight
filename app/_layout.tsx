@@ -1,10 +1,11 @@
 import 'react-native-gesture-handler';
+import { useFonts } from '@expo-google-fonts/poppins';
+import { Poppins_300Light, Poppins_400Regular, Poppins_500Medium } from '@expo-google-fonts/poppins';
 import {
-  Manrope_300Light,
-  Manrope_400Regular,
-  Manrope_500Medium,
-  useFonts,
-} from '@expo-google-fonts/manrope';
+  PlayfairDisplay_500Medium,
+  PlayfairDisplay_600SemiBold,
+  PlayfairDisplay_500Medium_Italic,
+} from '@expo-google-fonts/playfair-display';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
@@ -38,9 +39,12 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    Manrope_300Light,
-    Manrope_400Regular,
-    Manrope_500Medium,
+    Poppins_300Light,
+    Poppins_400Regular,
+    Poppins_500Medium,
+    PlayfairDisplay_500Medium,
+    PlayfairDisplay_600SemiBold,
+    PlayfairDisplay_500Medium_Italic,
   });
 
   if (!fontsLoaded) {

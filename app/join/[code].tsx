@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   text: {
-    fontFamily: 'Manrope_400Regular',
+    fontFamily: 'Poppins_400Regular',
     fontSize: 16,
     color: colors.textFainter,
     textAlign: 'center',

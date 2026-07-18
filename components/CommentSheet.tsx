@@ -125,8 +125,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   title: {
-    fontFamily: 'Manrope_500Medium',
-    fontSize: 18,
+    fontFamily: 'PlayfairDisplay_500Medium',
+    fontSize: 20,
     color: colors.white,
   },
   close: {
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   empty: {
-    fontFamily: 'Manrope_400Regular',
+    fontFamily: 'Poppins_400Regular',
     fontSize: 14,
     lineHeight: 22,
     color: colors.textFainter,
@@ -159,12 +159,12 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   author: {
-    fontFamily: 'Manrope_500Medium',
+    fontFamily: 'Poppins_500Medium',
     fontSize: 14,
     color: colors.goldWarm,
   },
   text: {
-    fontFamily: 'Manrope_400Regular',
+    fontFamily: 'Poppins_400Regular',
     fontSize: 15,
     lineHeight: 21,
     color: colors.white,
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.09)',
     paddingHorizontal: 16,
     color: colors.white,
-    fontFamily: 'Manrope_400Regular',
+    fontFamily: 'Poppins_400Regular',
     fontSize: 15,
   },
   sendButton: {
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sendText: {
-    fontFamily: 'Manrope_500Medium',
+    fontFamily: 'Poppins_500Medium',
     fontSize: 15,
     color: colors.ink,
   },
