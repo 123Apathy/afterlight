@@ -19,6 +19,9 @@ export const colors = {
 export const images = {
   // The Afterlight horizon mark (transparent PNG, from brand/logo.html).
   logo: require('../assets/images/logo-mark.png'),
+  // Landing backdrop: golden-hour glow through cloud (Pexels #29150580,
+  // free/commercial, no attribution required). The "afterglow" the name means.
+  landingSky: require('../assets/images/landing-sky.jpg'),
 };
 
 export const copy = {

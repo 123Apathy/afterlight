@@ -314,21 +314,17 @@ function EmptyState({ onUpload }: { onUpload: () => void }) {
   );
 }
 
-// Cheap re-impl of the reference "blur-halo vignette": layered gradients +
-// concentric rings instead of a filter blur, so it costs nothing on mobile.
+// Landing/gate backdrop: the real golden-hour photograph, dimmed under a warm
+// dark scrim so it reads as depth behind the copy — not a bright sky fighting
+// white text. Scrim is darkest top & bottom (text zones), lets the glow through
+// the middle where the hero mark sits.
 function HorizonGlow() {
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <Image source={images.landingSky} style={StyleSheet.absoluteFill} resizeMode="cover" />
       <LinearGradient
-        colors={['#181310', '#261D17', '#171210']}
-        locations={[0, 0.45, 1]}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-      <LinearGradient
-        colors={['transparent', 'rgba(212, 169, 118, 0.07)', 'transparent']}
-        locations={[0.25, 0.5, 0.75]}
+        colors={['rgba(20, 16, 14, 0.92)', 'rgba(24, 19, 16, 0.62)', 'rgba(20, 16, 14, 0.95)']}
+        locations={[0, 0.5, 1]}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
         style={StyleSheet.absoluteFill}
@@ -472,6 +468,7 @@ const styles = StyleSheet.create({
   page: {
     flex: 1,
     backgroundColor: colors.dark,
+    overflow: 'hidden', // clip the full-res backdrop image to the viewport
   },
   headerOverlay: {
     position: 'absolute',
@@ -602,6 +599,7 @@ const styles = StyleSheet.create({
   pageContent: {
     flex: 1,
     backgroundColor: colors.dark,
+    overflow: 'hidden',
   },
   emptyState: {
     flex: 1,
