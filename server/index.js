@@ -322,6 +322,32 @@ app.delete('/api/photos/:photoId/favorite', async (req, res, next) => {
   }
 });
 
+// --- Tribute intake ---
+app.post('/api/projects/:projectId/tribute', async (req, res, next) => {
+  try {
+    const { respondent, answers } = req.body || {};
+    if (!respondent || typeof respondent !== 'string' || !respondent.trim()) {
+      return res.status(400).json({ error: 'respondent is required' });
+    }
+    if (!Array.isArray(answers) || answers.length === 0) {
+      return res.status(400).json({ error: 'answers is required' });
+    }
+
+    const { error } = await supabase.from('afterlight_tribute_responses').insert({
+      project_id: req.params.projectId,
+      respondent: respondent.trim(),
+      answers,
+    });
+    if (error) {
+      if (error.code === '23503') return res.status(404).json({ error: 'project not found' });
+      throw Object.assign(new Error(error.message), { status: 500 });
+    }
+    res.status(201).json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // --- Comments ---
 
 app.post('/api/photos/:photoId/comments', async (req, res, next) => {

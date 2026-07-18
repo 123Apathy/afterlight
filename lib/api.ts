@@ -125,6 +125,13 @@ export const api = {
 
   deletePhoto: (photoId: string) => request<void>(`/api/photos/${photoId}`, { method: 'DELETE' }),
 
+  submitTribute: (projectId: string, respondent: string, answers: { question: string; answer: string }[]) =>
+    request<{ ok: true }>(`/api/projects/${projectId}/tribute`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ respondent, answers }),
+    }),
+
   favoritePhoto: (photoId: string, rater: string) =>
     request<Rating>(`/api/photos/${photoId}/favorite`, {
       method: 'POST',

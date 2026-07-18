@@ -1,4 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -20,6 +21,7 @@ type MenuOverlayProps = {
 };
 
 export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
+  const router = useRouter();
   const reduceMotion = useReducedMotion();
   const progress = useSharedValue(0);
   const { projectId, projectName, clearProject, remember } = useActiveProject();
@@ -147,6 +149,15 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
               subtitle="The photos your family loved the most"
               onPress={handleSeeFavourites}
             />
+            <ActionCard
+              icon={<IconStory />}
+              title="Share your memories"
+              subtitle="Answer a few gentle questions for the tribute"
+              onPress={() => {
+                onClose();
+                router.push('/tribute');
+              }}
+            />
           </View>
 
           {!!projectId && (
@@ -203,6 +214,17 @@ function IconInvite() {
 
 function IconHeart() {
   return <Text style={styles.iconHeart}>♥</Text>;
+}
+
+function IconStory() {
+  // Lines of writing — a story/note.
+  return (
+    <View style={styles.iconInner}>
+      <View style={[styles.storyLine, { width: 26 }]} />
+      <View style={[styles.storyLine, { width: 26 }]} />
+      <View style={[styles.storyLine, { width: 16 }]} />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -321,6 +343,12 @@ const styles = StyleSheet.create({
     fontSize: 26,
     lineHeight: 30,
     color: colors.heart,
+  },
+  storyLine: {
+    height: 2.6,
+    borderRadius: 2,
+    backgroundColor: colors.goldWarm,
+    marginVertical: 2.5,
   },
   cardText: {
     flex: 1,
