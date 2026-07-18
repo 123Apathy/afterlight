@@ -1,3 +1,4 @@
+import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useState } from 'react';
 import { Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, {
@@ -25,6 +26,7 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
   const [copied, setCopied] = useState(false);
   const [creatingProject, setCreatingProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     const duration = reduceMotion ? 0 : visible ? 220 : 180;
@@ -81,6 +83,33 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         window.alert("Couldn't create the project. Check your connection and try again.");
       }
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!projectId) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      quality: 0.85,
+    });
+    if (result.canceled || !result.assets.length) return;
+    setUploading(true);
+    try {
+      await api.uploadPhotos(
+        projectId,
+        result.assets.map((asset, i) => ({
+          uri: asset.uri,
+          name: asset.fileName || `photo-${Date.now()}-${i}.jpg`,
+          type: asset.mimeType || 'image/jpeg',
+        }))
+      );
+    } catch {
+      if (typeof window !== 'undefined') {
+        window.alert('Upload failed — those photos were NOT saved. Check your connection and try again.');
+      }
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -149,6 +178,15 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
           </PressableScale>
         )}
       </View>
+
+      {!!projectId && (
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>PHOTOS</Text>
+          <PressableScale style={styles.rowButton} onPress={handleUpload} scaleTo={0.97}>
+            <Text style={styles.rowButtonText}>{uploading ? 'Uploading...' : '+ Upload photos'}</Text>
+          </PressableScale>
+        </View>
+      )}
 
       {!!projectId && (
         <View style={styles.section}>

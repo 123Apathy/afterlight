@@ -78,6 +78,17 @@ export function photoUrl(photo: Photo) {
   return photo.url;
 }
 
+// Favorites reuse the ratings table as a boolean (a row = hearted); there is
+// no tier system anymore. ratingCount doubles as the heart count.
+export function isFavoritedBy(photo: Photo, rater: string) {
+  const name = rater.trim().toLowerCase();
+  return photo.ratings.some((r) => r.rater.toLowerCase() === name);
+}
+
+export function heartCount(photo: Photo) {
+  return photo.ratingCount;
+}
+
 export function inviteUrl(project: Project) {
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   return `${origin}/join/${project.inviteCode}`;
@@ -112,12 +123,15 @@ export const api = {
 
   deletePhoto: (photoId: string) => request<void>(`/api/photos/${photoId}`, { method: 'DELETE' }),
 
-  ratePhoto: (photoId: string, rater: string, score: number) =>
-    request<Rating>(`/api/photos/${photoId}/rate`, {
+  favoritePhoto: (photoId: string, rater: string) =>
+    request<Rating>(`/api/photos/${photoId}/favorite`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rater, score }),
+      body: JSON.stringify({ rater }),
     }),
+
+  unfavoritePhoto: (photoId: string, rater: string) =>
+    request<void>(`/api/photos/${photoId}/favorite?rater=${encodeURIComponent(rater)}`, { method: 'DELETE' }),
 
   addComment: (photoId: string, author: string, text: string) =>
     request<Comment>(`/api/photos/${photoId}/comments`, {

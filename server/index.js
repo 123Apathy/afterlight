@@ -275,23 +275,21 @@ app.delete('/api/photos/:photoId', async (req, res, next) => {
   }
 });
 
-// --- Ratings (one per rater per photo, upsert) ---
+// --- Favorites (heart/unheart, one per rater per photo) ---
+// Reuses the ratings table as a boolean signal: a row means "hearted by
+// rater", score is always 1. No tier system anymore.
 
-app.post('/api/photos/:photoId/rate', async (req, res, next) => {
+app.post('/api/photos/:photoId/favorite', async (req, res, next) => {
   try {
-    const { rater, score } = req.body || {};
+    const { rater } = req.body || {};
     if (!rater || typeof rater !== 'string' || !rater.trim()) {
       return res.status(400).json({ error: 'rater is required' });
-    }
-    const numericScore = Number(score);
-    if (!Number.isFinite(numericScore) || numericScore < 1 || numericScore > 5) {
-      return res.status(400).json({ error: 'score must be 1-5' });
     }
 
     const { data, error } = await supabase
       .from('afterlight_ratings')
       .upsert(
-        { photo_id: req.params.photoId, rater: rater.trim(), score: numericScore, updated_at: new Date().toISOString() },
+        { photo_id: req.params.photoId, rater: rater.trim(), score: 1, updated_at: new Date().toISOString() },
         { onConflict: 'photo_id,rater' }
       )
       .select()
@@ -302,6 +300,23 @@ app.post('/api/photos/:photoId/rate', async (req, res, next) => {
       throw Object.assign(new Error(error.message), { status: 500 });
     }
     res.status(201).json(mapRating(data));
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.delete('/api/photos/:photoId/favorite', async (req, res, next) => {
+  try {
+    const rater = String(req.query.rater || '').trim();
+    if (!rater) return res.status(400).json({ error: 'rater is required' });
+
+    const { error } = await supabase
+      .from('afterlight_ratings')
+      .delete()
+      .eq('photo_id', req.params.photoId)
+      .eq('rater', rater);
+    assertOk(error);
+    res.status(204).end();
   } catch (err) {
     next(err);
   }
@@ -486,20 +501,6 @@ app.delete('/api/kanban/notes/:noteId', async (req, res, next) => {
 
 // --- Results report (self-contained HTML, print-to-PDF friendly) ---
 
-const REPORT_TIERS = [
-  { key: 'S', score: 5, label: 'Must use', color: '#E4B778' },
-  { key: 'A', score: 4, label: 'Great', color: '#CBAE85' },
-  { key: 'B', score: 3, label: 'Good', color: '#A99A8C' },
-  { key: 'C', score: 2, label: 'Maybe', color: '#8A8078' },
-  { key: 'D', score: 1, label: 'Skip', color: '#6B6560' },
-];
-
-function tierForAvg(avg) {
-  if (avg == null) return null;
-  const rounded = Math.max(1, Math.min(5, Math.round(avg)));
-  return REPORT_TIERS.find((t) => t.score === rounded) || null;
-}
-
 function esc(text) {
   return String(text ?? '')
     .replace(/&/g, '&amp;')
@@ -542,20 +543,15 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
     const enriched = await Promise.all(
       photos.map(async (photo) => {
         const photoRatings = (ratings || []).filter((r) => r.photo_id === photo.id);
-        const avg = photoRatings.length
-          ? photoRatings.reduce((sum, r) => sum + r.score, 0) / photoRatings.length
-          : null;
         return {
           url: await signPhotoUrl(photo.storage_path, REPORT_IMAGE_TTL_SECONDS),
           name: photo.original_name,
-          avg,
-          tier: tierForAvg(avg),
-          ratingCount: photoRatings.length,
+          favoritedBy: photoRatings.map((r) => r.rater),
           comments: (comments || []).filter((c) => c.photo_id === photo.id),
         };
       })
     );
-    enriched.sort((a, b) => (b.avg ?? -1) - (a.avg ?? -1));
+    enriched.sort((a, b) => b.favoritedBy.length - a.favoritedBy.length);
 
     const { data: columns, error: columnsError } = await supabase
       .from('afterlight_kanban_columns')
@@ -571,12 +567,12 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
 
     const photoCards = enriched
       .map((p) => {
-        const badge = p.tier
-          ? `<span class="badge" style="background:${p.tier.color}">${p.tier.key}</span>`
-          : '<span class="badge badge-none">—</span>';
-        const meta = p.avg != null
-          ? `${p.tier.label} · ${p.ratingCount} rating${p.ratingCount === 1 ? '' : 's'}`
-          : 'Not yet rated';
+        const favCount = p.favoritedBy.length;
+        const badge = favCount > 0 ? `<span class="badge">&hearts; ${favCount}</span>` : '';
+        const meta =
+          favCount > 0
+            ? `Favourited by ${p.favoritedBy.map(esc).join(', ')}`
+            : 'Not favourited yet';
         const commentHtml = p.comments.length
           ? `<ul class="comments">${p.comments
               .map((c) => `<li><strong>${esc(c.author)}</strong> ${esc(c.body)}</li>`)
@@ -624,8 +620,7 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
   .photo-card { background: rgba(255,255,255,0.04); border-radius: 12px; overflow: hidden; break-inside: avoid; }
   .photo-wrap { position: relative; }
   .photo-wrap img { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; }
-  .badge { position: absolute; top: 10px; left: 10px; width: 30px; height: 30px; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #1A1613; font-family: 'Manrope', sans-serif; font-size: 14px; }
-  .badge-none { background: rgba(255,255,255,0.25); color: #fff; }
+  .badge { position: absolute; top: 10px; left: 10px; height: 28px; padding: 0 10px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #1A1613; background: #E4B778; font-family: 'Manrope', sans-serif; font-size: 13px; }
   .photo-meta { padding: 10px 14px; font-size: 13px; color: rgba(255,255,255,0.6); font-family: 'Manrope', sans-serif; }
   .photo-missing { aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.4); font-family: 'Manrope', sans-serif; font-size: 13px; background: rgba(255,255,255,0.03); }
   .print-tip { margin-top: 10px; font-size: 13px; color: rgba(255,255,255,0.45); font-family: 'Manrope', sans-serif; }
@@ -665,12 +660,12 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
     </svg>
     <div>
       <h1>${esc(projectRow.name)}</h1>
-      <div class="sub">Photo results &amp; arrangements</div>
+      <div class="sub">Favourite photos &amp; arrangements</div>
     </div>
   </header>
   <p class="print-tip">Tip: press Ctrl+P (or Share &rarr; Print on your phone) and save as PDF for a permanent copy.</p>
 
-  <h2>Photos, best first</h2>
+  <h2>Photos, most favourited first</h2>
   <div class="grid">${photoCards || '<p class="empty">No photos uploaded yet.</p>'}</div>
 
   <h2>Arrangements</h2>
