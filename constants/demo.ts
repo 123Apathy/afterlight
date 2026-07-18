@@ -7,17 +7,19 @@ export const DEMO = process.env.EXPO_PUBLIC_DEMO === '1';
 
 type Seed = { src: number; favouritedBy?: string[]; comments?: { author: string; text: string }[] };
 
+// Placeholder imagery for the offline preview — a bundled, non-PII image so the
+// demo build never carries real family photos (those stay out of the repo).
+const PLACEHOLDER = require('../assets/images/landing-sky.jpg');
+
 const seeds: Seed[] = [
-  { src: require('../assets/demo/photo-01.jpg'), favouritedBy: ['Deon', 'Mom'],
-    comments: [{ author: 'Deon', text: 'Ouma with the little one — summer at the farm.' }] },
-  { src: require('../assets/demo/photo-02.jpg'), favouritedBy: ['Keegan'] },
-  { src: require('../assets/demo/photo-03.jpg') },
-  { src: require('../assets/demo/photo-04.jpg'), favouritedBy: ['Deon', 'Mom', 'Keegan'],
-    comments: [{ author: 'Mom', text: 'One of my favourites of her.' }] },
-  { src: require('../assets/demo/photo-05.jpg') },
-  { src: require('../assets/demo/photo-06.jpg'), favouritedBy: ['Mom'] },
-  { src: require('../assets/demo/photo-07.jpg') },
-  { src: require('../assets/demo/photo-08.jpg'), favouritedBy: ['Deon'] },
+  { src: PLACEHOLDER, favouritedBy: ['Deon', 'Mom'],
+    comments: [{ author: 'Deon', text: 'A favourite moment — summer at the farm.' }] },
+  { src: PLACEHOLDER, favouritedBy: ['Keegan'] },
+  { src: PLACEHOLDER },
+  { src: PLACEHOLDER, favouritedBy: ['Deon', 'Mom', 'Keegan'],
+    comments: [{ author: 'Mom', text: 'One of my favourites of them.' }] },
+  { src: PLACEHOLDER },
+  { src: PLACEHOLDER, favouritedBy: ['Mom'] },
 ];
 
 export const DEMO_PHOTOS: Photo[] = seeds.map((s, i) => {

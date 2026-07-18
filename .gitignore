@@ -48,3 +48,8 @@ dist/
 dist-inlined/
 .verify-shots/
 metro.log
+
+# demo/preview real photos — never commit family PII
+assets/demo/
+# built web export
+dist/
