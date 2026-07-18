@@ -140,7 +140,6 @@ export default function SwipeScreen() {
               <Image source={images.logo} style={styles.logo} resizeMode="contain" />
               <Text style={styles.brandText}>Afterlight</Text>
             </View>
-            <HamburgerButton onPress={() => setMenuOpen(true)} />
           </View>
         </View>
         <View style={styles.gate}>

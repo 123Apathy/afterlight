@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useState } from 'react';
-import { Platform, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -22,11 +22,9 @@ type MenuOverlayProps = {
 export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
   const reduceMotion = useReducedMotion();
   const progress = useSharedValue(0);
-  const { projectId, projectName, setProject, clearProject } = useActiveProject();
+  const { projectId, projectName, clearProject } = useActiveProject();
   const [project, setProjectDetails] = useState<Project | null>(null);
   const [copied, setCopied] = useState(false);
-  const [creatingProject, setCreatingProject] = useState(false);
-  const [newProjectName, setNewProjectName] = useState('');
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
@@ -51,39 +49,17 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
 
   const handleShare = async () => {
     if (!project) {
-      if (typeof window !== 'undefined') {
-        window.alert("Couldn't load the invite link. Check your connection, then close and reopen the menu.");
-      }
+      window.alert("We couldn't get the link just now. Please close this, check your internet, and try again.");
       return;
     }
     const url = inviteUrl(project);
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
+      setTimeout(() => setCopied(false), 2600);
     } catch {
       // navigator.clipboard needs a secure origin — fall back to a copyable prompt.
-      if (typeof window !== 'undefined') {
-        window.prompt('Copy this invite link:', url);
-      }
-    }
-  };
-
-  const handleCreateProject = async () => {
-    if (!newProjectName.trim()) {
-      setCreatingProject(false);
-      return;
-    }
-    try {
-      const created = await api.createProject(newProjectName.trim());
-      setProject(created);
-      setProjectDetails(created);
-      setNewProjectName('');
-      setCreatingProject(false);
-    } catch {
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        window.alert("Couldn't create the project. Check your connection and try again.");
-      }
+      window.prompt('Copy this link and send it to your family:', url);
     }
   };
 
@@ -106,19 +82,15 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
         }))
       );
     } catch {
-      if (typeof window !== 'undefined') {
-        window.alert('Upload failed — those photos were NOT saved. Check your connection and try again.');
-      }
+      window.alert('Those photos were not added. Please check your internet and try again.');
     } finally {
       setUploading(false);
     }
   };
 
-  const handleDownloadReport = () => {
+  const handleSeeFavourites = () => {
     if (!project) {
-      if (typeof window !== 'undefined') {
-        window.alert("Couldn't load the report link. Check your connection, then close and reopen the menu.");
-      }
+      window.alert("We couldn't open the favourites just now. Please close this, check your internet, and try again.");
       return;
     }
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -130,104 +102,101 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
     <Animated.View style={[styles.overlay, overlayStyle]}>
       <View style={styles.header}>
         <Text style={styles.title}>Menu</Text>
-        <PressableScale onPress={onClose} hitSlop={12} style={styles.closeButton}>
+        <PressableScale onPress={onClose} style={styles.closeButton} scaleTo={0.94}>
           <View style={[styles.closeLine, { transform: [{ rotate: '45deg' }] }]} />
           <View style={[styles.closeLine, { transform: [{ rotate: '-45deg' }] }]} />
+          <Text style={styles.closeText}>Close</Text>
         </PressableScale>
       </View>
 
-      {DEMO && (
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>PREVIEW BUILD</Text>
+      {DEMO ? (
+        <View style={styles.demoCard}>
+          <Text style={styles.demoTitle}>This is a preview</Text>
           <Text style={styles.demoNote}>
-            You&rsquo;re browsing a local preview with sample photos. Favourites and comments
-            you add here stay on this device. Uploading, invites, and the results report need
-            the live server, which isn&rsquo;t part of this preview.
+            You&rsquo;re looking at a sample with a few photos. Swiping, hearts, and comments all
+            work. Adding your own photos and inviting family come with the full version.
           </Text>
         </View>
-      )}
+      ) : (
+        <>
+          {!!projectName && <Text style={styles.contextLine}>{projectName}</Text>}
 
-      {!DEMO && (
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>PROJECT</Text>
-        <Text style={styles.raterName}>{projectName || 'No project selected'}</Text>
-
-        {creatingProject ? (
-          <View style={styles.inlineForm}>
-            <TextInput
-              value={newProjectName}
-              onChangeText={setNewProjectName}
-              placeholder="Project name..."
-              placeholderTextColor={colors.textFaintest}
-              style={styles.input}
-              autoFocus
-              onSubmitEditing={handleCreateProject}
+          <View style={styles.cards}>
+            <ActionCard
+              icon={<IconAdd />}
+              title={uploading ? 'Adding photos…' : 'Add photos'}
+              subtitle="Choose pictures from this phone"
+              onPress={handleUpload}
             />
-            <View style={styles.inlineFormButtons}>
-              <PressableScale
-                onPress={() => {
-                  setCreatingProject(false);
-                  setNewProjectName('');
-                }}
-                style={styles.rowButtonSecondary}
-                scaleTo={0.97}
-              >
-                <Text style={styles.rowButtonSecondaryText}>Cancel</Text>
-              </PressableScale>
-              <PressableScale onPress={handleCreateProject} style={styles.rowButtonHalf} scaleTo={0.97}>
-                <Text style={styles.rowButtonText}>Create</Text>
-              </PressableScale>
-            </View>
+            <ActionCard
+              icon={<IconInvite />}
+              title="Invite family"
+              subtitle={copied ? 'Link copied — now paste it into a message' : 'Send a link so they can add their photos too'}
+              onPress={handleShare}
+              highlight={copied}
+            />
+            <ActionCard
+              icon={<IconHeart />}
+              title="See everyone's favourites"
+              subtitle="The photos your family loved the most"
+              onPress={handleSeeFavourites}
+            />
           </View>
-        ) : (
-          <PressableScale style={styles.rowButton} onPress={() => setCreatingProject(true)} scaleTo={0.97}>
-            <Text style={styles.rowButtonText}>+ New project</Text>
-          </PressableScale>
-        )}
 
-        {!!projectId && (
-          <PressableScale style={styles.rowButton} onPress={clearProject} scaleTo={0.97}>
-            <Text style={styles.rowButtonText}>Leave this project</Text>
-          </PressableScale>
-        )}
-      </View>
+          {!!projectId && (
+            <PressableScale onPress={clearProject} style={styles.switchLink} scaleTo={0.98}>
+              <Text style={styles.switchText}>Switch to a different memorial</Text>
+            </PressableScale>
+          )}
+        </>
       )}
-
-      {!DEMO && !!projectId && (
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>PHOTOS</Text>
-          <PressableScale style={styles.rowButton} onPress={handleUpload} scaleTo={0.97}>
-            <Text style={styles.rowButtonText}>{uploading ? 'Uploading...' : '+ Upload photos'}</Text>
-          </PressableScale>
-        </View>
-      )}
-
-      {!!projectId && (
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>INVITE</Text>
-          <PressableScale style={styles.rowButton} onPress={handleShare} scaleTo={0.97}>
-            <Text style={styles.rowButtonText}>{copied ? 'Link copied!' : 'Copy invite link'}</Text>
-          </PressableScale>
-        </View>
-      )}
-
-      {!!projectId && (
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>RESULTS</Text>
-          <PressableScale style={styles.rowButton} onPress={handleDownloadReport} scaleTo={0.97}>
-            <Text style={styles.rowButtonText}>Open results report</Text>
-          </PressableScale>
-        </View>
-      )}
-
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>BILLING</Text>
-        <View style={styles.rowButtonDisabled}>
-          <Text style={styles.rowButtonDisabledText}>Coming soon</Text>
-        </View>
-      </View>
     </Animated.View>
   );
+}
+
+type ActionCardProps = {
+  icon: React.ReactNode;
+  title: string;
+  subtitle: string;
+  onPress: () => void;
+  highlight?: boolean;
+};
+
+function ActionCard({ icon, title, subtitle, onPress, highlight }: ActionCardProps) {
+  return (
+    <PressableScale onPress={onPress} style={[styles.card, highlight && styles.cardHighlight]} scaleTo={0.98}>
+      <View style={styles.iconBox}>{icon}</View>
+      <View style={styles.cardText}>
+        <Text style={styles.cardTitle}>{title}</Text>
+        <Text style={styles.cardSubtitle}>{subtitle}</Text>
+      </View>
+      <Text style={styles.chevron}>›</Text>
+    </PressableScale>
+  );
+}
+
+// Icons drawn with plain Views — no icon library, no emoji.
+function IconAdd() {
+  return (
+    <View style={styles.iconInner}>
+      <View style={styles.plusBar} />
+      <View style={[styles.plusBar, { transform: [{ rotate: '90deg' }] }]} />
+    </View>
+  );
+}
+
+function IconInvite() {
+  // Envelope: a bordered rectangle with a downward triangular flap.
+  return (
+    <View style={styles.iconInner}>
+      <View style={styles.envBox} />
+      <View style={styles.envFlap} />
+    </View>
+  );
+}
+
+function IconHeart() {
+  return <Text style={styles.iconHeart}>♥</Text>;
 }
 
 const styles = StyleSheet.create({
@@ -239,112 +208,163 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: colors.dark,
     zIndex: 100,
-    paddingTop: 48,
+    paddingTop: 44,
     paddingHorizontal: 20,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 8,
   },
   title: {
     fontFamily: 'Manrope_500Medium',
-    fontSize: 20,
+    fontSize: 24,
     color: colors.white,
   },
   closeButton: {
-    width: 24,
-    height: 24,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 8,
+    height: 44,
+    paddingHorizontal: 16,
+    borderRadius: 22,
+    backgroundColor: colors.glassMedium,
   },
   closeLine: {
     position: 'absolute',
-    width: 20,
-    height: 1.5,
+    left: 16,
+    width: 14,
+    height: 2,
+    borderRadius: 1,
     backgroundColor: colors.white,
   },
-  section: {
-    marginTop: 32,
+  closeText: {
+    fontFamily: 'Manrope_500Medium',
+    fontSize: 15,
+    color: colors.white,
+    marginLeft: 18,
+  },
+  contextLine: {
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 16,
+    color: colors.goldWarm,
+    marginTop: 8,
+    marginBottom: 20,
+  },
+  cards: {
+    gap: 14,
+  },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    minHeight: 84,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 18,
+    backgroundColor: colors.darkWarmLight,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+  cardHighlight: {
+    borderColor: colors.goldWarm,
+    backgroundColor: 'rgba(212, 169, 118, 0.14)',
+  },
+  iconBox: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: 'rgba(212, 169, 118, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconInner: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  plusBar: {
+    position: 'absolute',
+    width: 24,
+    height: 3.5,
+    borderRadius: 2,
+    backgroundColor: colors.goldWarm,
+  },
+  envBox: {
+    width: 28,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2.4,
+    borderColor: colors.goldWarm,
+  },
+  envFlap: {
+    position: 'absolute',
+    top: 4,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 12,
+    borderRightWidth: 12,
+    borderTopWidth: 9,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: colors.goldWarm,
+  },
+  iconHeart: {
+    fontSize: 26,
+    lineHeight: 30,
+    color: colors.heart,
+  },
+  cardText: {
+    flex: 1,
+    gap: 3,
+  },
+  cardTitle: {
+    fontFamily: 'Manrope_500Medium',
+    fontSize: 18,
+    color: colors.white,
+  },
+  cardSubtitle: {
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textFainter,
+  },
+  chevron: {
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 28,
+    color: colors.textFaintest,
+    marginLeft: 4,
+  },
+  switchLink: {
+    marginTop: 28,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  switchText: {
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 15,
+    color: colors.textFainter,
+    textDecorationLine: 'underline',
+  },
+  demoCard: {
+    marginTop: 16,
+    padding: 20,
+    borderRadius: 18,
+    backgroundColor: colors.darkWarmLight,
     gap: 10,
   },
-  sectionLabel: {
+  demoTitle: {
     fontFamily: 'Manrope_500Medium',
-    fontSize: 11,
-    letterSpacing: 1,
-    color: colors.textFaintest,
-  },
-  raterName: {
-    fontFamily: 'Manrope_400Regular',
-    fontSize: 22,
+    fontSize: 18,
     color: colors.white,
-    marginBottom: 4,
   },
   demoNote: {
     fontFamily: 'Manrope_400Regular',
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 23,
     color: colors.textFainter,
-  },
-  rowButton: {
-    height: 46,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rowButtonHalf: {
-    flex: 1,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: colors.gold,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rowButtonText: {
-    fontFamily: 'Manrope_500Medium',
-    fontSize: 15,
-    color: colors.gold,
-  },
-  rowButtonSecondary: {
-    flex: 1,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rowButtonSecondaryText: {
-    fontFamily: 'Manrope_400Regular',
-    fontSize: 15,
-    color: colors.textFainter,
-  },
-  rowButtonDisabled: {
-    height: 46,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rowButtonDisabledText: {
-    fontFamily: 'Manrope_400Regular',
-    fontSize: 15,
-    color: colors.textFaintest,
-  },
-  inlineForm: {
-    gap: 8,
-  },
-  input: {
-    height: 46,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    paddingHorizontal: 16,
-    color: colors.white,
-    fontFamily: 'Manrope_400Regular',
-    fontSize: 15,
-  },
-  inlineFormButtons: {
-    flexDirection: 'row',
-    gap: 8,
   },
 });
