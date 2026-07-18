@@ -9,9 +9,10 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import PressableScale from '../components/PressableScale';
-import { colors } from '../constants/theme';
+import { colors, images } from '../constants/theme';
 import { fillName, tributeCopy, tributeQuestions } from '../constants/tribute';
 import { api } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
@@ -74,16 +75,12 @@ export default function TributeScreen() {
 
   return (
     <View style={styles.page}>
+      <Image source={images.landingSky} style={StyleSheet.absoluteFill} resizeMode="cover" />
       <LinearGradient
-        colors={[colors.darkWarm, colors.dark]}
+        colors={['rgba(18, 14, 12, 0.94)', 'rgba(22, 17, 14, 0.86)', 'rgba(15, 12, 10, 0.96)']}
+        locations={[0, 0.5, 1]}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-      <LinearGradient
-        colors={['rgba(212, 169, 118, 0.06)', 'transparent']}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 0.5 }}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
@@ -93,7 +90,7 @@ export default function TributeScreen() {
         style={{ flex: 1 }}
       >
         {phase === 'intro' && (
-          <ScrollView contentContainerStyle={styles.scroll}>
+          <ScrollView contentContainerStyle={styles.scrollCenter}>
             <Text style={styles.overline}>{fillName(tributeCopy.overline, name).toUpperCase()}</Text>
             <Ornament />
             <Text style={styles.title}>{tributeCopy.introTitle}</Text>
@@ -121,46 +118,54 @@ export default function TributeScreen() {
         )}
 
         {phase === 'questions' && (
-          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-            <View style={styles.progressHeader}>
-              <Text style={styles.progressText}>
-                {index + 1} of {total}
-              </Text>
-              <PressableScale onPress={goHome} hitSlop={10} scaleTo={0.95}>
-                <Text style={styles.progressClose}>Close</Text>
-              </PressableScale>
-            </View>
-            <View style={styles.progressTrack}>
-              <View style={[styles.progressFill, { width: `${((index + 1) / total) * 100}%` }]} />
-            </View>
-
-            <Text style={styles.question}>{questions[index]}</Text>
-
-            <TextInput
-              value={answers[index]}
-              onChangeText={setAnswer}
-              placeholder="Write as much or as little as you like…"
-              placeholderTextColor={colors.textFaintest}
-              style={styles.answerInput}
-              multiline
-              textAlignVertical="top"
-            />
-
-            <View style={styles.qButtons}>
-              <PressableScale style={styles.skipButton} onPress={advance} scaleTo={0.97}>
-                <Text style={styles.skipText}>Skip</Text>
-              </PressableScale>
-              <PressableScale style={styles.nextButton} onPress={advance} scaleTo={0.97}>
-                <Text style={styles.nextText}>{index < total - 1 ? 'Next' : 'Finish'}</Text>
-              </PressableScale>
+          <View style={styles.qPage}>
+            <View style={styles.progressWrap}>
+              <View style={styles.progressHeader}>
+                <Text style={styles.progressText}>
+                  {index + 1} of {total}
+                </Text>
+                <PressableScale onPress={goHome} hitSlop={10} scaleTo={0.95}>
+                  <Text style={styles.progressClose}>Close</Text>
+                </PressableScale>
+              </View>
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: `${((index + 1) / total) * 100}%` }]} />
+              </View>
             </View>
 
-            {index > 0 && (
-              <PressableScale style={styles.textLink} onPress={() => setIndex(index - 1)} scaleTo={0.98}>
-                <Text style={styles.textLinkLabel}>Back</Text>
-              </PressableScale>
-            )}
-          </ScrollView>
+            <ScrollView
+              contentContainerStyle={styles.qScroll}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={styles.question}>{questions[index]}</Text>
+
+              <TextInput
+                value={answers[index]}
+                onChangeText={setAnswer}
+                placeholder="Write as much or as little as you like…"
+                placeholderTextColor={colors.textFaintest}
+                style={styles.answerInput}
+                multiline
+                textAlignVertical="top"
+              />
+
+              <View style={styles.qButtons}>
+                <PressableScale style={styles.skipButton} onPress={advance} scaleTo={0.97}>
+                  <Text style={styles.skipText}>Skip</Text>
+                </PressableScale>
+                <PressableScale style={styles.nextButton} onPress={advance} scaleTo={0.97}>
+                  <Text style={styles.nextText}>{index < total - 1 ? 'Next' : 'Finish'}</Text>
+                </PressableScale>
+              </View>
+
+              {index > 0 && (
+                <PressableScale style={styles.textLink} onPress={() => setIndex(index - 1)} scaleTo={0.98}>
+                  <Text style={styles.textLinkLabel}>Back</Text>
+                </PressableScale>
+              )}
+            </ScrollView>
+          </View>
         )}
 
         {phase === 'thanks' && (
@@ -191,20 +196,26 @@ function Ornament() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.dark },
-  scroll: {
-    flexGrow: 1,
-    paddingHorizontal: 28,
-    paddingTop: 72,
-    paddingBottom: 56,
-    alignItems: 'center',
-  },
+  page: { flex: 1, backgroundColor: colors.dark, overflow: 'hidden' },
   scrollCenter: {
     flexGrow: 1,
-    paddingHorizontal: 28,
+    paddingHorizontal: 30,
     paddingVertical: 72,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  qPage: {
+    flex: 1,
+    paddingTop: 60,
+    paddingHorizontal: 28,
+  },
+  progressWrap: {
+    marginBottom: 8,
+  },
+  qScroll: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingBottom: 40,
   },
   overline: {
     fontFamily: 'Poppins_400Regular',

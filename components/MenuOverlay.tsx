@@ -1,7 +1,8 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -9,7 +10,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { colors } from '../constants/theme';
+import { colors, images } from '../constants/theme';
 import { DEMO } from '../constants/demo';
 import { API_BASE, api, inviteUrl, type Project } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
@@ -108,6 +109,15 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
 
   return (
     <Animated.View style={[styles.overlay, overlayStyle]}>
+      <Image source={images.landingSky} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      <LinearGradient
+        colors={['rgba(18, 14, 12, 0.95)', 'rgba(22, 17, 14, 0.9)', 'rgba(15, 12, 10, 0.97)']}
+        locations={[0, 0.5, 1]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
       <View style={styles.header}>
         <Text style={styles.title}>Menu</Text>
         <PressableScale onPress={onClose} style={styles.closeButton} scaleTo={0.94}>
@@ -235,6 +245,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: colors.dark,
+    overflow: 'hidden',
     zIndex: 100,
     paddingTop: 44,
     paddingHorizontal: 20,
@@ -291,9 +302,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 16,
     borderRadius: 18,
-    backgroundColor: colors.darkWarmLight,
+    backgroundColor: 'rgba(42, 35, 33, 0.82)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(212, 169, 118, 0.14)',
   },
   cardHighlight: {
     borderColor: colors.goldWarm,
