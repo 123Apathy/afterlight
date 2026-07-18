@@ -362,23 +362,60 @@ type PhotoDeckProps = {
 };
 
 function PhotoDeck({ photos, width, height, raterName, onToggleFavorite, onDoubleTap, reduceMotion }: PhotoDeckProps) {
+  const scrollRef = useRef<ScrollView>(null);
+  const [index, setIndex] = useState(0);
+
+  const goTo = (next: number) => {
+    const clamped = Math.max(0, Math.min(photos.length - 1, next));
+    scrollRef.current?.scrollTo({ x: clamped * width, animated: true });
+    setIndex(clamped);
+  };
+
   return (
-    <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={StyleSheet.absoluteFill}>
-      {photos.map((photo, index) => (
-        <PhotoSlide
-          key={photo.id}
-          photo={photo}
-          index={index}
-          total={photos.length}
-          width={width}
-          height={height}
-          raterName={raterName}
-          onToggleFavorite={onToggleFavorite}
-          onDoubleTap={onDoubleTap}
-          reduceMotion={reduceMotion}
-        />
-      ))}
-    </ScrollView>
+    <View style={StyleSheet.absoluteFill}>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        style={StyleSheet.absoluteFill}
+        onMomentumScrollEnd={(e) => setIndex(Math.round(e.nativeEvent.contentOffset.x / width))}
+      >
+        {photos.map((photo, i) => (
+          <PhotoSlide
+            key={photo.id}
+            photo={photo}
+            index={i}
+            total={photos.length}
+            width={width}
+            height={height}
+            raterName={raterName}
+            onToggleFavorite={onToggleFavorite}
+            onDoubleTap={onDoubleTap}
+            reduceMotion={reduceMotion}
+          />
+        ))}
+      </ScrollView>
+
+      <View style={styles.navRow} pointerEvents="box-none">
+        <PressableScale
+          onPress={() => goTo(index - 1)}
+          scaleTo={0.9}
+          hitSlop={10}
+          style={[styles.navButton, index === 0 && styles.navButtonDisabled]}
+        >
+          <Text style={styles.navButtonText}>‹</Text>
+        </PressableScale>
+        <PressableScale
+          onPress={() => goTo(index + 1)}
+          scaleTo={0.9}
+          hitSlop={10}
+          style={[styles.navButton, index === photos.length - 1 && styles.navButtonDisabled]}
+        >
+          <Text style={styles.navButtonText}>›</Text>
+        </PressableScale>
+      </View>
+    </View>
   );
 }
 
@@ -685,10 +722,38 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 24,
     right: 24,
-    bottom: 40,
+    bottom: 96,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  navRow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 36,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 16,
+  },
+  navButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navButtonDisabled: {
+    opacity: 0.35,
+  },
+  navButtonText: {
+    fontSize: 26,
+    lineHeight: 30,
+    color: colors.white,
+    marginTop: -2,
   },
   heartCountLabel: {
     fontFamily: 'Manrope_400Regular',
@@ -714,7 +779,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: colors.goldWarm,
+    backgroundColor: colors.heart,
   },
   heartIcon: {
     fontSize: 42,
@@ -723,6 +788,6 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   heartIconActive: {
-    color: colors.goldWarm,
+    color: colors.heart,
   },
 });

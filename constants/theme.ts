@@ -4,6 +4,7 @@ export const colors = {
   darkWarmLight: 'rgb(42, 35, 33)',
   gold: '#D4A976',
   goldWarm: '#C49A6C',
+  heart: '#E8536B',
   white: '#FFFFFF',
   cream: '#F5F0EB',
   textFaint: 'rgba(255, 255, 255, 0.77)',
