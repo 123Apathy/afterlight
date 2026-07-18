@@ -183,13 +183,6 @@ export default function SwipeScreen() {
             </View>
           )}
         </View>
-        <MenuOverlay
-          visible={menuOpen}
-          onClose={() => {
-            setMenuOpen(false);
-            refresh();
-          }}
-        />
       </View>
     );
   }

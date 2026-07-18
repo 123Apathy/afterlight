@@ -44,9 +44,5 @@ export function useActiveProject() {
     setProjectName('');
   };
 
-  const forgetProject = (id: string) => {
-    setKnownRaw(JSON.stringify(known.filter((k) => k.id !== id)));
-  };
-
-  return { projectId, projectName, known, setProject, clearProject, remember, forgetProject };
+  return { projectId, projectName, known, setProject, clearProject, remember };
 }
