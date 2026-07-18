@@ -12,6 +12,7 @@ import {
 import { Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import PressableScale from '../components/PressableScale';
+import GoldButton from '../components/GoldButton';
 import { colors, images } from '../constants/theme';
 import { fillName, tributeCopy, tributeQuestions } from '../constants/tribute';
 import { api } from '../lib/api';
@@ -106,9 +107,7 @@ export default function TributeScreen() {
               />
             )}
 
-            <PressableScale style={styles.cta} onPress={begin} scaleTo={0.98}>
-              <Text style={styles.ctaText}>{tributeCopy.introCta}</Text>
-            </PressableScale>
+            <GoldButton label={tributeCopy.introCta} onPress={begin} style={styles.cta} pill textStyle={styles.ctaText} />
             <Text style={styles.ctaSub}>{tributeCopy.introSub}</Text>
 
             <PressableScale style={styles.textLink} onPress={goHome} scaleTo={0.98}>
@@ -154,9 +153,11 @@ export default function TributeScreen() {
                 <PressableScale style={styles.skipButton} onPress={advance} scaleTo={0.97}>
                   <Text style={styles.skipText}>Skip</Text>
                 </PressableScale>
-                <PressableScale style={styles.nextButton} onPress={advance} scaleTo={0.97}>
-                  <Text style={styles.nextText}>{index < total - 1 ? 'Next' : 'Finish'}</Text>
-                </PressableScale>
+                <GoldButton
+                  label={index < total - 1 ? 'Next' : 'Finish'}
+                  onPress={advance}
+                  style={styles.nextButton}
+                />
               </View>
 
               {index > 0 && (
@@ -175,9 +176,7 @@ export default function TributeScreen() {
             <Text style={styles.title}>{tributeCopy.thanksTitle}</Text>
             <Text style={styles.body}>{fillName(tributeCopy.thanksBody, name)}</Text>
             <Text style={styles.signoff}>{tributeCopy.thanksSignoff}</Text>
-            <PressableScale style={styles.cta} onPress={goHome} scaleTo={0.98}>
-              <Text style={styles.ctaText}>Done</Text>
-            </PressableScale>
+            <GoldButton label="Done" onPress={goHome} style={styles.cta} pill textStyle={styles.ctaText} />
           </ScrollView>
         )}
       </KeyboardAvoidingView>
@@ -266,19 +265,12 @@ const styles = StyleSheet.create({
   cta: {
     width: '100%',
     maxWidth: 360,
-    height: 54,
-    borderRadius: 999,
-    backgroundColor: colors.goldWarm,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginTop: 32,
   },
   ctaText: {
-    fontFamily: 'Poppins_500Medium',
     fontSize: 14,
     letterSpacing: 2,
     textTransform: 'uppercase',
-    color: colors.ink,
   },
   ctaSub: {
     fontFamily: 'PlayfairDisplay_500Medium_Italic',
@@ -369,16 +361,6 @@ const styles = StyleSheet.create({
   nextButton: {
     flex: 2,
     height: 52,
-    borderRadius: 14,
-    backgroundColor: colors.goldWarm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nextText: {
-    fontFamily: 'Poppins_500Medium',
-    fontSize: 15,
-    letterSpacing: 0.3,
-    color: colors.ink,
   },
   signoff: {
     fontFamily: 'PlayfairDisplay_500Medium_Italic',

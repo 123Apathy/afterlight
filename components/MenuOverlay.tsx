@@ -177,6 +177,11 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
           )}
         </>
       )}
+
+      <View style={styles.footer} pointerEvents="none">
+        <Image source={images.logo} style={styles.footerMark} resizeMode="contain" />
+        <Text style={styles.footerText}>Afterlight</Text>
+      </View>
     </Animated.View>
   );
 }
@@ -393,6 +398,23 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.textFainter,
     textDecorationLine: 'underline',
+  },
+  footer: {
+    marginTop: 'auto',
+    alignItems: 'center',
+    gap: 8,
+    paddingBottom: 28,
+    opacity: 0.45,
+  },
+  footerMark: {
+    width: 30,
+    height: 30,
+  },
+  footerText: {
+    fontFamily: 'PlayfairDisplay_500Medium',
+    fontSize: 15,
+    letterSpacing: 0.3,
+    color: colors.white,
   },
   demoCard: {
     marginTop: 16,

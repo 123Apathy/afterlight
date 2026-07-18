@@ -4,6 +4,7 @@ export const colors = {
   darkWarmLight: 'rgb(42, 35, 33)',
   gold: '#D4A976',
   goldWarm: '#C49A6C',
+  goldDeep: '#A6794A',
   heart: '#E8536B',
   white: '#FFFFFF',
   cream: '#F5F0EB',

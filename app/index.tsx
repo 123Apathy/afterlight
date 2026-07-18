@@ -14,6 +14,7 @@ import HamburgerButton from '../components/HamburgerButton';
 import MenuOverlay from '../components/MenuOverlay';
 import CommentSheet from '../components/CommentSheet';
 import PressableScale from '../components/PressableScale';
+import GoldButton from '../components/GoldButton';
 import { colors, copy, images } from '../constants/theme';
 import { DEMO, DEMO_PHOTOS } from '../constants/demo';
 import { api, heartCount, isFavoritedBy, photoUrl, type Photo } from '../lib/api';
@@ -156,9 +157,11 @@ export default function SwipeScreen() {
             style={styles.gateInput}
             onSubmitEditing={handleCreateProject}
           />
-          <PressableScale style={styles.gateButton} onPress={handleCreateProject} scaleTo={0.97}>
-            <Text style={styles.gateButtonText}>{creatingProject ? 'Creating...' : 'Begin'}</Text>
-          </PressableScale>
+          <GoldButton
+            label={creatingProject ? 'Creating…' : 'Begin'}
+            onPress={handleCreateProject}
+            style={styles.gateButton}
+          />
 
           {known.length > 0 && (
             <View style={styles.knownBlock}>
@@ -206,13 +209,11 @@ export default function SwipeScreen() {
             style={styles.gateInput}
             onSubmitEditing={() => setRaterName(nameDraft.trim())}
           />
-          <PressableScale
-            style={styles.gateButton}
+          <GoldButton
+            label="Enter"
             onPress={() => nameDraft.trim() && setRaterName(nameDraft.trim())}
-            scaleTo={0.97}
-          >
-            <Text style={styles.gateButtonText}>Enter</Text>
-          </PressableScale>
+            style={styles.gateButton}
+          />
         </View>
       </View>
     );
@@ -326,9 +327,7 @@ function EmptyState({ onUpload }: { onUpload: () => void }) {
         <Text style={styles.emptySubtitle}>
           Add the photos you have — everyone you invite swipes through them and keeps their favourites.
         </Text>
-        <PressableScale style={styles.emptyButton} onPress={onUpload} scaleTo={0.97}>
-          <Text style={styles.emptyButtonText}>Upload photos</Text>
-        </PressableScale>
+        <GoldButton label="Upload photos" onPress={onUpload} style={styles.emptyButton} pill textStyle={styles.emptyButtonText} />
       </View>
 
       <View style={styles.heartRow} pointerEvents="none">
@@ -372,9 +371,7 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
           <Text style={styles.emptySubtitle}>
             We couldn&rsquo;t load the photos. Check your connection and try again.
           </Text>
-          <PressableScale style={styles.emptyButton} onPress={onRetry} scaleTo={0.97}>
-            <Text style={styles.emptyButtonText}>Try again</Text>
-          </PressableScale>
+          <GoldButton label="Try again" onPress={onRetry} style={styles.emptyButton} pill textStyle={styles.emptyButtonText} />
         </View>
       </View>
     </View>
@@ -670,10 +667,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 340,
     height: 52,
-    borderRadius: 12,
-    backgroundColor: colors.goldWarm,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   gateButtonText: {
     fontFamily: 'Poppins_500Medium',
@@ -792,16 +785,11 @@ const styles = StyleSheet.create({
   },
   emptyButton: {
     marginTop: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    borderRadius: 26,
-    backgroundColor: colors.goldWarm,
+    paddingHorizontal: 30,
   },
   emptyButtonText: {
-    fontFamily: 'Poppins_500Medium',
     fontSize: 15,
     letterSpacing: 0.2,
-    color: colors.ink,
   },
   topScrim: {
     position: 'absolute',
