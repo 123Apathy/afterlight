@@ -23,6 +23,8 @@ export const images = {
   // Landing backdrop: golden-hour glow through cloud (Pexels #29150580,
   // free/commercial, no attribution required). The "afterglow" the name means.
   landingSky: require('../assets/images/landing-sky.jpg'),
+  // Full brand lockup (icon + wordmark + "Memorial Films"), transparent.
+  lockup: require('../assets/images/lockup.png'),
 };
 
 export const copy = {

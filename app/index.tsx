@@ -143,13 +143,7 @@ export default function SwipeScreen() {
           </View>
         </View>
         <View style={styles.gate}>
-          <View style={styles.heroMark}>
-            <View style={[styles.glowRing, styles.glowRingOuter]} />
-            <View style={[styles.glowRing, styles.glowRingMid]} />
-            <View style={[styles.glowRing, styles.glowRingInner]} />
-            <Image source={images.logo} style={styles.heroLogo} resizeMode="contain" />
-          </View>
-          <Text style={styles.gateTagline}>{copy.slogan}</Text>
+          <Image source={images.lockup} style={styles.lockup} resizeMode="contain" />
           <Text style={styles.gateTitle}>{copy.landing.title}</Text>
           <Text style={styles.gateSubtitle}>
             {copy.landing.subtitle}
@@ -725,6 +719,12 @@ const styles = StyleSheet.create({
     fontSize: 64,
     color: colors.goldWarm,
     lineHeight: 64,
+  },
+  lockup: {
+    width: 280,
+    height: 185,
+    alignSelf: 'center',
+    marginBottom: 8,
   },
   heroMark: {
     width: 180,
