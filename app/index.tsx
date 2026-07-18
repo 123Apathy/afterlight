@@ -37,7 +37,6 @@ export default function SwipeScreen() {
   const [loadError, setLoadError] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [commentPhotoId, setCommentPhotoId] = useState<string | null>(null);
-  const lastTapRef = useRef<{ id: string; time: number } | null>(null);
 
   const refresh = async () => {
     if (!projectId) return;
@@ -118,17 +117,6 @@ export default function SwipeScreen() {
         window.alert("That comment didn't save — check your connection and try again.");
       }
       refresh();
-    }
-  };
-
-  const handleDoubleTap = (photo: Photo) => {
-    const now = Date.now();
-    const last = lastTapRef.current;
-    if (last && last.id === photo.id && now - last.time < DOUBLE_TAP_MS) {
-      lastTapRef.current = null;
-      if (!isFavoritedBy(photo, raterName)) toggleFavorite(photo);
-    } else {
-      lastTapRef.current = { id: photo.id, time: now };
     }
   };
 
@@ -237,7 +225,6 @@ export default function SwipeScreen() {
           height={height}
           raterName={raterName}
           onToggleFavorite={toggleFavorite}
-          onDoubleTap={handleDoubleTap}
           onOpenComments={(photo) => setCommentPhotoId(photo.id)}
           reduceMotion={reduceMotion}
         />
@@ -387,7 +374,6 @@ type PhotoDeckProps = {
   height: number;
   raterName: string;
   onToggleFavorite: (photo: Photo) => void;
-  onDoubleTap: (photo: Photo) => void;
   onOpenComments: (photo: Photo) => void;
   reduceMotion: boolean;
 };
@@ -398,7 +384,6 @@ function PhotoDeck({
   height,
   raterName,
   onToggleFavorite,
-  onDoubleTap,
   onOpenComments,
   reduceMotion,
 }: PhotoDeckProps) {
@@ -431,7 +416,6 @@ function PhotoDeck({
             height={height}
             raterName={raterName}
             onToggleFavorite={onToggleFavorite}
-            onDoubleTap={onDoubleTap}
             onOpenComments={onOpenComments}
             reduceMotion={reduceMotion}
           />
@@ -468,7 +452,6 @@ type PhotoSlideProps = {
   height: number;
   raterName: string;
   onToggleFavorite: (photo: Photo) => void;
-  onDoubleTap: (photo: Photo) => void;
   onOpenComments: (photo: Photo) => void;
   reduceMotion: boolean;
 };
@@ -481,7 +464,6 @@ function PhotoSlide({
   height,
   raterName,
   onToggleFavorite,
-  onDoubleTap,
   onOpenComments,
   reduceMotion,
 }: PhotoSlideProps) {
@@ -489,9 +471,23 @@ function PhotoSlide({
   const count = heartCount(photo);
   const scale = useSharedValue(1);
   const glowOpacity = useSharedValue(0);
+  const burst = useSharedValue(0);
+  const lastTap = useRef(0);
 
   const heartStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   const glowStyle = useAnimatedStyle(() => ({ opacity: glowOpacity.value }));
+  const burstStyle = useAnimatedStyle(() => ({
+    opacity: burst.value,
+    transform: [{ scale: 0.5 + burst.value * 0.7 }],
+  }));
+
+  const playBurst = () => {
+    if (reduceMotion) return;
+    burst.value = withSequence(
+      withTiming(1, { duration: 160, easing: Easing.out(Easing.cubic) }),
+      withTiming(0, { duration: 340, easing: Easing.in(Easing.cubic) })
+    );
+  };
 
   const handleHeartPress = () => {
     if (!reduceMotion) {
@@ -504,8 +500,21 @@ function PhotoSlide({
     onToggleFavorite(photo);
   };
 
+  // Double-tap = favourite (never un-favourite), Instagram-style. The heart
+  // burst always plays on a double-tap, even when it was already a favourite.
+  const handleTap = () => {
+    const now = Date.now();
+    if (now - lastTap.current < DOUBLE_TAP_MS) {
+      lastTap.current = 0;
+      if (!favorited) onToggleFavorite(photo);
+      playBurst();
+    } else {
+      lastTap.current = now;
+    }
+  };
+
   return (
-    <Pressable onPress={() => onDoubleTap(photo)} style={{ width, height }}>
+    <Pressable onPress={handleTap} style={{ width, height }}>
       <Image source={{ uri: photoUrl(photo) }} style={StyleSheet.absoluteFill} resizeMode="cover" />
       <LinearGradient colors={['rgba(0,0,0,0.4)', 'transparent']} style={styles.topScrim} pointerEvents="none" />
       <LinearGradient
@@ -513,6 +522,10 @@ function PhotoSlide({
         style={styles.bottomScrim}
         pointerEvents="none"
       />
+
+      <Animated.Text style={[styles.burstHeart, burstStyle]} pointerEvents="none">
+        ♥
+      </Animated.Text>
 
       <View style={styles.counter}>
         <Text style={styles.counterText}>{String(index + 1).padStart(2, '0')}</Text>
@@ -860,5 +873,15 @@ const styles = StyleSheet.create({
   },
   heartIconActive: {
     color: colors.heart,
+  },
+  burstHeart: {
+    position: 'absolute',
+    alignSelf: 'center',
+    top: '38%',
+    fontSize: 120,
+    lineHeight: 132,
+    color: colors.heart,
+    textShadowColor: 'rgba(0, 0, 0, 0.35)',
+    textShadowRadius: 24,
   },
 });

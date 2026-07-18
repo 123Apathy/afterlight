@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -36,8 +36,9 @@ export default function CommentSheet({ photo, onClose, onSubmit }: CommentSheetP
   const style = useAnimatedStyle(() => ({
     opacity: progress.value,
     transform: [{ translateY: (1 - progress.value) * 40 }],
-    pointerEvents: visible ? 'auto' : 'none',
   }));
+
+  const backdropStyle = useAnimatedStyle(() => ({ opacity: progress.value * 0.6 }));
 
   const send = () => {
     const text = draft.trim();
@@ -49,7 +50,11 @@ export default function CommentSheet({ photo, onClose, onSubmit }: CommentSheetP
   const comments = photo?.comments ?? [];
 
   return (
-    <Animated.View style={[styles.sheet, style]}>
+    <View style={StyleSheet.absoluteFill} pointerEvents={visible ? 'auto' : 'none'}>
+      <Animated.View style={[styles.backdrop, backdropStyle]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+      </Animated.View>
+      <Animated.View style={[styles.sheet, style]}>
       <View style={styles.header}>
         <Text style={styles.title}>Comments</Text>
         <PressableScale onPress={onClose} hitSlop={12} style={styles.close}>
@@ -85,11 +90,20 @@ export default function CommentSheet({ photo, onClose, onSubmit }: CommentSheetP
           <Text style={styles.sendText}>Post</Text>
         </PressableScale>
       </View>
-    </Animated.View>
+      </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#000',
+  },
   sheet: {
     position: 'absolute',
     left: 0,
