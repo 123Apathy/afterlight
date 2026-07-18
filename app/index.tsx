@@ -12,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import HamburgerButton from '../components/HamburgerButton';
 import MenuOverlay from '../components/MenuOverlay';
+import CommentSheet from '../components/CommentSheet';
 import PressableScale from '../components/PressableScale';
 import { colors, copy, images } from '../constants/theme';
 import { api, heartCount, isFavoritedBy, photoUrl, type Photo } from '../lib/api';
@@ -35,6 +36,7 @@ export default function SwipeScreen() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [commentPhotoId, setCommentPhotoId] = useState<string | null>(null);
   const lastTapRef = useRef<{ id: string; time: number } | null>(null);
 
   const refresh = async () => {
@@ -93,6 +95,27 @@ export default function SwipeScreen() {
     } catch {
       if (typeof window !== 'undefined') {
         window.alert("That didn't save — check your connection and try again.");
+      }
+      refresh();
+    }
+  };
+
+  const addComment = async (photo: Photo, text: string) => {
+    const optimistic = {
+      id: `optimistic-${photo.id}-${Date.now()}`,
+      photoId: photo.id,
+      author: raterName,
+      text,
+      createdAt: new Date().toISOString(),
+    };
+    setPhotos((prev) =>
+      prev.map((p) => (p.id === photo.id ? { ...p, comments: [...p.comments, optimistic] } : p))
+    );
+    try {
+      await api.addComment(photo.id, raterName, text);
+    } catch {
+      if (typeof window !== 'undefined') {
+        window.alert("That comment didn't save — check your connection and try again.");
       }
       refresh();
     }
@@ -215,9 +238,16 @@ export default function SwipeScreen() {
           raterName={raterName}
           onToggleFavorite={toggleFavorite}
           onDoubleTap={handleDoubleTap}
+          onOpenComments={(photo) => setCommentPhotoId(photo.id)}
           reduceMotion={reduceMotion}
         />
       )}
+
+      <CommentSheet
+        photo={photos.find((p) => p.id === commentPhotoId) ?? null}
+        onClose={() => setCommentPhotoId(null)}
+        onSubmit={addComment}
+      />
 
       <View style={styles.headerOverlay} pointerEvents="box-none">
         <View style={styles.header}>
@@ -303,8 +333,8 @@ function EmptyState({ onUpload }: { onUpload: () => void }) {
 
       <View style={styles.heartRow} pointerEvents="none">
         <View>
-          <Text style={styles.heartCountLabel}>Tap ♡ to keep a moment</Text>
-          <Text style={styles.heartRaters}>the favourites gather here</Text>
+          <Text style={styles.heartCountLabel}>Tap ♡ to favourite</Text>
+          <Text style={styles.heartRaters}>favourites and comments gather here</Text>
         </View>
         <View style={styles.heartButtonContainer}>
           <Text style={[styles.heartIcon, styles.heartIconGhost]}>♡</Text>
@@ -358,10 +388,20 @@ type PhotoDeckProps = {
   raterName: string;
   onToggleFavorite: (photo: Photo) => void;
   onDoubleTap: (photo: Photo) => void;
+  onOpenComments: (photo: Photo) => void;
   reduceMotion: boolean;
 };
 
-function PhotoDeck({ photos, width, height, raterName, onToggleFavorite, onDoubleTap, reduceMotion }: PhotoDeckProps) {
+function PhotoDeck({
+  photos,
+  width,
+  height,
+  raterName,
+  onToggleFavorite,
+  onDoubleTap,
+  onOpenComments,
+  reduceMotion,
+}: PhotoDeckProps) {
   const scrollRef = useRef<ScrollView>(null);
   const [index, setIndex] = useState(0);
 
@@ -392,6 +432,7 @@ function PhotoDeck({ photos, width, height, raterName, onToggleFavorite, onDoubl
             raterName={raterName}
             onToggleFavorite={onToggleFavorite}
             onDoubleTap={onDoubleTap}
+            onOpenComments={onOpenComments}
             reduceMotion={reduceMotion}
           />
         ))}
@@ -428,6 +469,7 @@ type PhotoSlideProps = {
   raterName: string;
   onToggleFavorite: (photo: Photo) => void;
   onDoubleTap: (photo: Photo) => void;
+  onOpenComments: (photo: Photo) => void;
   reduceMotion: boolean;
 };
 
@@ -440,6 +482,7 @@ function PhotoSlide({
   raterName,
   onToggleFavorite,
   onDoubleTap,
+  onOpenComments,
   reduceMotion,
 }: PhotoSlideProps) {
   const favorited = isFavoritedBy(photo, raterName);
@@ -479,14 +522,21 @@ function PhotoSlide({
 
       <View style={styles.heartRow}>
         <View style={styles.heartLabels}>
-          <Text style={styles.heartCountLabel}>
-            {count > 0 ? `${count} favourite${count === 1 ? '' : 's'}` : 'Tap ♡ to keep this one'}
-          </Text>
-          {count > 0 && (
-            <Text style={styles.heartRaters} numberOfLines={1}>
-              {photo.ratings.map((r) => r.rater).join(' · ')}
-            </Text>
+          {count > 0 ? (
+            <View style={styles.likePill}>
+              <Text style={styles.likePillHeart}>♥</Text>
+              <Text style={styles.likePillCount}>{count}</Text>
+            </View>
+          ) : (
+            <Text style={styles.heartCountLabel}>Tap ♡ to favourite</Text>
           )}
+          <PressableScale onPress={() => onOpenComments(photo)} scaleTo={0.96} hitSlop={8}>
+            <Text style={styles.commentLink}>
+              {photo.comments.length > 0
+                ? `${photo.comments.length} comment${photo.comments.length === 1 ? '' : 's'}`
+                : 'Add a comment'}
+            </Text>
+          </PressableScale>
         </View>
         <View style={styles.heartButtonContainer}>
           <Animated.View style={[styles.glowPulse, glowStyle]} pointerEvents="none" />
@@ -766,6 +816,27 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.goldWarm,
     marginTop: 4,
+  },
+  likePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  likePillHeart: {
+    fontSize: 18,
+    lineHeight: 22,
+    color: colors.heart,
+  },
+  likePillCount: {
+    fontFamily: 'Manrope_500Medium',
+    fontSize: 15,
+    color: 'rgba(255, 255, 255, 0.92)',
+  },
+  commentLink: {
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.75)',
+    marginTop: 6,
   },
   heartButtonContainer: {
     position: 'relative',
