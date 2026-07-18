@@ -8,7 +8,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { colors } from '../constants/theme';
-import { api, inviteUrl, type Project } from '../lib/api';
+import { API_BASE, api, inviteUrl, type Project } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
 import PressableScale from './PressableScale';
 
@@ -47,11 +47,22 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
   }));
 
   const handleShare = async () => {
-    if (!project) return;
-    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
-      await navigator.clipboard.writeText(inviteUrl(project));
+    if (!project) {
+      if (typeof window !== 'undefined') {
+        window.alert("Couldn't load the invite link. Check your connection, then close and reopen the menu.");
+      }
+      return;
+    }
+    const url = inviteUrl(project);
+    try {
+      await navigator.clipboard.writeText(url);
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // navigator.clipboard needs a secure origin — fall back to a copyable prompt.
+      if (typeof window !== 'undefined') {
+        window.prompt('Copy this invite link:', url);
+      }
     }
   };
 
@@ -60,11 +71,29 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
       setCreatingProject(false);
       return;
     }
-    const created = await api.createProject(newProjectName.trim());
-    setProject(created);
-    setProjectDetails(created);
-    setNewProjectName('');
-    setCreatingProject(false);
+    try {
+      const created = await api.createProject(newProjectName.trim());
+      setProject(created);
+      setProjectDetails(created);
+      setNewProjectName('');
+      setCreatingProject(false);
+    } catch {
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert("Couldn't create the project. Check your connection and try again.");
+      }
+    }
+  };
+
+  const handleDownloadReport = () => {
+    if (!project) {
+      if (typeof window !== 'undefined') {
+        window.alert("Couldn't load the report link. Check your connection, then close and reopen the menu.");
+      }
+      return;
+    }
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.open(`${API_BASE}/api/report/${project.inviteCode}`, '_blank');
+    }
   };
 
   return (
@@ -126,6 +155,15 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
           <Text style={styles.sectionLabel}>INVITE</Text>
           <PressableScale style={styles.rowButton} onPress={handleShare} scaleTo={0.97}>
             <Text style={styles.rowButtonText}>{copied ? 'Link copied!' : 'Copy invite link'}</Text>
+          </PressableScale>
+        </View>
+      )}
+
+      {!!projectId && (
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>RESULTS</Text>
+          <PressableScale style={styles.rowButton} onPress={handleDownloadReport} scaleTo={0.97}>
+            <Text style={styles.rowButtonText}>Open results report</Text>
           </PressableScale>
         </View>
       )}

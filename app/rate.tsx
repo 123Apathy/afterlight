@@ -32,6 +32,7 @@ export default function RatePhotosScreen() {
   const [nameDraft, setNameDraft] = useState('');
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [view, setView] = useState<'rate' | 'results'>('rate');
   const [pageIndex, setPageIndex] = useState(0);
@@ -45,9 +46,15 @@ export default function RatePhotosScreen() {
 
   const refresh = async () => {
     if (!projectId) return;
-    const data = await api.getPhotos(projectId);
-    setPhotos(data);
-    setLoading(false);
+    try {
+      const data = await api.getPhotos(projectId);
+      setPhotos(data);
+      setLoadError(false);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -87,7 +94,14 @@ export default function RatePhotosScreen() {
         return { ...p, ratings: nextRatings, avgRating, ratingCount: nextRatings.length };
       })
     );
-    await api.ratePhoto(photo.id, raterName, tier.score);
+    try {
+      await api.ratePhoto(photo.id, raterName, tier.score);
+    } catch {
+      if (typeof window !== 'undefined') {
+        window.alert("That rating didn't save — check your connection and set it again.");
+      }
+      refresh();
+    }
   };
 
   const handleUpload = async () => {
@@ -109,8 +123,27 @@ export default function RatePhotosScreen() {
         }))
       );
       await refresh();
+    } catch {
+      if (typeof window !== 'undefined') {
+        window.alert('Upload failed — those photos were NOT saved. Check your connection and try again.');
+      }
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleDeletePhoto = async (photo: Photo) => {
+    if (typeof window !== 'undefined' && !window.confirm('Remove this photo for everyone? This cannot be undone.')) {
+      return;
+    }
+    try {
+      await api.deletePhoto(photo.id);
+      setPageIndex(0);
+      await refresh();
+    } catch {
+      if (typeof window !== 'undefined') {
+        window.alert("Couldn't remove the photo — check your connection and try again.");
+      }
     }
   };
 
@@ -180,7 +213,7 @@ export default function RatePhotosScreen() {
     <View style={styles.page}>
       <View style={styles.header}>
         <View style={styles.brand}>
-          <Image source={{ uri: images.logo }} style={styles.logo} resizeMode="contain" />
+          <Image source={images.logo} style={styles.logo} resizeMode="contain" />
           <Text style={styles.brandText}>Afterlight</Text>
         </View>
         <View style={styles.headerActions}>
@@ -202,6 +235,23 @@ export default function RatePhotosScreen() {
 
       {loading ? (
         <Text style={styles.emptyText}>Loading...</Text>
+      ) : loadError ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyTitle}>Connection trouble</Text>
+          <Text style={styles.emptySubtitle}>
+            We couldn&rsquo;t load the photos. Check your internet and try again.
+          </Text>
+          <PressableScale
+            style={styles.emptyUploadButton}
+            onPress={() => {
+              setLoading(true);
+              refresh();
+            }}
+            scaleTo={0.97}
+          >
+            <Text style={styles.emptyUploadText}>Try again</Text>
+          </PressableScale>
+        </View>
       ) : photos.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyTitle}>No photos yet</Text>
@@ -230,7 +280,7 @@ export default function RatePhotosScreen() {
 
                 <View style={[styles.content, { height: availableHeight - heroHeight }]}>
                   <TierScrubber
-                    tierIndex={tierIndexForScore(myScore)}
+                    tierIndex={myScore == null ? null : tierIndexForScore(myScore)}
                     onChange={(index) => handleTierChange(photo, index)}
                     width={width - 38}
                   />
@@ -279,6 +329,14 @@ export default function RatePhotosScreen() {
                     <Text style={styles.gridCommentText}>{photo.comments.length}</Text>
                   </View>
                 )}
+                <PressableScale
+                  style={styles.gridDelete}
+                  onPress={() => handleDeletePhoto(photo)}
+                  hitSlop={6}
+                  scaleTo={0.9}
+                >
+                  <Text style={styles.gridDeleteText}>&times;</Text>
+                </PressableScale>
               </PressableScale>
             );
           })}
@@ -479,6 +537,22 @@ const styles = StyleSheet.create({
     fontFamily: 'Manrope_500Medium',
     fontSize: 11,
     color: colors.white,
+  },
+  gridDelete: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  gridDeleteText: {
+    fontSize: 14,
+    lineHeight: 16,
+    color: 'rgba(255,255,255,0.85)',
   },
   gate: {
     flex: 1,

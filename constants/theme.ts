@@ -9,6 +9,13 @@ export const colors = {
 };
 
 export const images = {
-  logo: 'https://picsum.photos/seed/afterlight-logo/92/92',
-  portrait: 'https://picsum.photos/seed/afterlight-family/480/600',
+  // The Afterlight horizon mark (transparent PNG, from brand/logo.html).
+  logo: require('../assets/images/logo-mark.png'),
+  // Branded fallback hero, shown only until useProjectCover resolves a real
+  // project photo (or when a project has none yet). Never a stock photo.
+  portrait: require('../assets/images/hero-placeholder.png'),
+};
+
+export const copy = {
+  slogan: 'A memory you can hold.',
 };

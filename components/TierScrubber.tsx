@@ -15,7 +15,7 @@ const TRACK_HEIGHT = 52;
 const THUMB_SIZE = 44;
 
 type TierScrubberProps = {
-  tierIndex: number; // 0 = S (left, best) .. 4 = D (right, skip)
+  tierIndex: number | null; // 0 = S (left, best) .. 4 = D (right, skip); null = not rated yet
   onChange: (tierIndex: number) => void;
   width: number;
 };
@@ -23,31 +23,35 @@ type TierScrubberProps = {
 export default function TierScrubber({ tierIndex, onChange, width }: TierScrubberProps) {
   const trackWidth = width;
   const step = trackWidth / (TIERS.length - 1);
-  const x = useSharedValue(tierIndex * step);
+  const restingIndex = tierIndex ?? 2; // unrated thumb parks mid-track, styled hollow
+  const x = useSharedValue(restingIndex * step);
   const dragging = useSharedValue(false);
 
   useEffect(() => {
     if (!dragging.value) {
-      x.value = withSpring(tierIndex * step, { damping: 18 });
+      x.value = withSpring(restingIndex * step, { damping: 18 });
     }
-  }, [tierIndex, trackWidth]);
+  }, [restingIndex, trackWidth]);
 
   const commitIndex = (index: number) => {
     onChange(index);
   };
 
   const pan = Gesture.Pan()
-    .onBegin(() => {
+    .onBegin((event) => {
       dragging.value = true;
-    })
-    .onUpdate((event) => {
+      // Jump to the touch point so a plain tap on the track also sets a tier.
       x.value = Math.max(0, Math.min(trackWidth, event.x));
     })
-    .onEnd(() => {
-      const nearest = Math.round(x.value / step);
+    .onFinalize((event) => {
+      const clamped = Math.max(0, Math.min(trackWidth, event.x));
+      const nearest = Math.round(clamped / step);
       x.value = withSpring(nearest * step, { damping: 18 });
       dragging.value = false;
       runOnJS(commitIndex)(nearest);
+    })
+    .onUpdate((event) => {
+      x.value = Math.max(0, Math.min(trackWidth, event.x));
     });
 
   useAnimatedReaction(
@@ -68,7 +72,8 @@ export default function TierScrubber({ tierIndex, onChange, width }: TierScrubbe
     width: Math.max(THUMB_SIZE / 2, x.value + THUMB_SIZE / 2),
   }));
 
-  const currentTier = TIERS[Math.max(0, Math.min(TIERS.length - 1, tierIndex))];
+  const rated = tierIndex != null;
+  const currentTier = TIERS[Math.max(0, Math.min(TIERS.length - 1, restingIndex))];
 
   return (
     <View style={[styles.wrap, { width: trackWidth }]}>
@@ -76,7 +81,7 @@ export default function TierScrubber({ tierIndex, onChange, width }: TierScrubbe
         {TIERS.map((tier, index) => (
           <Text
             key={tier.key}
-            style={[styles.tickLabel, index === tierIndex && { color: tier.color, fontFamily: 'Manrope_500Medium' }]}
+            style={[styles.tickLabel, rated && index === tierIndex && { color: tier.color, fontFamily: 'Manrope_500Medium' }]}
           >
             {tier.key}
           </Text>
@@ -84,9 +89,11 @@ export default function TierScrubber({ tierIndex, onChange, width }: TierScrubbe
       </View>
       <GestureDetector gesture={pan}>
         <View style={styles.track} testID="tier-scrubber-track">
-          <Animated.View style={[styles.fill, fillStyle, { backgroundColor: currentTier.color }]} />
-          <Animated.View style={[styles.thumb, thumbStyle]}>
-            <Text style={styles.thumbLabel}>{currentTier.key}</Text>
+          {rated && <Animated.View style={[styles.fill, fillStyle, { backgroundColor: currentTier.color }]} />}
+          <Animated.View style={[styles.thumb, thumbStyle, !rated && styles.thumbUnrated]}>
+            <Text style={[styles.thumbLabel, !rated && styles.thumbLabelUnrated]}>
+              {rated ? currentTier.key : '?'}
+            </Text>
           </Animated.View>
         </View>
       </GestureDetector>
@@ -141,5 +148,13 @@ const styles = StyleSheet.create({
     fontFamily: 'Manrope_500Medium',
     fontSize: 16,
     color: colors.ink,
+  },
+  thumbUnrated: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: 'rgba(228,183,120,0.6)',
+  },
+  thumbLabelUnrated: {
+    color: 'rgba(228,183,120,0.8)',
   },
 });

@@ -9,11 +9,13 @@ import Typewriter from '../components/Typewriter';
 import { colors, images } from '../constants/theme';
 import { api } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
+import { useProjectCover } from '../lib/useProjectCover';
 
 export default function HomeScreen() {
   const [menuOpen, setMenuOpen] = useState(false);
   const arrowShift = useSharedValue(0);
   const { projectId, projectName, setProject } = useActiveProject();
+  const coverUrl = useProjectCover(projectId);
   const [newProjectName, setNewProjectName] = useState('');
   const [creating, setCreating] = useState(false);
 
@@ -28,6 +30,10 @@ export default function HomeScreen() {
       const created = await api.createProject(newProjectName.trim());
       setProject(created);
       setNewProjectName('');
+    } catch {
+      if (typeof window !== 'undefined') {
+        window.alert("Couldn't create the project. Check your connection and try again.");
+      }
     } finally {
       setCreating(false);
     }
@@ -38,12 +44,13 @@ export default function HomeScreen() {
       <View style={styles.page}>
         <View style={[styles.header, styles.headerStandalone]}>
           <View style={styles.brand}>
-            <Image source={{ uri: images.logo }} style={styles.logo} resizeMode="contain" />
+            <Image source={images.logo} style={styles.logo} resizeMode="contain" />
             <Text style={styles.brandText}>Afterlight</Text>
           </View>
           <HamburgerButton onPress={() => setMenuOpen(true)} />
         </View>
         <View style={styles.onboarding}>
+          <Text style={styles.onboardingTagline}>A memory you can hold.</Text>
           <Text style={styles.onboardingTitle}>Start a project</Text>
           <Text style={styles.onboardingSubtitle}>
             Create a project for the person you&rsquo;re honoring, or use an invite link someone
@@ -72,21 +79,17 @@ export default function HomeScreen() {
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.header}>
           <View style={styles.brand}>
-            <Image source={{ uri: images.logo }} style={styles.logo} resizeMode="contain" />
+            <Image source={images.logo} style={styles.logo} resizeMode="contain" />
             <Text style={styles.brandText}>Afterlight</Text>
           </View>
           <HamburgerButton onPress={() => setMenuOpen(true)} />
         </View>
 
-        <View style={styles.portraitRow}>
-          <View style={styles.rotatedTextColumn}>
-            <View style={styles.rotatedTextWrap}>
-              <Text style={styles.rotatedName}>{projectName}</Text>
-              <Text style={styles.rotatedRole}>Open project</Text>
-            </View>
-          </View>
-          <Image source={{ uri: images.portrait }} style={styles.portrait} resizeMode="cover" />
-        </View>
+        <Image
+          source={coverUrl ? { uri: coverUrl } : images.portrait}
+          style={styles.portrait}
+          resizeMode="cover"
+        />
 
         <Text style={styles.quoteIcon}>&ldquo;</Text>
         <Typewriter
@@ -164,6 +167,14 @@ const styles = StyleSheet.create({
     gap: 14,
     paddingHorizontal: 24,
   },
+  onboardingTagline: {
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 15,
+    fontStyle: 'italic',
+    color: colors.gold,
+    textAlign: 'center',
+    marginBottom: 2,
+  },
   onboardingTitle: {
     fontFamily: 'Manrope_500Medium',
     fontSize: 28,
@@ -203,93 +214,65 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.ink,
   },
-  portraitRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  rotatedTextColumn: {
-    width: 24,
-    height: 140,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rotatedTextWrap: {
-    width: 140,
-    alignItems: 'center',
-    transform: [{ rotate: '-90deg' }],
-  },
-  rotatedName: {
-    fontFamily: 'Manrope_500Medium',
-    fontSize: 13,
-    letterSpacing: 1.2,
-    color: colors.textFaintest,
-  },
-  rotatedRole: {
-    fontFamily: 'Manrope_400Regular',
-    fontSize: 13,
-    letterSpacing: 1.2,
-    color: colors.textFaintest,
-  },
   portrait: {
-    flex: 1,
-    height: 280,
+    width: '100%',
+    height: 320,
     borderRadius: 16,
   },
   quoteIcon: {
-    marginTop: 20,
-    fontSize: 40,
-    lineHeight: 40,
+    marginTop: 24,
+    fontSize: 56,
+    lineHeight: 56,
     fontFamily: 'Manrope_500Medium',
     color: colors.gold,
   },
   quote: {
     marginTop: 4,
     fontFamily: 'Manrope_400Regular',
-    fontSize: 19,
-    lineHeight: 26,
+    fontSize: 20,
+    lineHeight: 27,
     color: colors.textFaint,
   },
   card: {
-    marginTop: 24,
-    padding: 20,
-    paddingBottom: 24,
-    borderRadius: 16,
+    marginTop: 28,
+    padding: 24,
+    paddingBottom: 28,
+    borderRadius: 20,
     backgroundColor: colors.white,
   },
   cardTitle: {
     fontFamily: 'Manrope_500Medium',
-    fontSize: 26,
+    fontSize: 36,
     letterSpacing: -0.5,
     color: '#1a1a1a',
   },
   cardSubtitle: {
     fontFamily: 'Manrope_400Regular',
-    fontSize: 14,
+    fontSize: 17,
     color: '#888888',
-    marginTop: 4,
+    marginTop: 8,
   },
   learnMore: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginTop: 18,
+    marginTop: 24,
     alignSelf: 'flex-start',
   },
   learnMoreText: {
     fontFamily: 'Manrope_500Medium',
-    fontSize: 15,
+    fontSize: 17,
     color: '#1a1a1a',
   },
   arrowIcon: {
-    fontSize: 15,
+    fontSize: 17,
     color: '#1a1a1a',
   },
   star: {
     position: 'absolute',
-    right: 20,
-    bottom: 20,
-    fontSize: 32,
+    right: 24,
+    bottom: 24,
+    fontSize: 40,
     color: colors.gold,
   },
 });

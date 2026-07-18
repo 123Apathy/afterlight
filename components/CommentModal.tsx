@@ -14,7 +14,7 @@ type ThreadEntry = {
 type CommentModalProps = {
   visible: boolean;
   comments: ThreadEntry[];
-  onSubmit: (text: string) => void;
+  onSubmit: (text: string) => void | Promise<void>;
   onClose: () => void;
   title?: string;
   placeholder?: string;
@@ -32,10 +32,18 @@ export default function CommentModal({
 }: CommentModalProps) {
   const [draft, setDraft] = useState('');
 
-  const submit = () => {
-    if (!draft.trim()) return;
-    onSubmit(draft.trim());
-    setDraft('');
+  const submit = async () => {
+    const text = draft.trim();
+    if (!text) return;
+    try {
+      await onSubmit(text);
+      setDraft('');
+    } catch {
+      // Keep the draft so nothing typed is lost.
+      if (typeof window !== 'undefined') {
+        window.alert("That didn't save — check your connection and tap Add again.");
+      }
+    }
   };
 
   return (

@@ -78,10 +78,10 @@ function mapNote(row) {
   return { id: row.id, cardId: row.card_id, author: row.author, text: row.body, createdAt: row.created_at };
 }
 
-async function signPhotoUrl(storagePath) {
+async function signPhotoUrl(storagePath, ttlSeconds = SIGNED_URL_TTL_SECONDS) {
   const { data, error } = await supabase.storage
     .from(PHOTOS_BUCKET)
-    .createSignedUrl(storagePath, SIGNED_URL_TTL_SECONDS);
+    .createSignedUrl(storagePath, ttlSeconds);
   if (error) return null;
   return data.signedUrl;
 }
@@ -484,7 +484,222 @@ app.delete('/api/kanban/notes/:noteId', async (req, res, next) => {
   }
 });
 
+// --- Results report (self-contained HTML, print-to-PDF friendly) ---
+
+const REPORT_TIERS = [
+  { key: 'S', score: 5, label: 'Must use', color: '#E4B778' },
+  { key: 'A', score: 4, label: 'Great', color: '#CBAE85' },
+  { key: 'B', score: 3, label: 'Good', color: '#A99A8C' },
+  { key: 'C', score: 2, label: 'Maybe', color: '#8A8078' },
+  { key: 'D', score: 1, label: 'Skip', color: '#6B6560' },
+];
+
+function tierForAvg(avg) {
+  if (avg == null) return null;
+  const rounded = Math.max(1, Math.min(5, Math.round(avg)));
+  return REPORT_TIERS.find((t) => t.score === rounded) || null;
+}
+
+function esc(text) {
+  return String(text ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// Keyed by invite code (the capability families already hold), not raw
+// project id, so report URLs can be shared without exposing internal ids.
+const REPORT_IMAGE_TTL_SECONDS = 60 * 60 * 24 * 30; // saved/printed reports keep working for a month
+
+app.get('/api/report/:inviteCode', async (req, res, next) => {
+  try {
+    const { data: projectRow, error: projectError } = await supabase
+      .from('afterlight_projects')
+      .select('*')
+      .eq('invite_code', req.params.inviteCode)
+      .single();
+    if (projectError || !projectRow) return res.status(404).send('Report not found');
+    const projectId = projectRow.id;
+
+    const { data: photos, error: photosError } = await supabase
+      .from('afterlight_photos')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: true });
+    assertOk(photosError);
+
+    const photoIds = photos.map((p) => p.id);
+    const [{ data: ratings, error: ratingsError }, { data: comments, error: commentsError }] = photoIds.length
+      ? await Promise.all([
+          supabase.from('afterlight_ratings').select('*').in('photo_id', photoIds),
+          supabase.from('afterlight_comments').select('*').in('photo_id', photoIds).order('created_at', { ascending: true }),
+        ])
+      : [{ data: [], error: null }, { data: [], error: null }];
+    assertOk(ratingsError);
+    assertOk(commentsError);
+
+    const enriched = await Promise.all(
+      photos.map(async (photo) => {
+        const photoRatings = (ratings || []).filter((r) => r.photo_id === photo.id);
+        const avg = photoRatings.length
+          ? photoRatings.reduce((sum, r) => sum + r.score, 0) / photoRatings.length
+          : null;
+        return {
+          url: await signPhotoUrl(photo.storage_path, REPORT_IMAGE_TTL_SECONDS),
+          name: photo.original_name,
+          avg,
+          tier: tierForAvg(avg),
+          ratingCount: photoRatings.length,
+          comments: (comments || []).filter((c) => c.photo_id === photo.id),
+        };
+      })
+    );
+    enriched.sort((a, b) => (b.avg ?? -1) - (a.avg ?? -1));
+
+    const { data: columns, error: columnsError } = await supabase
+      .from('afterlight_kanban_columns')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('order', { ascending: true });
+    assertOk(columnsError);
+    const columnIds = (columns || []).map((c) => c.id);
+    const { data: cards, error: cardsError } = columnIds.length
+      ? await supabase.from('afterlight_kanban_cards').select('*').in('column_id', columnIds).order('order', { ascending: true })
+      : { data: [], error: null };
+    assertOk(cardsError);
+
+    const photoCards = enriched
+      .map((p) => {
+        const badge = p.tier
+          ? `<span class="badge" style="background:${p.tier.color}">${p.tier.key}</span>`
+          : '<span class="badge badge-none">—</span>';
+        const meta = p.avg != null
+          ? `${p.tier.label} · ${p.ratingCount} rating${p.ratingCount === 1 ? '' : 's'}`
+          : 'Not yet rated';
+        const commentHtml = p.comments.length
+          ? `<ul class="comments">${p.comments
+              .map((c) => `<li><strong>${esc(c.author)}</strong> ${esc(c.body)}</li>`)
+              .join('')}</ul>`
+          : '';
+        const imageHtml = p.url
+          ? `<img src="${esc(p.url)}" alt="${esc(p.name)}" loading="lazy" />`
+          : '<div class="photo-missing">Photo unavailable</div>';
+        return `<div class="photo-card">
+          <div class="photo-wrap">${imageHtml}${badge}</div>
+          <div class="photo-meta">${esc(meta)}</div>
+          ${commentHtml}
+        </div>`;
+      })
+      .join('');
+
+    const arrangements = (columns || [])
+      .map((column) => {
+        const columnCards = (cards || []).filter((c) => c.column_id === column.id);
+        const items = columnCards
+          .map((c) => `<li>${esc(c.title)}${c.description ? `<span class="card-desc"> — ${esc(c.description)}</span>` : ''}</li>`)
+          .join('');
+        return `<div class="arr-column"><h3>${esc(column.title)} <span class="count">${columnCards.length}</span></h3><ul>${items || '<li class="empty">Nothing here.</li>'}</ul></div>`;
+      })
+      .join('');
+
+    res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>${esc(projectRow.name)} — Afterlight results</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Georgia, 'Times New Roman', serif; background: #161312; color: rgba(255,255,255,0.85); padding: 48px 28px; }
+  .page { max-width: 900px; margin: 0 auto; }
+  header { display: flex; align-items: center; gap: 20px; margin-bottom: 8px; }
+  header svg { flex-shrink: 0; }
+  h1 { font-size: 34px; font-weight: 600; color: #fff; }
+  .sub { color: rgba(228,183,120,0.85); font-size: 14px; letter-spacing: 2.5px; text-transform: uppercase; margin-top: 5px; }
+  h2 { font-size: 21px; color: #E4B778; margin: 44px 0 18px; font-weight: 600; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+  .photo-card { background: rgba(255,255,255,0.04); border-radius: 12px; overflow: hidden; break-inside: avoid; }
+  .photo-wrap { position: relative; }
+  .photo-wrap img { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; }
+  .badge { position: absolute; top: 10px; left: 10px; width: 30px; height: 30px; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #1A1613; font-family: 'Manrope', sans-serif; font-size: 14px; }
+  .badge-none { background: rgba(255,255,255,0.25); color: #fff; }
+  .photo-meta { padding: 10px 14px; font-size: 13px; color: rgba(255,255,255,0.6); font-family: 'Manrope', sans-serif; }
+  .photo-missing { aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.4); font-family: 'Manrope', sans-serif; font-size: 13px; background: rgba(255,255,255,0.03); }
+  .print-tip { margin-top: 10px; font-size: 13px; color: rgba(255,255,255,0.45); font-family: 'Manrope', sans-serif; }
+  .comments { list-style: none; padding: 0 14px 12px; font-size: 13px; font-family: 'Manrope', sans-serif; color: rgba(255,255,255,0.75); }
+  .comments li { margin-top: 4px; }
+  .comments strong { color: #E4B778; font-weight: 600; }
+  .arr-column { margin-bottom: 22px; }
+  .arr-column h3 { font-size: 16px; color: #fff; margin-bottom: 8px; font-family: 'Manrope', sans-serif; }
+  .arr-column .count { color: rgba(255,255,255,0.4); font-weight: 400; margin-left: 6px; }
+  .arr-column ul { list-style: none; }
+  .arr-column li { padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.07); font-size: 14px; font-family: 'Manrope', sans-serif; }
+  .card-desc { color: rgba(255,255,255,0.45); }
+  .empty { color: rgba(255,255,255,0.35); }
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid rgba(228,183,120,0.25); text-align: center; }
+  footer .slogan { font-style: italic; font-size: 17px; color: rgba(255,255,255,0.75); }
+  footer .brand { margin-top: 6px; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: rgba(228,183,120,0.7); font-family: 'Manrope', sans-serif; }
+  @media print {
+    body { background: #fff; color: #1a1613; }
+    .photo-card { background: #f5f1ea; }
+    .photo-meta, .comments { color: #555; }
+    .comments strong { color: #8a6d3f; }
+    h1 { color: #1a1613; } h2 { color: #8a6d3f; }
+    .arr-column h3 { color: #1a1613; }
+    .arr-column li { border-color: #ddd; }
+    footer .slogan { color: #444; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <svg width="64" height="64" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+      <defs><clipPath id="hc"><rect x="0" y="64" width="120" height="56" /></clipPath></defs>
+      <circle cx="60" cy="50" r="30" fill="none" stroke="#E4B778" stroke-width="2" opacity="0.5" />
+      <circle cx="60" cy="50" r="30" fill="#E4B778" clip-path="url(#hc)" />
+      <line x1="10" y1="64" x2="110" y2="64" stroke="#E4B778" stroke-width="2" opacity="0.9" />
+    </svg>
+    <div>
+      <h1>${esc(projectRow.name)}</h1>
+      <div class="sub">Photo results &amp; arrangements</div>
+    </div>
+  </header>
+  <p class="print-tip">Tip: press Ctrl+P (or Share &rarr; Print on your phone) and save as PDF for a permanent copy.</p>
+
+  <h2>Photos, best first</h2>
+  <div class="grid">${photoCards || '<p class="empty">No photos uploaded yet.</p>'}</div>
+
+  <h2>Arrangements</h2>
+  ${arrangements || '<p class="empty">No arrangements board.</p>'}
+
+  <footer>
+    <div class="slogan">A memory you can hold.</div>
+    <div class="brand">Afterlight · Memorial Films</div>
+  </footer>
+</div>
+</body>
+</html>`);
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.get('/health', (req, res) => res.json({ ok: true }));
+
+// Serve the exported web build (npx expo export --platform web) when present,
+// so one deployed server = app + API on a single public origin and the client
+// can resolve the API via window.location.origin.
+const distDir = path.join(__dirname, '..', 'dist');
+app.use(express.static(distDir));
+app.get(/^\/(?!api\/).*/, (req, res, next) => {
+  res.sendFile(path.join(distDir, 'index.html'), (err) => {
+    if (err) next();
+  });
+});
 
 app.use((err, req, res, next) => {
   console.error(err);

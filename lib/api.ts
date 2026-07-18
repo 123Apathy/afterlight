@@ -1,4 +1,9 @@
-export const API_BASE = 'http://localhost:4400';
+// Dev: EXPO_PUBLIC_API_BASE in .env points at the local server (Metro serves
+// the app on a different port). Deployed: leave it unset and serve the web
+// export from the Express server itself, so the API is same-origin.
+export const API_BASE =
+  process.env.EXPO_PUBLIC_API_BASE ||
+  (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:4400');
 
 export type Project = {
   id: string;
