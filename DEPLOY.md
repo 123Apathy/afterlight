@@ -1,99 +1,55 @@
-# Deploying Afterlight to a VPS
+# Deploying Afterlight
 
 Afterlight runs as **one Node process**: the Express server (`server/index.js`)
-serves the API *and* the compiled web app (`dist/`) on a single origin. Put it
-behind nginx with HTTPS and it's live.
+serves the API *and* the compiled web app (`dist/`) on a single origin.
 
-## Prerequisites on the VPS
+## Live deploy — Google Cloud Run (current)
 
-- **Node 20.6+** (the server uses `--env-file`), `npm`, `git`
-- **nginx** + **certbot** (Let's Encrypt) for HTTPS — required, because the
-  invite-link copy and the photo picker only work on a secure origin
-- A **subdomain** with an A record pointing at the VPS IP (e.g. `afterlight.yourdomain.co.za`)
+Afterlight is deployed as its own Cloud Run service in the same project as PL@4M
+(`hosting-and-sharing-platform`, region `europe-west1`), isolated from the other
+services. The `Dockerfile` builds the web export and runs the server; Cloud Run
+provides HTTPS and scales to zero.
 
-## 1. Get the code
-
-The repo is private (`github.com/123Apathy/afterlight`). Give the VPS read
-access once — easiest is `gh auth login` on the box, or add a read-only deploy
-key, or clone over HTTPS with a personal access token.
+**Redeploy after changes** (needs `gcloud` authed on the project):
 
 ```bash
-git clone https://github.com/123Apathy/afterlight.git
-cd afterlight
-npm install
-cd server && npm install && cd ..
+gcloud run deploy afterlight \
+  --source . \
+  --project hosting-and-sharing-platform \
+  --region europe-west1 \
+  --allow-unauthenticated \
+  --min-instances=0 --max-instances=2 \
+  --set-env-vars "^##^SUPABASE_URL=https://kgzgpanbnpdyamhtjhau.supabase.co##SUPABASE_KEY=<publishable key>"
 ```
 
-## 2. Server env
+Notes:
+- **Node 22+ is required** — `@supabase/supabase-js` needs native WebSocket
+  (the `Dockerfile` uses `node:22-slim`).
+- The `.dockerignore` excludes `.env`, so the web build resolves the API from
+  its own origin (never hardcodes localhost). Do not add build ARGs that set
+  `EXPO_PUBLIC_API_BASE`.
+- Cloud Run injects `PORT` and the `SUPABASE_*` env vars; the server reads them
+  from `process.env`.
+- Cloud Run caps request bodies at ~32 MB — a single bulk upload of many large
+  photos could hit that. Chunk uploads if it becomes an issue.
 
-Copy your local `server/.env` values onto the VPS (they are NOT in the repo):
+**Custom domain (optional):** map e.g. `afterlight.pl4m.co.za` with
+`gcloud beta run domain-mappings create --service afterlight --domain <domain>
+--region europe-west1`, then add the DNS records it prints. The `*.run.app` URL
+works fully without this.
 
-```bash
-cat > server/.env <<'EOF'
-SUPABASE_URL=<your supabase url>
-SUPABASE_KEY=<publishable key for now>
-PORT=4400
-EOF
-```
+## Alternative — a plain VPS
 
-> Keep the root `.env` absent on the VPS. If `EXPO_PUBLIC_API_BASE` is set at
-> build time it hardcodes that URL into the client and breaks in production.
-> With no root `.env`, the client correctly calls its own origin.
-
-## 3. Build the web app
-
-```bash
-npx expo export --platform web   # produces ./dist, served by the Express server
-```
-
-## 4. Run it (pm2)
-
-```bash
-npm i -g pm2
-pm2 start "node --env-file=server/.env server/index.js" --name afterlight
-pm2 save && pm2 startup   # keep it running across reboots
-```
-
-Health check: `curl localhost:4400/health` → `{"ok":true}`.
-
-## 5. nginx + HTTPS
-
-```nginx
-# /etc/nginx/sites-available/afterlight
-server {
-  server_name afterlight.yourdomain.co.za;
-  client_max_body_size 40m;            # photo uploads
-  location / {
-    proxy_pass http://127.0.0.1:4400;
-    proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-  }
-}
-```
-
-```bash
-ln -s /etc/nginx/sites-available/afterlight /etc/nginx/sites-enabled/
-nginx -t && systemctl reload nginx
-certbot --nginx -d afterlight.yourdomain.co.za   # issues + wires up HTTPS
-```
-
-Visit `https://afterlight.yourdomain.co.za` — create a memorial, upload a
-photo, favourite it. Invite links will automatically use this domain.
-
-## Updating later
-
-```bash
-git pull
-npm install
-npx expo export --platform web
-pm2 restart afterlight
-```
+One Node process behind nginx + certbot. Prereqs: Node 22+, nginx, certbot, a
+subdomain. Steps: clone the private repo, `npm install` (root + `server/`),
+create `server/.env` with `SUPABASE_URL` + `SUPABASE_KEY` + `PORT`, build with
+`npx expo export --platform web` (no root `.env` so the API resolves to origin),
+run under pm2 (`pm2 start "node --env-file=server/.env server/index.js" --name
+afterlight`), reverse-proxy the subdomain to the port, and `certbot --nginx -d
+<subdomain>` for HTTPS.
 
 ## Notes
 
-- The offline **demo mode** (`EXPO_PUBLIC_DEMO=1`) is for local previews only —
-  leave it off in production.
+- The offline **demo mode** (`EXPO_PUBLIC_DEMO=1`) is for local previews only.
 - RLS on the shared Supabase project is still open (server uses the publishable
-  key). Switch to the secret key + lock down policies when moving to Afterlight's
-  own Supabase project.
+  key). Lock it down with the secret key when moving to Afterlight's own project.
