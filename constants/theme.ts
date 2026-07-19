@@ -1,3 +1,7 @@
+// Mobile-first: on wide screens the app renders inside a centered frame of this
+// width instead of stretching across the whole window.
+export const APP_MAX_WIDTH = 460;
+
 export const colors = {
   dark: 'rgb(25, 20, 19)',
   darkWarm: 'rgb(32, 26, 24)',

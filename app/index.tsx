@@ -15,7 +15,7 @@ import MenuOverlay from '../components/MenuOverlay';
 import CommentSheet from '../components/CommentSheet';
 import PressableScale from '../components/PressableScale';
 import GoldButton from '../components/GoldButton';
-import { colors, copy, images } from '../constants/theme';
+import { APP_MAX_WIDTH, colors, copy, images } from '../constants/theme';
 import { DEMO, DEMO_PHOTOS } from '../constants/demo';
 import { api, heartCount, isFavoritedBy, photoUrl, type Photo } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
@@ -27,7 +27,9 @@ const ENTRANCE_DURATION = 360;
 const STAGGER_DELAY = 45;
 
 export default function SwipeScreen() {
-  const { width, height } = useWindowDimensions();
+  const { width: winWidth, height } = useWindowDimensions();
+  // Photos size to the centered frame on wide screens, not the whole window.
+  const width = Math.min(winWidth, APP_MAX_WIDTH);
   const reduceMotion = useReducedMotion();
   const { projectId, setProject, known } = useActiveProject();
   const [raterName, setRaterName] = useLocalStorage('afterlight.rater', '');
