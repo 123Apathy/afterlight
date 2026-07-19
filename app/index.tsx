@@ -542,10 +542,19 @@ function PhotoSlide({
 
   return (
     <Pressable onPress={handleTap} style={{ width, height }}>
+      {/* Blurred, dimmed copy fills the letterbox area behind the fitted photo. */}
       <Image
         source={photo.localSource ?? { uri: photoUrl(photo) }}
         style={StyleSheet.absoluteFill}
         resizeMode="cover"
+        blurRadius={24}
+      />
+      <View style={styles.fillDim} pointerEvents="none" />
+      {/* The whole photo, fit to screen (no cropping / bleed). */}
+      <Image
+        source={photo.localSource ?? { uri: photoUrl(photo) }}
+        style={StyleSheet.absoluteFill}
+        resizeMode="contain"
       />
       <LinearGradient colors={['rgba(0,0,0,0.4)', 'transparent']} style={styles.topScrim} pointerEvents="none" />
       <LinearGradient
@@ -815,6 +824,14 @@ const styles = StyleSheet.create({
   emptyButtonText: {
     fontSize: 15,
     letterSpacing: 0.2,
+  },
+  fillDim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(16, 14, 12, 0.55)',
   },
   topScrim: {
     position: 'absolute',
