@@ -591,6 +591,13 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
       : { data: [], error: null };
     assertOk(cardsError);
 
+    const { data: tributes, error: tributesError } = await supabase
+      .from('afterlight_tribute_responses')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: true });
+    assertOk(tributesError);
+
     const photoCards = enriched
       .map((p) => {
         const favCount = p.favoritedBy.length;
@@ -622,6 +629,17 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
           .map((c) => `<li>${esc(c.title)}${c.description ? `<span class="card-desc"> — ${esc(c.description)}</span>` : ''}</li>`)
           .join('');
         return `<div class="arr-column"><h3>${esc(column.title)} <span class="count">${columnCards.length}</span></h3><ul>${items || '<li class="empty">Nothing here.</li>'}</ul></div>`;
+      })
+      .join('');
+
+    const tributeHtml = (tributes || [])
+      .map((t) => {
+        const answers = Array.isArray(t.answers) ? t.answers : [];
+        const qa = answers
+          .filter((a) => a && String(a.answer || '').trim())
+          .map((a) => `<div class="qa"><div class="q">${esc(a.question)}</div><div class="a">${esc(a.answer)}</div></div>`)
+          .join('');
+        return qa ? `<div class="story"><h3>${esc(t.respondent)}</h3>${qa}</div>` : '';
       })
       .join('');
 
@@ -660,6 +678,11 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
   .arr-column li { padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.07); font-size: 14px; font-family: 'Manrope', sans-serif; }
   .card-desc { color: rgba(255,255,255,0.45); }
   .empty { color: rgba(255,255,255,0.35); }
+  .story { margin-bottom: 30px; break-inside: avoid; }
+  .story h3 { font-size: 17px; color: #E4B778; margin-bottom: 10px; font-family: 'Manrope', sans-serif; }
+  .qa { margin-bottom: 13px; }
+  .qa .q { font-size: 12px; letter-spacing: 0.3px; color: rgba(255,255,255,0.5); font-family: 'Manrope', sans-serif; }
+  .qa .a { font-size: 15px; color: rgba(255,255,255,0.88); margin-top: 3px; line-height: 1.55; }
   footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid rgba(228,183,120,0.25); text-align: center; }
   footer .slogan { font-style: italic; font-size: 17px; color: rgba(255,255,255,0.75); }
   footer .brand { margin-top: 6px; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: rgba(228,183,120,0.7); font-family: 'Manrope', sans-serif; }
@@ -671,6 +694,7 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
     h1 { color: #1a1613; } h2 { color: #8a6d3f; }
     .arr-column h3 { color: #1a1613; }
     .arr-column li { border-color: #ddd; }
+    .story h3 { color: #8a6d3f; } .qa .q { color: #777; } .qa .a { color: #222; }
     footer .slogan { color: #444; }
   }
 </style>
@@ -686,13 +710,15 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
     </svg>
     <div>
       <h1>${esc(projectRow.name)}</h1>
-      <div class="sub">Favourite photos &amp; arrangements</div>
+      <div class="sub">Favourite photos &amp; shared memories</div>
     </div>
   </header>
   <p class="print-tip">Tip: press Ctrl+P (or Share &rarr; Print on your phone) and save as PDF for a permanent copy.</p>
 
   <h2>Photos, most favourited first</h2>
   <div class="grid">${photoCards || '<p class="empty">No photos uploaded yet.</p>'}</div>
+
+  ${tributeHtml ? `<h2>Memories &amp; stories shared</h2><div class="stories">${tributeHtml}</div>` : ''}
 
   <h2>Arrangements</h2>
   ${arrangements || '<p class="empty">No arrangements board.</p>'}
