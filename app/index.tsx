@@ -39,6 +39,17 @@ export default function SwipeScreen() {
   const [loadError, setLoadError] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [commentPhotoId, setCommentPhotoId] = useState<string | null>(null);
+  const [inputFocused, setInputFocused] = useState(false);
+
+  // Gentle one-time entrance for the welcome screen (fade + slight rise).
+  const enter = useSharedValue(0);
+  useEffect(() => {
+    enter.value = reduceMotion ? 1 : withTiming(1, { duration: 520, easing: Easing.out(Easing.cubic) });
+  }, []);
+  const enterStyle = useAnimatedStyle(() => ({
+    opacity: enter.value,
+    transform: [{ translateY: (1 - enter.value) * 14 }],
+  }));
 
   const refresh = async () => {
     if (DEMO) {
@@ -144,41 +155,45 @@ export default function SwipeScreen() {
           </View>
         </View>
         <View style={styles.gate}>
-          <Image source={images.lockup} style={styles.lockup} resizeMode="contain" />
-          <Text style={styles.gateTitle}>{copy.landing.title}</Text>
-          <Text style={styles.gateSubtitle}>
-            {copy.landing.subtitle}
-          </Text>
-          <TextInput
-            value={newProjectName}
-            onChangeText={setNewProjectName}
-            placeholder="Person's name or occasion…"
-            placeholderTextColor={colors.textFaintest}
-            style={styles.gateInput}
-            onSubmitEditing={handleCreateProject}
-          />
-          <GoldButton
-            label={creatingProject ? 'Creating…' : 'Begin'}
-            onPress={handleCreateProject}
-            style={styles.gateButton}
-          />
+          <Animated.View style={[styles.gateInner, enterStyle]}>
+            <Image source={images.lockup} style={styles.lockup} resizeMode="contain" />
+            <Text style={styles.gateTitle}>{copy.landing.title}</Text>
+            <Text style={styles.gateSubtitle}>
+              {copy.landing.subtitle}
+            </Text>
+            <TextInput
+              value={newProjectName}
+              onChangeText={setNewProjectName}
+              placeholder="Person's name or occasion…"
+              placeholderTextColor={colors.textFaintest}
+              style={[styles.gateInput, inputFocused && styles.gateInputFocused]}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setInputFocused(false)}
+              onSubmitEditing={handleCreateProject}
+            />
+            <GoldButton
+              label={creatingProject ? 'Creating…' : 'Begin'}
+              onPress={handleCreateProject}
+              style={styles.gateButton}
+            />
 
-          {known.length > 0 && (
-            <View style={styles.knownBlock}>
-              <Text style={styles.knownLabel}>Or open one you&rsquo;re already part of</Text>
-              {known.map((k) => (
-                <PressableScale
-                  key={k.id}
-                  style={styles.knownRow}
-                  onPress={() => setProject(k)}
-                  scaleTo={0.98}
-                >
-                  <Text style={styles.knownName}>{k.name}</Text>
-                  <Text style={styles.knownChevron}>›</Text>
-                </PressableScale>
-              ))}
-            </View>
-          )}
+            {known.length > 0 && (
+              <View style={styles.knownBlock}>
+                <Text style={styles.knownLabel}>Or open one you&rsquo;re already part of</Text>
+                {known.map((k) => (
+                  <PressableScale
+                    key={k.id}
+                    style={styles.knownRow}
+                    onPress={() => setProject(k)}
+                    scaleTo={0.98}
+                  >
+                    <Text style={styles.knownName}>{k.name}</Text>
+                    <Text style={styles.knownChevron}>›</Text>
+                  </PressableScale>
+                ))}
+              </View>
+            )}
+          </Animated.View>
         </View>
       </View>
     );
@@ -619,9 +634,13 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 18,
     paddingHorizontal: 28,
     paddingBottom: 80,
+  },
+  gateInner: {
+    width: '100%',
+    alignItems: 'center',
+    gap: 18,
   },
   gateTagline: {
     fontFamily: 'Poppins_400Regular',
@@ -662,6 +681,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_400Regular',
     fontSize: 16,
     marginTop: 12,
+  },
+  gateInputFocused: {
+    borderColor: colors.goldWarm,
+    backgroundColor: 'rgba(212, 169, 118, 0.1)',
   },
   gateButton: {
     width: '100%',
