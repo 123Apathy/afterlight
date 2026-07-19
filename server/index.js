@@ -91,6 +91,44 @@ function assertOk(error) {
   if (error) throw Object.assign(new Error(error.message), { status: 500 });
 }
 
+// Fire a notification when a family engages (a tribute is submitted). Sends to
+// Telegram (if NOTIFY_TELEGRAM_BOT_TOKEN + NOTIFY_TELEGRAM_CHAT_ID are set) and/or
+// a generic webhook (NOTIFY_WEBHOOK_URL). Never throws — a failed notify must not
+// break the family's submission.
+async function notify(text) {
+  const jobs = [];
+  const tgToken = process.env.NOTIFY_TELEGRAM_BOT_TOKEN;
+  const tgChat = process.env.NOTIFY_TELEGRAM_CHAT_ID;
+  if (tgToken && tgChat) {
+    jobs.push(
+      fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: tgChat, text, disable_web_page_preview: true }),
+        signal: AbortSignal.timeout(5000),
+      })
+    );
+  }
+  const hook = process.env.NOTIFY_WEBHOOK_URL;
+  if (hook) {
+    jobs.push(
+      fetch(hook, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // `text` and `content` between them cover Slack / Discord / most receivers.
+        body: JSON.stringify({ text, content: text }),
+        signal: AbortSignal.timeout(5000),
+      })
+    );
+  }
+  if (!jobs.length) return;
+  try {
+    await Promise.allSettled(jobs);
+  } catch {
+    /* swallow */
+  }
+}
+
 async function seedProjectKanban(projectId) {
   const columnIds = {
     todo: `${projectId}-todo`,
@@ -343,6 +381,21 @@ app.post('/api/projects/:projectId/tribute', async (req, res, next) => {
       if (error.code === '23503') return res.status(404).json({ error: 'project not found' });
       throw Object.assign(new Error(error.message), { status: 500 });
     }
+
+    // Notify the operator that a family member just contributed.
+    const { data: proj } = await supabase
+      .from('afterlight_projects')
+      .select('name, invite_code')
+      .eq('id', req.params.projectId)
+      .maybeSingle();
+    if (proj) {
+      const origin = `https://${req.get('host')}`;
+      const answered = answers.filter((a) => a && String(a.answer || '').trim()).length;
+      await notify(
+        `📝 Afterlight — ${respondent.trim()} shared memories for "${proj.name}" (${answered} answers).\nResults: ${origin}/api/report/${proj.invite_code}`
+      );
+    }
+
     res.status(201).json({ ok: true });
   } catch (err) {
     next(err);
@@ -783,6 +836,94 @@ app.get('/join/:code', async (req, res, next) => {
       html = html.replace(/<title>[^<]*<\/title>/i, '').replace(/<head>/i, `<head>${meta}`);
     }
     res.type('html').send(html);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Private owner dashboard — every memorial + its activity, at a secret path.
+// Guarded by ADMIN_SECRET (route 404s if the env var is unset or mismatched).
+app.get('/admin/:secret', async (req, res, next) => {
+  try {
+    if (!process.env.ADMIN_SECRET || req.params.secret !== process.env.ADMIN_SECRET) {
+      return res.status(404).send('Not found');
+    }
+    const [{ data: projects }, { data: photos }, { data: tributes }, { data: ratings }, { data: comments }] =
+      await Promise.all([
+        supabase.from('afterlight_projects').select('id, name, invite_code, created_at'),
+        supabase.from('afterlight_photos').select('id, project_id, created_at'),
+        supabase.from('afterlight_tribute_responses').select('project_id, created_at'),
+        supabase.from('afterlight_ratings').select('photo_id, created_at'),
+        supabase.from('afterlight_comments').select('photo_id, created_at'),
+      ]);
+
+    const photoProject = new Map((photos || []).map((p) => [p.id, p.project_id]));
+    const acc = new Map();
+    const bump = (pid, field, when) => {
+      if (!pid) return;
+      const e = acc.get(pid) || { photos: 0, favs: 0, comments: 0, tributes: 0, last: null };
+      e[field] += 1;
+      if (when && (!e.last || when > e.last)) e.last = when;
+      acc.set(pid, e);
+    };
+    (photos || []).forEach((p) => bump(p.project_id, 'photos', p.created_at));
+    (tributes || []).forEach((t) => bump(t.project_id, 'tributes', t.created_at));
+    (ratings || []).forEach((r) => bump(photoProject.get(r.photo_id), 'favs', r.created_at));
+    (comments || []).forEach((c) => bump(photoProject.get(c.photo_id), 'comments', c.created_at));
+
+    const ago = (iso) => {
+      if (!iso) return '—';
+      const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+      if (s < 3600) return `${Math.round(s / 60)}m ago`;
+      if (s < 86400) return `${Math.round(s / 3600)}h ago`;
+      return `${Math.round(s / 86400)}d ago`;
+    };
+
+    const rows = (projects || [])
+      .map((p) => ({ ...p, ...(acc.get(p.id) || { photos: 0, favs: 0, comments: 0, tributes: 0, last: p.created_at }) }))
+      .sort((a, b) => String(b.last || '').localeCompare(String(a.last || '')));
+
+    const origin = `https://${req.get('host')}`;
+    const body = rows
+      .map(
+        (r) => `<tr>
+        <td class="name">${esc(r.name)}</td>
+        <td>${r.photos}</td>
+        <td class="${r.favs ? 'hot' : ''}">${r.favs}</td>
+        <td>${r.comments}</td>
+        <td class="${r.tributes ? 'hot' : ''}">${r.tributes}</td>
+        <td class="ago">${ago(r.last)}</td>
+        <td><a href="${origin}/api/report/${esc(r.invite_code)}" target="_blank">results ↗</a></td>
+      </tr>`
+      )
+      .join('');
+
+    res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" />
+<title>Afterlight — dashboard</title><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Poppins',system-ui,sans-serif; background:#191413; color:rgba(255,255,255,0.85); padding:40px 24px; }
+  .page { max-width:820px; margin:0 auto; }
+  h1 { font-family:'Playfair Display',serif; font-size:30px; color:#fff; }
+  .sub { color:rgba(196,154,108,0.9); font-size:12px; letter-spacing:2.5px; text-transform:uppercase; margin:6px 0 26px; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th { text-align:left; font-weight:500; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:rgba(255,255,255,0.45); padding:0 10px 10px; }
+  td { padding:12px 10px; border-top:1px solid rgba(255,255,255,0.08); }
+  td.name { font-weight:500; color:#fff; }
+  td.ago { color:rgba(255,255,255,0.5); }
+  td.hot { color:#C49A6C; font-weight:500; }
+  a { color:#C49A6C; text-decoration:none; }
+  .empty { color:rgba(255,255,255,0.4); margin-top:20px; }
+</style></head><body><div class="page">
+  <h1>Memorials</h1>
+  <div class="sub">Afterlight · activity dashboard</div>
+  ${
+    rows.length
+      ? `<table><thead><tr><th>Memorial</th><th>Photos</th><th>Favourites</th><th>Comments</th><th>Stories</th><th>Last activity</th><th></th></tr></thead><tbody>${body}</tbody></table>`
+      : '<p class="empty">No memorials yet.</p>'
+  }
+</div></body></html>`);
   } catch (err) {
     next(err);
   }
