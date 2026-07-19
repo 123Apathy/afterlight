@@ -3,6 +3,7 @@ const cors = require('cors');
 const multer = require('multer');
 const crypto = require('crypto');
 const path = require('path');
+const fs = require('fs');
 const { supabase, PHOTOS_BUCKET, SIGNED_URL_TTL_SECONDS } = require('./supabaseClient');
 
 const PORT = process.env.PORT || 4400;
@@ -746,6 +747,47 @@ app.get('/health', (req, res) => res.json({ ok: true }));
 // can resolve the API via window.location.origin.
 const distDir = path.join(__dirname, '..', 'dist');
 app.use(express.static(distDir));
+
+// Invite links: inject project-specific preview meta so a shared /join/<code>
+// link previews as "You're invited — <name>" instead of the generic app title.
+// The SPA still boots and joins the project as normal.
+app.get('/join/:code', async (req, res, next) => {
+  try {
+    let html;
+    try {
+      html = fs.readFileSync(path.join(distDir, 'index.html'), 'utf8');
+    } catch {
+      return next(); // no web build present (dev) — let it fall through
+    }
+    const { data: project } = await supabase
+      .from('afterlight_projects')
+      .select('name')
+      .eq('invite_code', req.params.code)
+      .maybeSingle();
+    if (project && project.name) {
+      const name = esc(project.name);
+      const host = req.get('host');
+      const title = `You&#39;re invited &mdash; ${name} · Afterlight`;
+      const desc = `Help us honour ${name}. Add photos and favourite the moments that mattered, together.`;
+      const meta = `
+    <title>${title}</title>
+    <meta name="description" content="${desc}" />
+    <meta property="og:title" content="${title}" />
+    <meta property="og:description" content="${desc}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Afterlight · Memorial Films" />
+    <meta property="og:image" content="https://${esc(host)}/favicon.ico" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="${title}" />
+    <meta name="twitter:description" content="${desc}" />`;
+      html = html.replace(/<title>[^<]*<\/title>/i, '').replace(/<head>/i, `<head>${meta}`);
+    }
+    res.type('html').send(html);
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.get(/^\/(?!api\/).*/, (req, res, next) => {
   res.sendFile(path.join(distDir, 'index.html'), (err) => {
     if (err) next();
