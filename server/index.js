@@ -650,63 +650,67 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
 <title>${esc(projectRow.name)} — Afterlight results</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet" />
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: Georgia, 'Times New Roman', serif; background: #161312; color: rgba(255,255,255,0.85); padding: 48px 28px; }
+  body { font-family: 'Poppins', system-ui, sans-serif; background: #191413; color: rgba(255,255,255,0.85); padding: 48px 28px; }
   .page { max-width: 900px; margin: 0 auto; }
-  header { display: flex; align-items: center; gap: 20px; margin-bottom: 8px; }
+  header { display: flex; align-items: center; gap: 18px; margin-bottom: 8px; }
   header svg { flex-shrink: 0; }
-  h1 { font-size: 34px; font-weight: 600; color: #fff; }
-  .sub { color: rgba(228,183,120,0.85); font-size: 14px; letter-spacing: 2.5px; text-transform: uppercase; margin-top: 5px; }
-  h2 { font-size: 21px; color: #E4B778; margin: 44px 0 18px; font-weight: 600; }
+  h1 { font-family: 'Playfair Display', Georgia, serif; font-size: 38px; font-weight: 600; letter-spacing: -0.6px; color: #fff; }
+  .sub { font-size: 12px; letter-spacing: 3px; text-transform: uppercase; color: rgba(196,154,108,0.9); margin-top: 6px; }
+  h2 { font-family: 'Playfair Display', Georgia, serif; font-size: 25px; font-weight: 500; letter-spacing: -0.3px; color: #C49A6C; margin: 48px 0 18px; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
-  .photo-card { background: rgba(255,255,255,0.04); border-radius: 12px; overflow: hidden; break-inside: avoid; }
+  .photo-card { background: rgba(255,255,255,0.045); border: 1px solid rgba(196,154,108,0.12); border-radius: 14px; overflow: hidden; break-inside: avoid; }
   .photo-wrap { position: relative; }
   .photo-wrap img { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; }
-  .badge { position: absolute; top: 10px; left: 10px; height: 28px; padding: 0 10px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #1A1613; background: #E4B778; font-family: 'Manrope', sans-serif; font-size: 13px; }
-  .photo-meta { padding: 10px 14px; font-size: 13px; color: rgba(255,255,255,0.6); font-family: 'Manrope', sans-serif; }
-  .photo-missing { aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.4); font-family: 'Manrope', sans-serif; font-size: 13px; background: rgba(255,255,255,0.03); }
-  .print-tip { margin-top: 10px; font-size: 13px; color: rgba(255,255,255,0.45); font-family: 'Manrope', sans-serif; }
-  .comments { list-style: none; padding: 0 14px 12px; font-size: 13px; font-family: 'Manrope', sans-serif; color: rgba(255,255,255,0.75); }
+  .badge { position: absolute; top: 10px; left: 10px; height: 28px; padding: 0 11px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 500; color: #1A1613; background: #C49A6C; font-size: 13px; }
+  .photo-meta { padding: 11px 14px; font-size: 13px; color: rgba(255,255,255,0.6); }
+  .photo-missing { aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.4); font-size: 13px; background: rgba(255,255,255,0.03); }
+  .print-tip { margin-top: 10px; font-size: 13px; color: rgba(255,255,255,0.45); }
+  .comments { list-style: none; padding: 0 14px 12px; font-size: 13px; color: rgba(255,255,255,0.75); }
   .comments li { margin-top: 4px; }
-  .comments strong { color: #E4B778; font-weight: 600; }
+  .comments strong { color: #C49A6C; font-weight: 500; }
   .arr-column { margin-bottom: 22px; }
-  .arr-column h3 { font-size: 16px; color: #fff; margin-bottom: 8px; font-family: 'Manrope', sans-serif; }
+  .arr-column h3 { font-size: 15px; font-weight: 500; color: #fff; margin-bottom: 8px; }
   .arr-column .count { color: rgba(255,255,255,0.4); font-weight: 400; margin-left: 6px; }
   .arr-column ul { list-style: none; }
-  .arr-column li { padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.07); font-size: 14px; font-family: 'Manrope', sans-serif; }
+  .arr-column li { padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.07); font-size: 14px; }
   .card-desc { color: rgba(255,255,255,0.45); }
   .empty { color: rgba(255,255,255,0.35); }
-  .story { margin-bottom: 30px; break-inside: avoid; }
-  .story h3 { font-size: 17px; color: #E4B778; margin-bottom: 10px; font-family: 'Manrope', sans-serif; }
-  .qa { margin-bottom: 13px; }
-  .qa .q { font-size: 12px; letter-spacing: 0.3px; color: rgba(255,255,255,0.5); font-family: 'Manrope', sans-serif; }
-  .qa .a { font-size: 15px; color: rgba(255,255,255,0.88); margin-top: 3px; line-height: 1.55; }
-  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid rgba(228,183,120,0.25); text-align: center; }
-  footer .slogan { font-style: italic; font-size: 17px; color: rgba(255,255,255,0.75); }
-  footer .brand { margin-top: 6px; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: rgba(228,183,120,0.7); font-family: 'Manrope', sans-serif; }
+  .story { margin-bottom: 32px; break-inside: avoid; }
+  .story h3 { font-family: 'Playfair Display', Georgia, serif; font-size: 21px; font-weight: 500; color: #C49A6C; margin-bottom: 12px; }
+  .qa { margin-bottom: 14px; }
+  .qa .q { font-size: 12px; letter-spacing: 0.3px; color: rgba(255,255,255,0.5); }
+  .qa .a { font-size: 15px; color: rgba(255,255,255,0.88); margin-top: 3px; line-height: 1.6; }
+  footer { margin-top: 58px; padding-top: 22px; border-top: 1px solid rgba(196,154,108,0.25); text-align: center; }
+  footer .slogan { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: 20px; color: rgba(255,255,255,0.78); }
+  footer .brand { margin-top: 8px; font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; color: rgba(196,154,108,0.75); }
   @media print {
     body { background: #fff; color: #1a1613; }
-    .photo-card { background: #f5f1ea; }
+    .photo-card { background: #f7f2ea; border-color: #e5d9c4; }
     .photo-meta, .comments { color: #555; }
-    .comments strong { color: #8a6d3f; }
-    h1 { color: #1a1613; } h2 { color: #8a6d3f; }
+    .comments strong { color: #9a744a; }
+    h1 { color: #1a1613; } h2 { color: #9a744a; }
     .arr-column h3 { color: #1a1613; }
     .arr-column li { border-color: #ddd; }
-    .story h3 { color: #8a6d3f; } .qa .q { color: #777; } .qa .a { color: #222; }
-    footer .slogan { color: #444; }
+    .story h3 { color: #9a744a; } .qa .q { color: #777; } .qa .a { color: #222; }
+    footer .slogan { color: #333; } footer .brand { color: #9a744a; }
   }
 </style>
 </head>
 <body>
 <div class="page">
   <header>
-    <svg width="64" height="64" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-      <defs><clipPath id="hc"><rect x="0" y="64" width="120" height="56" /></clipPath></defs>
-      <circle cx="60" cy="50" r="30" fill="none" stroke="#E4B778" stroke-width="2" opacity="0.5" />
-      <circle cx="60" cy="50" r="30" fill="#E4B778" clip-path="url(#hc)" />
-      <line x1="10" y1="64" x2="110" y2="64" stroke="#E4B778" stroke-width="2" opacity="0.9" />
+    <svg width="60" height="60" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+      <line x1="52" y1="170" x2="188" y2="170" stroke="#C49A6C" stroke-width="4" stroke-linecap="round" opacity="0.9" />
+      <path d="M66,170 A54,54 0 0 1 174,170" fill="none" stroke="#C49A6C" stroke-width="8" stroke-linecap="round" />
+      <line x1="120" y1="108" x2="120" y2="66" stroke="#C49A6C" stroke-width="6" stroke-linecap="round" />
+      <line x1="99" y1="108" x2="102" y2="74" stroke="#C49A6C" stroke-width="5" stroke-linecap="round" opacity="0.85" />
+      <line x1="141" y1="108" x2="138" y2="74" stroke="#C49A6C" stroke-width="5" stroke-linecap="round" opacity="0.85" />
+      <line x1="78" y1="108" x2="84" y2="82" stroke="#C49A6C" stroke-width="4" stroke-linecap="round" opacity="0.7" />
+      <line x1="162" y1="108" x2="156" y2="82" stroke="#C49A6C" stroke-width="4" stroke-linecap="round" opacity="0.7" />
+      <circle cx="120" cy="170" r="5" fill="#A6794A" />
     </svg>
     <div>
       <h1>${esc(projectRow.name)}</h1>
