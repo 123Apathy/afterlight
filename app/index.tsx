@@ -19,7 +19,7 @@ import PressableScale from '../components/PressableScale';
 import GoldButton from '../components/GoldButton';
 import { APP_MAX_WIDTH, colors, copy, images } from '../constants/theme';
 import { DEMO, DEMO_PHOTOS } from '../constants/demo';
-import { api, heartCount, isFavoritedBy, photoUrl, type Photo } from '../lib/api';
+import { API_BASE, api, heartCount, isFavoritedBy, photoUrl, type Photo, type Project } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
 import { useLocalStorage } from '../lib/useLocalStorage';
 
@@ -46,6 +46,7 @@ export default function SwipeScreen() {
   const [inputFocused, setInputFocused] = useState(false);
   const [viewMode, setViewMode] = useState<'deck' | 'grid'>('deck');
   const [deckIndex, setDeckIndex] = useState(0);
+  const [projectDetails, setProjectDetails] = useState<Project | null>(null);
 
   // Gentle one-time entrance for the welcome screen (fade + slight rise).
   const enter = useSharedValue(0);
@@ -79,6 +80,17 @@ export default function SwipeScreen() {
 
   useEffect(() => {
     refresh();
+  }, [projectId]);
+
+  useEffect(() => {
+    if (!projectId) {
+      setProjectDetails(null);
+      return;
+    }
+    api
+      .getProject(projectId)
+      .then(setProjectDetails)
+      .catch(() => setProjectDetails(null));
   }, [projectId]);
 
   const handleCreateProject = async () => {
@@ -274,6 +286,8 @@ export default function SwipeScreen() {
           onToggleFavorite={toggleFavorite}
           onOpenComments={(photo) => setCommentPhotoId(photo.id)}
           reduceMotion={reduceMotion}
+          projectName={projectDetails?.name || 'their'}
+          reportUrl={projectDetails ? `${API_BASE}/api/report/${projectDetails.inviteCode}` : null}
         />
       )}
 
@@ -429,6 +443,8 @@ type PhotoDeckProps = {
   onToggleFavorite: (photo: Photo) => void;
   onOpenComments: (photo: Photo) => void;
   reduceMotion: boolean;
+  projectName: string;
+  reportUrl: string | null;
 };
 
 // Trackpad/mouse-wheel deltas fire many times over a single flick (momentum),
@@ -447,11 +463,16 @@ function PhotoDeck({
   onToggleFavorite,
   onOpenComments,
   reduceMotion,
+  projectName,
+  reportUrl,
 }: PhotoDeckProps) {
   const scrollRef = useRef<ScrollView>(null);
   const [index, setIndex] = useState(initialIndex);
   const indexRef = useRef(index);
   const navEnabledRef = useRef(navEnabled);
+  // One virtual slide appended after the last photo: the "thank you, go see
+  // everyone's favourites" handoff.
+  const lastIndex = photos.length;
 
   useEffect(() => {
     indexRef.current = index;
@@ -462,7 +483,7 @@ function PhotoDeck({
   }, [navEnabled]);
 
   const goTo = (next: number) => {
-    const clamped = Math.max(0, Math.min(photos.length - 1, next));
+    const clamped = Math.max(0, Math.min(lastIndex, next));
     scrollRef.current?.scrollTo({ x: clamped * width, animated: true });
     setIndex(clamped);
   };
@@ -522,6 +543,7 @@ function PhotoDeck({
             reduceMotion={reduceMotion}
           />
         ))}
+        <EndOfDeckSlide width={width} height={height} projectName={projectName} reportUrl={reportUrl} />
       </ScrollView>
 
       <View style={styles.navRow} pointerEvents="box-none">
@@ -537,11 +559,38 @@ function PhotoDeck({
           onPress={() => goTo(index + 1)}
           scaleTo={0.9}
           hitSlop={10}
-          style={[styles.navButton, index === photos.length - 1 && styles.navButtonDisabled]}
+          style={[styles.navButton, index === lastIndex && styles.navButtonDisabled]}
         >
           <Text style={styles.navButtonText}>›</Text>
         </PressableScale>
       </View>
+    </View>
+  );
+}
+
+type EndOfDeckSlideProps = {
+  width: number;
+  height: number;
+  projectName: string;
+  reportUrl: string | null;
+};
+
+function EndOfDeckSlide({ width, height, projectName, reportUrl }: EndOfDeckSlideProps) {
+  const openFavourites = () => {
+    if (!reportUrl) return;
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.open(reportUrl, '_blank');
+    }
+  };
+
+  return (
+    <View style={[styles.endSlide, { width, height }]}>
+      <Text style={styles.endTitle}>Thank you for going through {projectName}&rsquo;s photos.</Text>
+      <Text style={styles.endSubtitle}>
+        Now you can see what everyone else loved. Tap below to look through the favourites, and the
+        memories, your whole family shared.
+      </Text>
+      <GoldButton label="See Everybody's Favourites →" onPress={openFavourites} style={styles.endButton} />
     </View>
   );
 }
@@ -740,6 +789,33 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     color: colors.goldWarm,
     textAlign: 'center',
+  },
+  endSlide: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    backgroundColor: colors.ink,
+  },
+  endTitle: {
+    fontFamily: 'PlayfairDisplay_500Medium',
+    fontSize: 30,
+    letterSpacing: -0.4,
+    lineHeight: 38,
+    color: colors.white,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  endSubtitle: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 15,
+    lineHeight: 26,
+    color: colors.textFainter,
+    textAlign: 'center',
+    maxWidth: 360,
+    marginBottom: 32,
+  },
+  endButton: {
+    minWidth: 260,
   },
   gateTitle: {
     fontFamily: 'PlayfairDisplay_500Medium',
