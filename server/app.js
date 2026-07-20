@@ -79,6 +79,14 @@ function mapNote(row) {
   return { id: row.id, cardId: row.card_id, author: row.author, text: row.body, createdAt: row.created_at };
 }
 
+function requireAdmin(req, res, next) {
+  const provided = req.get('x-admin-secret') || req.query.secret;
+  if (!process.env.ADMIN_SECRET || provided !== process.env.ADMIN_SECRET) {
+    return res.status(404).json({ error: 'not found' });
+  }
+  next();
+}
+
 async function signPhotoUrl(storagePath, ttlSeconds = SIGNED_URL_TTL_SECONDS) {
   const { data, error } = await supabase.storage
     .from(PHOTOS_BUCKET)
@@ -702,6 +710,11 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
       })
       .join('');
 
+    const videoUrl =
+      projectRow.video_published && projectRow.video_storage_path
+        ? await signPhotoUrl(projectRow.video_storage_path, REPORT_IMAGE_TTL_SECONDS)
+        : null;
+
     const tributeHtml = (tributes || [])
       .map((t) => {
         const answers = Array.isArray(t.answers) ? t.answers : [];
@@ -738,6 +751,9 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
   .photo-meta { padding: 11px 14px; font-size: 13px; color: rgba(255,255,255,0.6); }
   .photo-missing { aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.4); font-size: 13px; background: rgba(255,255,255,0.03); }
   .print-tip { margin-top: 10px; font-size: 13px; color: rgba(255,255,255,0.45); }
+  .video-wrap { background: rgba(255,255,255,0.045); border: 1px solid rgba(196,154,108,0.12); border-radius: 14px; padding: 14px; }
+  .video-wrap video { width: 100%; border-radius: 8px; display: block; background: #000; }
+  .video-download { display: inline-block; margin-top: 12px; font-size: 13px; color: #C49A6C; }
   .comments { list-style: none; padding: 0 14px 12px; font-size: 13px; color: rgba(255,255,255,0.75); }
   .comments li { margin-top: 4px; }
   .comments strong { color: #C49A6C; font-weight: 500; }
@@ -757,6 +773,7 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
   footer .slogan { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: 20px; color: rgba(255,255,255,0.78); }
   footer .brand { margin-top: 8px; font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; color: rgba(196,154,108,0.75); }
   @media print {
+    .video-wrap { display: none; }
     body { background: #fff; color: #1a1613; }
     .photo-card { background: #f7f2ea; border-color: #e5d9c4; }
     .photo-meta, .comments { color: #555; }
@@ -788,6 +805,12 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
     </div>
   </header>
   <p class="print-tip">Tip: press Ctrl+P (or Share &rarr; Print on your phone) and save as PDF for a permanent copy.</p>
+
+  ${videoUrl ? `<h2>Tribute video</h2>
+  <div class="video-wrap">
+    <video controls preload="metadata" src="${esc(videoUrl)}"></video>
+    <a class="video-download" href="${esc(videoUrl)}" download>Download video</a>
+  </div>` : ''}
 
   <h2>Photos, most favourited first</h2>
   <div class="grid">${photoCards || '<p class="empty">No photos uploaded yet.</p>'}</div>
@@ -844,8 +867,15 @@ app.get('/join/:code', async (req, res, next) => {
     if (project && project.name) {
       const name = esc(project.name);
       const host = req.get('host');
-      const title = `You&#39;re invited &mdash; ${name} · Afterlight`;
-      const desc = `Help us honour ${name}. Add photos and favourite the moments that mattered, together.`;
+      // Optional ?from=<name> personalizes the preview with whoever shared the
+      // link (e.g. a family member forwarding it on WhatsApp). Capped and
+      // escaped since it's untrusted user input reflected straight into HTML.
+      const fromRaw = typeof req.query.from === 'string' ? req.query.from.trim().slice(0, 60) : '';
+      const from = esc(fromRaw);
+      const title = from ? `${from} invited you — remembering ${name}` : `In loving memory of ${name}`;
+      const desc = from
+        ? `${from} would love your photos and memories of ${name} here. It's a keepsake for the whole family to treasure — no app or account needed.`
+        : `Please add your photos and memories of ${name} here. It's a keepsake for the whole family to treasure — no app or account needed.`;
       const meta = `
     <title>${title}</title>
     <meta name="description" content="${desc}" />
@@ -865,6 +895,75 @@ app.get('/join/:code', async (req, res, next) => {
   }
 });
 
+// --- Admin: tribute video (uploaded straight from the browser to Supabase
+// Storage via a signed upload URL, so the multi-hundred-MB file never has to
+// pass through the Netlify Function's small request/response body limit) ---
+
+app.post('/api/admin/projects/:projectId/video/upload-url', requireAdmin, async (req, res, next) => {
+  try {
+    const { filename } = req.body || {};
+    const ext = (filename && path.extname(filename)) || '.mp4';
+    const storagePath = `videos/${req.params.projectId}/${Date.now()}${ext}`;
+    const { data, error } = await supabase.storage.from(PHOTOS_BUCKET).createSignedUploadUrl(storagePath);
+    assertOk(error);
+    res.json({ signedUrl: data.signedUrl, token: data.token, path: storagePath });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.patch('/api/admin/projects/:projectId/video', requireAdmin, async (req, res, next) => {
+  try {
+    const { storagePath } = req.body || {};
+    if (!storagePath || typeof storagePath !== 'string') {
+      return res.status(400).json({ error: 'storagePath is required' });
+    }
+    const { error } = await supabase
+      .from('afterlight_projects')
+      .update({ video_storage_path: storagePath, video_published: false, video_uploaded_at: new Date().toISOString() })
+      .eq('id', req.params.projectId);
+    assertOk(error);
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.patch('/api/admin/projects/:projectId/video/publish', requireAdmin, async (req, res, next) => {
+  try {
+    const { published } = req.body || {};
+    const { error } = await supabase
+      .from('afterlight_projects')
+      .update({ video_published: !!published })
+      .eq('id', req.params.projectId);
+    assertOk(error);
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.delete('/api/admin/projects/:projectId/video', requireAdmin, async (req, res, next) => {
+  try {
+    const { data: projectRow } = await supabase
+      .from('afterlight_projects')
+      .select('video_storage_path')
+      .eq('id', req.params.projectId)
+      .single();
+    if (projectRow?.video_storage_path) {
+      await supabase.storage.from(PHOTOS_BUCKET).remove([projectRow.video_storage_path]);
+    }
+    const { error } = await supabase
+      .from('afterlight_projects')
+      .update({ video_storage_path: null, video_published: false, video_uploaded_at: null })
+      .eq('id', req.params.projectId);
+    assertOk(error);
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Private owner dashboard — every memorial + its activity, at a secret path.
 // Guarded by ADMIN_SECRET (route 404s if the env var is unset or mismatched).
 app.get('/admin/:secret', async (req, res, next) => {
@@ -872,14 +971,17 @@ app.get('/admin/:secret', async (req, res, next) => {
     if (!process.env.ADMIN_SECRET || req.params.secret !== process.env.ADMIN_SECRET) {
       return res.status(404).send('Not found');
     }
-    const [{ data: projects }, { data: photos }, { data: tributes }, { data: ratings }, { data: comments }] =
+    const [{ data: projects, error: projectsError }, { data: photos }, { data: tributes }, { data: ratings }, { data: comments }] =
       await Promise.all([
-        supabase.from('afterlight_projects').select('id, name, invite_code, created_at'),
+        supabase
+          .from('afterlight_projects')
+          .select('id, name, invite_code, created_at, video_storage_path, video_published'),
         supabase.from('afterlight_photos').select('id, project_id, created_at'),
         supabase.from('afterlight_tribute_responses').select('project_id, created_at'),
         supabase.from('afterlight_ratings').select('photo_id, created_at'),
         supabase.from('afterlight_comments').select('photo_id, created_at'),
       ]);
+    assertOk(projectsError);
 
     const photoProject = new Map((photos || []).map((p) => [p.id, p.project_id]));
     const acc = new Map();
@@ -911,6 +1013,7 @@ app.get('/admin/:secret', async (req, res, next) => {
     const body = rows
       .map((r) => {
         const shareLink = `${origin}/join/${esc(r.invite_code)}`;
+        const videoStatus = r.video_published ? 'Published' : r.video_storage_path ? 'Uploaded' : 'None';
         return `<tr>
         <td class="name">${esc(r.name)}</td>
         <td>${r.photos}</td>
@@ -918,8 +1021,26 @@ app.get('/admin/:secret', async (req, res, next) => {
         <td>${r.comments}</td>
         <td class="${r.tributes ? 'hot' : ''}">${r.tributes}</td>
         <td class="ago">${ago(r.last)}</td>
-        <td class="link"><code>${shareLink}</code><button class="copy" data-link="${shareLink}" type="button">Copy</button></td>
+        <td class="link"><code class="share-code" data-base="${shareLink}">${shareLink}</code><button class="copy" data-link="${shareLink}" data-base="${shareLink}" type="button">Copy</button></td>
         <td><a href="${origin}/api/report/${esc(r.invite_code)}" target="_blank">results ↗</a></td>
+        <td><button class="kanban-toggle" data-project-id="${esc(r.id)}" type="button">Arrangements ▾</button></td>
+        <td class="video-cell">
+          <span class="video-status" id="video-status-${esc(r.id)}">${videoStatus}</span>
+          <label class="video-upload-label">
+            Upload
+            <input class="video-upload" type="file" accept="video/*" data-project-id="${esc(r.id)}" hidden />
+          </label>
+          <button
+            class="video-publish-toggle"
+            type="button"
+            data-project-id="${esc(r.id)}"
+            data-published="${r.video_published ? 'true' : 'false'}"
+            ${r.video_storage_path ? '' : 'disabled'}
+          >${r.video_published ? 'Unpublish' : 'Publish'}</button>
+        </td>
+      </tr>
+      <tr class="kanban-row" id="kanban-row-${esc(r.id)}" style="display:none">
+        <td colspan="10"><div class="kanban-board" id="kanban-${esc(r.id)}">Loading…</div></td>
       </tr>`;
       })
       .join('');
@@ -945,16 +1066,57 @@ app.get('/admin/:secret', async (req, res, next) => {
   td.link .copy:hover { background:rgba(196,154,108,0.12); }
   a { color:#C49A6C; text-decoration:none; }
   .empty { color:rgba(255,255,255,0.4); margin-top:20px; }
+  .kanban-toggle { font-size:12px; color:#C49A6C; background:none; border:1px solid rgba(196,154,108,0.4); border-radius:6px; padding:5px 10px; cursor:pointer; white-space:nowrap; }
+  .kanban-toggle:hover { background:rgba(196,154,108,0.12); }
+  .kanban-row td { padding:16px 10px 20px; }
+  .kanban-board { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .kcol { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px; }
+  .kcol h4 { font-size:12px; letter-spacing:0.5px; text-transform:uppercase; color:rgba(255,255,255,0.55); margin-bottom:10px; }
+  .kcol ul { list-style:none; display:flex; flex-direction:column; gap:8px; }
+  .kcol li { font-size:13px; background:rgba(255,255,255,0.04); border-radius:8px; padding:8px 10px; }
+  .kcol li.empty { color:rgba(255,255,255,0.35); background:none; padding:0; }
+  .kcol .card-desc { display:block; color:rgba(255,255,255,0.45); font-size:12px; margin-top:2px; }
+  .video-cell { white-space:nowrap; font-size:12px; }
+  .video-status { display:inline-block; min-width:64px; color:rgba(255,255,255,0.6); }
+  .video-upload-label { color:#C49A6C; border:1px solid rgba(196,154,108,0.4); border-radius:6px; padding:3px 9px; cursor:pointer; margin:0 6px; }
+  .video-upload-label:hover { background:rgba(196,154,108,0.12); }
+  .video-publish-toggle { font-size:12px; color:#C49A6C; background:none; border:1px solid rgba(196,154,108,0.4); border-radius:6px; padding:3px 9px; cursor:pointer; }
+  .video-publish-toggle:hover:not(:disabled) { background:rgba(196,154,108,0.12); }
+  .video-publish-toggle:disabled { opacity:0.35; cursor:not-allowed; }
+  .sender-row { display:flex; align-items:center; gap:10px; margin-bottom:22px; }
+  .sender-row label { font-size:12px; color:rgba(255,255,255,0.5); }
+  .sender-row input { background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:6px; padding:6px 10px; font-size:13px; color:#fff; font-family:inherit; width:160px; }
+  .sender-row input:focus { outline:1px solid rgba(196,154,108,0.6); }
 </style></head><body><div class="page">
   <h1>Memorials</h1>
   <div class="sub">Afterlight · activity dashboard</div>
+  <div class="sender-row">
+    <label for="sender-name">Your name (added to share links so family sees who sent them)</label>
+    <input id="sender-name" type="text" placeholder="e.g. Keegan" maxlength="60" />
+  </div>
   ${
     rows.length
-      ? `<table><thead><tr><th>Memorial</th><th>Photos</th><th>Favourites</th><th>Comments</th><th>Stories</th><th>Last activity</th><th>Share link</th><th></th></tr></thead><tbody>${body}</tbody></table>`
+      ? `<table><thead><tr><th>Memorial</th><th>Photos</th><th>Favourites</th><th>Comments</th><th>Stories</th><th>Last activity</th><th>Share link</th><th></th><th>Arrangements</th><th>Tribute video</th></tr></thead><tbody>${body}</tbody></table>`
       : '<p class="empty">No memorials yet.</p>'
   }
 </div>
 <script>
+  const ADMIN_SECRET = ${JSON.stringify(req.params.secret)};
+
+  const senderInput = document.getElementById('sender-name');
+  function applySenderName() {
+    const name = senderInput.value.trim();
+    const suffix = name ? '?from=' + encodeURIComponent(name) : '';
+    document.querySelectorAll('.share-code').forEach((el) => { el.textContent = el.dataset.base + suffix; });
+    document.querySelectorAll('.copy').forEach((el) => { el.dataset.link = el.dataset.base + suffix; });
+  }
+  senderInput.value = localStorage.getItem('afterlight_sender_name') || '';
+  applySenderName();
+  senderInput.addEventListener('input', () => {
+    localStorage.setItem('afterlight_sender_name', senderInput.value.trim());
+    applySenderName();
+  });
+
   document.querySelectorAll('.copy').forEach((btn) => {
     btn.addEventListener('click', () => {
       navigator.clipboard.writeText(btn.dataset.link).then(() => {
@@ -962,6 +1124,106 @@ app.get('/admin/:secret', async (req, res, next) => {
         btn.textContent = 'Copied';
         setTimeout(() => { btn.textContent = original; }, 1500);
       });
+    });
+  });
+
+  function escHtml(text) {
+    return String(text ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  }
+
+  function renderKanban(data) {
+    if (!data.columns.length) return '<p class="empty">No arrangements board for this memorial.</p>';
+    return '<div class="kanban-board">' + data.columns.map((col) => {
+      const cards = data.cards.filter((c) => c.columnId === col.id);
+      const items = cards.map((c) =>
+        '<li>' + escHtml(c.title) + (c.description ? '<span class="card-desc">' + escHtml(c.description) + '</span>' : '') + '</li>'
+      ).join('') || '<li class="empty">Nothing here.</li>';
+      return '<div class="kcol"><h4>' + escHtml(col.title) + '</h4><ul>' + items + '</ul></div>';
+    }).join('') + '</div>';
+  }
+
+  document.querySelectorAll('.kanban-toggle').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const projectId = btn.dataset.projectId;
+      const row = document.getElementById('kanban-row-' + projectId);
+      const panel = document.getElementById('kanban-' + projectId);
+      const isOpen = row.style.display !== 'none';
+      if (isOpen) {
+        row.style.display = 'none';
+        btn.textContent = 'Arrangements ▾';
+        return;
+      }
+      row.style.display = '';
+      btn.textContent = 'Arrangements ▴';
+      if (!panel.dataset.loaded) {
+        try {
+          const res = await fetch('/api/projects/' + projectId + '/kanban');
+          const data = await res.json();
+          panel.innerHTML = renderKanban(data);
+          panel.dataset.loaded = '1';
+        } catch {
+          panel.innerHTML = '<p class="empty">Could not load arrangements.</p>';
+        }
+      }
+    });
+  });
+
+  document.querySelectorAll('.video-upload').forEach((input) => {
+    input.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const projectId = input.dataset.projectId;
+      const statusEl = document.getElementById('video-status-' + projectId);
+      const original = statusEl.textContent;
+      statusEl.textContent = 'Uploading…';
+      try {
+        const initRes = await fetch('/api/admin/projects/' + projectId + '/video/upload-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': ADMIN_SECRET },
+          body: JSON.stringify({ filename: file.name }),
+        });
+        if (!initRes.ok) throw new Error('could not start upload');
+        const { signedUrl, path: storagePath } = await initRes.json();
+
+        const putRes = await fetch(signedUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': file.type || 'application/octet-stream' },
+          body: file,
+        });
+        if (!putRes.ok) throw new Error('upload to storage failed');
+
+        const saveRes = await fetch('/api/admin/projects/' + projectId + '/video', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': ADMIN_SECRET },
+          body: JSON.stringify({ storagePath }),
+        });
+        if (!saveRes.ok) throw new Error('could not save video');
+
+        location.reload();
+      } catch (err) {
+        statusEl.textContent = original;
+        alert('Video upload failed: ' + err.message);
+      }
+    });
+  });
+
+  document.querySelectorAll('.video-publish-toggle').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const projectId = btn.dataset.projectId;
+      const publish = btn.dataset.published !== 'true';
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/admin/projects/' + projectId + '/video/publish', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': ADMIN_SECRET },
+          body: JSON.stringify({ published: publish }),
+        });
+        if (!res.ok) throw new Error('could not update');
+        location.reload();
+      } catch (err) {
+        btn.disabled = false;
+        alert('Could not update publish state: ' + err.message);
+      }
     });
   });
 </script>
