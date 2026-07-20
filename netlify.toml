@@ -1,0 +1,38 @@
+[build]
+  command = "npx expo export --platform web"
+  publish = "dist"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# /join/:code and /admin/:secret read the built index.html to inject meta
+# tags / render the dashboard — bundle dist/ into the function so that works.
+[functions.api]
+  included_files = ["dist/**"]
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/api/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/health"
+  to = "/.netlify/functions/api/health"
+  status = 200
+
+[[redirects]]
+  from = "/join/*"
+  to = "/.netlify/functions/api/join/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/admin/*"
+  to = "/.netlify/functions/api/admin/:splat"
+  status = 200
+
+# SPA fallback: anything else that isn't a static asset resolves client-side.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
