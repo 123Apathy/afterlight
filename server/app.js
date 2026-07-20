@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
+const sharp = require('sharp');
 const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
@@ -259,6 +260,21 @@ app.get('/api/projects/:projectId/photos', async (req, res, next) => {
   }
 });
 
+const ORIENTABLE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/tiff', 'image/heic', 'image/heif']);
+
+// Phone cameras always capture landscape and store an EXIF orientation tag telling
+// viewers how to rotate for display. Bake that rotation into the pixels here so
+// every photo displays upright everywhere, regardless of whether a given viewer
+// respects EXIF orientation.
+async function normalizeOrientation(buffer, mimetype) {
+  if (!ORIENTABLE_MIME_TYPES.has(mimetype)) return buffer;
+  try {
+    return await sharp(buffer).rotate().toBuffer();
+  } catch {
+    return buffer;
+  }
+}
+
 app.post('/api/projects/:projectId/photos', upload.array('photos', 40), async (req, res, next) => {
   try {
     const { projectId } = req.params;
@@ -266,9 +282,10 @@ app.post('/api/projects/:projectId/photos', upload.array('photos', 40), async (r
     for (const file of req.files || []) {
       const ext = path.extname(file.originalname) || '.jpg';
       const storagePath = `${projectId}/${crypto.randomUUID()}${ext}`;
+      const uploadBuffer = await normalizeOrientation(file.buffer, file.mimetype);
       const { error: uploadError } = await supabase.storage
         .from(PHOTOS_BUCKET)
-        .upload(storagePath, file.buffer, { contentType: file.mimetype });
+        .upload(storagePath, uploadBuffer, { contentType: file.mimetype });
       assertOk(uploadError);
 
       const { data: row, error: insertError } = await supabase
