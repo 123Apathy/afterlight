@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useAnimatedStyle,
@@ -11,8 +11,10 @@ import Animated, {
   useReducedMotion,
 } from 'react-native-reanimated';
 import HamburgerButton from '../components/HamburgerButton';
+import ViewModeButton from '../components/ViewModeButton';
 import MenuOverlay from '../components/MenuOverlay';
 import CommentSheet from '../components/CommentSheet';
+import PhotoGrid from '../components/PhotoGrid';
 import PressableScale from '../components/PressableScale';
 import GoldButton from '../components/GoldButton';
 import { APP_MAX_WIDTH, colors, copy, images } from '../constants/theme';
@@ -42,6 +44,8 @@ export default function SwipeScreen() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [commentPhotoId, setCommentPhotoId] = useState<string | null>(null);
   const [inputFocused, setInputFocused] = useState(false);
+  const [viewMode, setViewMode] = useState<'deck' | 'grid'>('deck');
+  const [deckIndex, setDeckIndex] = useState(0);
 
   // Gentle one-time entrance for the welcome screen (fade + slight rise).
   const enter = useSharedValue(0);
@@ -249,12 +253,24 @@ export default function SwipeScreen() {
         />
       ) : photos.length === 0 ? (
         <EmptyState onUpload={() => setMenuOpen(true)} />
+      ) : viewMode === 'grid' ? (
+        <PhotoGrid
+          photos={photos}
+          width={width}
+          onSelect={(i) => {
+            setDeckIndex(i);
+            setViewMode('deck');
+          }}
+        />
       ) : (
         <PhotoDeck
+          key={deckIndex}
           photos={photos}
           width={width}
           height={height}
           raterName={raterName}
+          initialIndex={deckIndex}
+          navEnabled={!commentPhotoId}
           onToggleFavorite={toggleFavorite}
           onOpenComments={(photo) => setCommentPhotoId(photo.id)}
           reduceMotion={reduceMotion}
@@ -273,7 +289,15 @@ export default function SwipeScreen() {
             <Image source={images.logo} style={styles.logo} resizeMode="contain" />
             <Text style={styles.brandText}>Afterlight</Text>
           </View>
-          <HamburgerButton onPress={() => setMenuOpen(true)} />
+          <View style={styles.headerActions}>
+            {photos.length > 0 && (
+              <ViewModeButton
+                mode={viewMode}
+                onPress={() => setViewMode((m) => (m === 'deck' ? 'grid' : 'deck'))}
+              />
+            )}
+            <HamburgerButton onPress={() => setMenuOpen(true)} />
+          </View>
         </View>
       </View>
 
@@ -400,28 +424,79 @@ type PhotoDeckProps = {
   width: number;
   height: number;
   raterName: string;
+  initialIndex?: number;
+  navEnabled?: boolean;
   onToggleFavorite: (photo: Photo) => void;
   onOpenComments: (photo: Photo) => void;
   reduceMotion: boolean;
 };
+
+// Trackpad/mouse-wheel deltas fire many times over a single flick (momentum),
+// not once. A short cooldown after each triggered advance turns "flick" into
+// "move exactly one photo" instead of skipping several at once.
+const WHEEL_COOLDOWN_MS = 450;
+const WHEEL_THRESHOLD = 12;
 
 function PhotoDeck({
   photos,
   width,
   height,
   raterName,
+  initialIndex = 0,
+  navEnabled = true,
   onToggleFavorite,
   onOpenComments,
   reduceMotion,
 }: PhotoDeckProps) {
   const scrollRef = useRef<ScrollView>(null);
-  const [index, setIndex] = useState(0);
+  const [index, setIndex] = useState(initialIndex);
+  const indexRef = useRef(index);
+  const navEnabledRef = useRef(navEnabled);
+
+  useEffect(() => {
+    indexRef.current = index;
+  }, [index]);
+
+  useEffect(() => {
+    navEnabledRef.current = navEnabled;
+  }, [navEnabled]);
 
   const goTo = (next: number) => {
     const clamped = Math.max(0, Math.min(photos.length - 1, next));
     scrollRef.current?.scrollTo({ x: clamped * width, animated: true });
     setIndex(clamped);
   };
+
+  // Snap to the requested photo once on mount (e.g. opened from the grid),
+  // without animating from photo 1.
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ x: initialIndex * width, animated: false });
+  }, []);
+
+  // Desktop/laptop input has no native paging for a horizontal deck — a
+  // vertical wheel/trackpad scroll otherwise does nothing. Translate it into
+  // "advance exactly one photo" so scrolling feels natural on a laptop.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    let cooling = false;
+    const handleWheel = (e: WheelEvent) => {
+      if (!navEnabledRef.current) return;
+      if (Math.abs(e.deltaY) < Math.abs(e.deltaX)) return; // let horizontal gestures pass through
+      if (Math.abs(e.deltaY) < WHEEL_THRESHOLD) return;
+      if (cooling) {
+        e.preventDefault();
+        return;
+      }
+      e.preventDefault();
+      cooling = true;
+      goTo(indexRef.current + (e.deltaY > 0 ? 1 : -1));
+      setTimeout(() => {
+        cooling = false;
+      }, WHEEL_COOLDOWN_MS);
+    };
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    return () => window.removeEventListener('wheel', handleWheel);
+  }, [width, photos.length]);
 
   return (
     <View style={StyleSheet.absoluteFill}>
@@ -629,6 +704,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 18,
   },
   logo: {
     width: 32,
