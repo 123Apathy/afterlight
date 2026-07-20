@@ -814,7 +814,15 @@ app.get('/health', (req, res) => res.json({ ok: true }));
 // Serve the exported web build (npx expo export --platform web) when present,
 // so one deployed server = app + API on a single public origin and the client
 // can resolve the API via window.location.origin.
-const distDir = path.join(__dirname, '..', 'dist');
+// __dirname points into esbuild's flattened Netlify Function bundle once
+// deployed, not the source repo layout, so the naive "../dist" guess only
+// works for local dev. Netlify's `included_files` places dist/ at the
+// function's cwd instead — try both and use whichever actually has the build.
+function resolveDistDir() {
+  const candidates = [path.join(__dirname, '..', 'dist'), path.join(process.cwd(), 'dist')];
+  return candidates.find((c) => fs.existsSync(path.join(c, 'index.html'))) || candidates[0];
+}
+const distDir = resolveDistDir();
 app.use(express.static(distDir));
 
 // Invite links: inject project-specific preview meta so a shared /join/<code>
@@ -901,17 +909,19 @@ app.get('/admin/:secret', async (req, res, next) => {
 
     const origin = `https://${req.get('host')}`;
     const body = rows
-      .map(
-        (r) => `<tr>
+      .map((r) => {
+        const shareLink = `${origin}/join/${esc(r.invite_code)}`;
+        return `<tr>
         <td class="name">${esc(r.name)}</td>
         <td>${r.photos}</td>
         <td class="${r.favs ? 'hot' : ''}">${r.favs}</td>
         <td>${r.comments}</td>
         <td class="${r.tributes ? 'hot' : ''}">${r.tributes}</td>
         <td class="ago">${ago(r.last)}</td>
+        <td class="link"><code>${shareLink}</code><button class="copy" data-link="${shareLink}" type="button">Copy</button></td>
         <td><a href="${origin}/api/report/${esc(r.invite_code)}" target="_blank">results ↗</a></td>
-      </tr>`
-      )
+      </tr>`;
+      })
       .join('');
 
     res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" />
@@ -929,6 +939,10 @@ app.get('/admin/:secret', async (req, res, next) => {
   td.name { font-weight:500; color:#fff; }
   td.ago { color:rgba(255,255,255,0.5); }
   td.hot { color:#C49A6C; font-weight:500; }
+  td.link { white-space:nowrap; }
+  td.link code { font-size:12px; color:rgba(255,255,255,0.6); background:rgba(255,255,255,0.06); padding:3px 7px; border-radius:6px; }
+  td.link .copy { margin-left:8px; font-size:12px; color:#C49A6C; background:none; border:1px solid rgba(196,154,108,0.4); border-radius:6px; padding:3px 9px; cursor:pointer; }
+  td.link .copy:hover { background:rgba(196,154,108,0.12); }
   a { color:#C49A6C; text-decoration:none; }
   .empty { color:rgba(255,255,255,0.4); margin-top:20px; }
 </style></head><body><div class="page">
@@ -936,10 +950,22 @@ app.get('/admin/:secret', async (req, res, next) => {
   <div class="sub">Afterlight · activity dashboard</div>
   ${
     rows.length
-      ? `<table><thead><tr><th>Memorial</th><th>Photos</th><th>Favourites</th><th>Comments</th><th>Stories</th><th>Last activity</th><th></th></tr></thead><tbody>${body}</tbody></table>`
+      ? `<table><thead><tr><th>Memorial</th><th>Photos</th><th>Favourites</th><th>Comments</th><th>Stories</th><th>Last activity</th><th>Share link</th><th></th></tr></thead><tbody>${body}</tbody></table>`
       : '<p class="empty">No memorials yet.</p>'
   }
-</div></body></html>`);
+</div>
+<script>
+  document.querySelectorAll('.copy').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      navigator.clipboard.writeText(btn.dataset.link).then(() => {
+        const original = btn.textContent;
+        btn.textContent = 'Copied';
+        setTimeout(() => { btn.textContent = original; }, 1500);
+      });
+    });
+  });
+</script>
+</body></html>`);
   } catch (err) {
     next(err);
   }
