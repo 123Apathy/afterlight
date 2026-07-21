@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     maxHeight: '72%',
-    backgroundColor: 'rgba(32, 26, 24, 0.68)',
+    backgroundColor: 'rgba(32, 26, 24, 0.52)',
     borderWidth: 1,
     borderBottomWidth: 0,
     borderColor: 'rgba(255, 255, 255, 0.12)',
