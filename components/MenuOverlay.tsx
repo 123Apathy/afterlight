@@ -12,8 +12,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { colors, images } from '../constants/theme';
 import { DEMO } from '../constants/demo';
-import { API_BASE, api, inviteUrl, type Project } from '../lib/api';
+import { API_BASE, api, inviteUrl, type ButtonKey, type Project } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
+import BackdropVideo from './BackdropVideo';
 import PressableScale from './PressableScale';
 
 type MenuOverlayProps = {
@@ -56,19 +57,36 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
     pointerEvents: visible ? 'auto' : 'none',
   }));
 
+  // Shared with both the "copy link" and "share via WhatsApp" actions, so
+  // however the link actually reaches a family member -- pasted into
+  // WhatsApp/SMS/email by hand, or sent straight through the WhatsApp
+  // button -- it always carries the same warm context, not a bare URL.
+  const inviteMessage = (p: Project) =>
+    `We're gathering photos and memories to honour ${p.name}. Add yours here: ${inviteUrl(p)}`;
+
   const handleShare = async () => {
     if (!project) {
       window.alert("We couldn't get the link just now. Please close this, check your internet, and try again.");
       return;
     }
-    const url = inviteUrl(project);
+    const message = inviteMessage(project);
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(message);
       setCopied(true);
       setTimeout(() => setCopied(false), 2600);
     } catch {
       // navigator.clipboard needs a secure origin — fall back to a copyable prompt.
-      window.prompt('Copy this link and send it to your family:', url);
+      window.prompt('Copy this and send it to your family:', message);
+    }
+  };
+
+  const handleWhatsAppShare = () => {
+    if (!project) {
+      window.alert("We couldn't get the link just now. Please close this, check your internet, and try again.");
+      return;
+    }
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.open(`https://wa.me/?text=${encodeURIComponent(inviteMessage(project))}`, '_blank');
     }
   };
 
@@ -97,6 +115,11 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
     }
   };
 
+  // Admin-configurable per memorial (server/app.js resolveEnabledButtons).
+  // Defaults to visible while `project` hasn't loaded yet, so cards don't
+  // flash and then disappear.
+  const showButton = (key: ButtonKey) => DEMO || !project || project.enabledButtons?.[key] !== false;
+
   const handleSeeFavourites = () => {
     if (!project) {
       window.alert("We couldn't open the favourites just now. Please close this, check your internet, and try again.");
@@ -109,7 +132,9 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
 
   return (
     <Animated.View style={[styles.overlay, overlayStyle]}>
-      <Image source={images.landingSky} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <BackdropVideo />
+      </View>
       <LinearGradient
         colors={['rgba(18, 14, 12, 0.95)', 'rgba(22, 17, 14, 0.9)', 'rgba(15, 12, 10, 0.97)']}
         locations={[0, 0.5, 1]}
@@ -140,34 +165,50 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
           {!!projectName && <Text style={styles.contextLine}>{projectName}</Text>}
 
           <View style={styles.cards}>
-            <ActionCard
-              icon={<IconAdd />}
-              title={uploading ? 'Adding photos…' : 'Add photos'}
-              subtitle="Choose pictures from this phone"
-              onPress={handleUpload}
-            />
-            <ActionCard
-              icon={<IconInvite />}
-              title="Invite family"
-              subtitle={copied ? 'Link copied — now paste it into a message' : 'Send a link so they can add their photos too'}
-              onPress={handleShare}
-              highlight={copied}
-            />
-            <ActionCard
-              icon={<IconHeart />}
-              title="See everyone's favourites"
-              subtitle="The photos your family loved the most"
-              onPress={handleSeeFavourites}
-            />
-            <ActionCard
-              icon={<IconStory />}
-              title="Share your memories"
-              subtitle="Answer a few gentle questions for the tribute"
-              onPress={() => {
-                onClose();
-                router.push('/tribute');
-              }}
-            />
+            {showButton('addPhotos') && (
+              <ActionCard
+                icon={<IconAdd />}
+                title={uploading ? 'Adding photos…' : 'Add photos'}
+                subtitle="Choose pictures from this phone"
+                onPress={handleUpload}
+              />
+            )}
+            {showButton('inviteFamily') && (
+              <View>
+                <ActionCard
+                  icon={<IconInvite />}
+                  title="Invite family"
+                  subtitle={copied ? 'Copied, now paste it into a message' : 'Send a link so they can add their photos too'}
+                  onPress={handleShare}
+                  highlight={copied}
+                />
+                <PressableScale onPress={handleWhatsAppShare} style={styles.whatsappLink} scaleTo={0.97}>
+                  <View style={styles.waIconBox}>
+                    <IconWhatsApp />
+                  </View>
+                  <Text style={styles.whatsappText}>Share via WhatsApp</Text>
+                </PressableScale>
+              </View>
+            )}
+            {showButton('seeFavourites') && (
+              <ActionCard
+                icon={<IconHeart />}
+                title="See everyone's favourites"
+                subtitle="The photos your family loved the most"
+                onPress={handleSeeFavourites}
+              />
+            )}
+            {showButton('shareMemories') && (
+              <ActionCard
+                icon={<IconStory />}
+                title="Share your memories"
+                subtitle="Answer a few gentle questions for the tribute"
+                onPress={() => {
+                  onClose();
+                  router.push('/tribute');
+                }}
+              />
+            )}
           </View>
 
           {!!projectId && (
@@ -238,6 +279,18 @@ function IconStory() {
       <View style={[styles.storyLine, { width: 26 }]} />
       <View style={[styles.storyLine, { width: 26 }]} />
       <View style={[styles.storyLine, { width: 16 }]} />
+    </View>
+  );
+}
+
+function IconWhatsApp() {
+  // Chat bubble with a small tail -- a placeholder shape, not a WhatsApp
+  // trademark asset. Swap for a real brand icon whenever the button pack
+  // gets designed.
+  return (
+    <View style={styles.iconInner}>
+      <View style={styles.waBubble} />
+      <View style={styles.waTail} />
     </View>
   );
 }
@@ -359,6 +412,42 @@ const styles = StyleSheet.create({
     fontSize: 26,
     lineHeight: 30,
     color: colors.heart,
+  },
+  waBubble: {
+    width: 24,
+    height: 19,
+    borderRadius: 10,
+    backgroundColor: '#25D366',
+  },
+  waTail: {
+    position: 'absolute',
+    bottom: -1,
+    left: 6,
+    width: 0,
+    height: 0,
+    borderTopWidth: 7,
+    borderRightWidth: 7,
+    borderTopColor: '#25D366',
+    borderRightColor: 'transparent',
+  },
+  whatsappLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 8,
+    marginLeft: 8,
+    paddingVertical: 4,
+  },
+  waIconBox: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  whatsappText: {
+    fontFamily: 'Poppins_500Medium',
+    fontSize: 14,
+    color: '#4FCE7E',
   },
   storyLine: {
     height: 2.6,

@@ -5,12 +5,16 @@ export const API_BASE =
   process.env.EXPO_PUBLIC_API_BASE ||
   (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:4400');
 
+// Keep in sync with BUTTON_KEYS in server/app.js.
+export type ButtonKey = 'addPhotos' | 'inviteFamily' | 'seeFavourites' | 'shareMemories';
+
 export type Project = {
   id: string;
   name: string;
   slug: string;
   inviteCode: string;
   createdAt: string;
+  enabledButtons: Record<ButtonKey, boolean>;
 };
 
 export type Reaction = {

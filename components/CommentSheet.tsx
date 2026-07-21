@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, {
   Easing,
@@ -24,6 +24,12 @@ type CommentSheetProps = {
 // Facebook-style comment thread as a slide-up sheet over the photo. The photo
 // prop is looked up fresh from parent state each render, so optimistic
 // comments appear the moment they're added.
+// After posting, hold the sheet open on the newly-visible comment for about
+// as long as the swipe view's favourite→comment entice pulse runs, then
+// close on its own -- long enough to register "it posted", not so long it
+// feels stuck.
+const AUTO_CLOSE_MS = 900;
+
 export default function CommentSheet({ photo, onClose, onSubmit, onReact, raterName }: CommentSheetProps) {
   const reduceMotion = useReducedMotion();
   const progress = useSharedValue(0);
@@ -33,6 +39,8 @@ export default function CommentSheet({ photo, onClose, onSubmit, onReact, raterN
   // five all the time; picking one closes it again.
   const [pickerFor, setPickerFor] = useState<string | null>(null);
   const visible = !!photo;
+  const listRef = useRef<ScrollView>(null);
+  const autoCloseRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     progress.value = withTiming(visible ? 1 : 0, {
@@ -44,6 +52,24 @@ export default function CommentSheet({ photo, onClose, onSubmit, onReact, raterN
   useEffect(() => {
     if (!visible) setPickerFor(null);
   }, [visible]);
+
+  // Cancel a pending auto-close if the sheet is closed (or swapped to a
+  // different photo) before its timer fires, and on unmount.
+  useEffect(() => {
+    if (!visible && autoCloseRef.current) {
+      clearTimeout(autoCloseRef.current);
+      autoCloseRef.current = null;
+    }
+  }, [visible]);
+  useEffect(() => () => {
+    if (autoCloseRef.current) clearTimeout(autoCloseRef.current);
+  }, []);
+
+  const comments = photo?.comments ?? [];
+
+  useEffect(() => {
+    if (comments.length > 0) listRef.current?.scrollToEnd({ animated: true });
+  }, [comments.length]);
 
   const style = useAnimatedStyle(() => ({
     opacity: progress.value,
@@ -57,6 +83,13 @@ export default function CommentSheet({ photo, onClose, onSubmit, onReact, raterN
     if (!text || !photo) return;
     onSubmit(photo, text);
     setDraft('');
+    // Let them see it land in the thread, then close on its own -- one less
+    // tap for something that's already done.
+    if (autoCloseRef.current) clearTimeout(autoCloseRef.current);
+    autoCloseRef.current = setTimeout(() => {
+      autoCloseRef.current = null;
+      onClose();
+    }, AUTO_CLOSE_MS);
   };
 
   const react = (commentId: string, emoji: string) => {
@@ -64,23 +97,30 @@ export default function CommentSheet({ photo, onClose, onSubmit, onReact, raterN
     setPickerFor(null);
   };
 
-  const comments = photo?.comments ?? [];
+  const close = () => {
+    if (autoCloseRef.current) {
+      clearTimeout(autoCloseRef.current);
+      autoCloseRef.current = null;
+    }
+    onClose();
+  };
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents={visible ? 'auto' : 'none'}>
       <Animated.View style={[styles.backdrop, backdropStyle]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={close} />
       </Animated.View>
       <Animated.View style={[styles.sheet, glassBlur, style]}>
       <View style={styles.header}>
         <Text style={styles.title}>Comments</Text>
-        <PressableScale onPress={onClose} hitSlop={12} style={styles.close}>
+        <PressableScale onPress={close} hitSlop={12} style={styles.close}>
           <View style={[styles.closeLine, { transform: [{ rotate: '45deg' }] }]} />
           <View style={[styles.closeLine, { transform: [{ rotate: '-45deg' }] }]} />
+          <Text style={styles.closeText}>Close</Text>
         </PressableScale>
       </View>
 
-      <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
+      <ScrollView ref={listRef} style={styles.list} contentContainerStyle={styles.listContent}>
         {comments.length === 0 ? (
           <Text style={styles.empty}>No comments yet. Share a memory of this moment.</Text>
         ) : (
@@ -179,16 +219,25 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   close: {
-    width: 24,
-    height: 24,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    height: 32,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: colors.glassMedium,
   },
   closeLine: {
     position: 'absolute',
-    width: 18,
+    left: 12,
+    width: 10,
     height: 1.5,
     backgroundColor: colors.white,
+  },
+  closeText: {
+    fontFamily: 'Poppins_500Medium',
+    fontSize: 13,
+    color: colors.white,
+    marginLeft: 14,
   },
   list: {
     flexGrow: 0,
@@ -253,7 +302,7 @@ const styles = StyleSheet.create({
   },
   reactLink: {
     fontFamily: 'Poppins_500Medium',
-    fontSize: 13,
+    fontSize: 11.5,
     color: colors.textFainter,
   },
   picker: {

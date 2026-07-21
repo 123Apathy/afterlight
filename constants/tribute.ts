@@ -6,7 +6,7 @@ export const tributeCopy = {
   overline: 'In loving memory of {name}',
   introTitle: 'Share your memories',
   introBody:
-    'Thank you for helping us honour {name}. The questions that follow are here to capture the stories, memories, and little moments that made them who they were. Please take your time, answer as many as you can, and don’t worry if you can’t remember something — simply press Skip on any you’d like to pass. Most importantly, enjoy remembering them.',
+    'Thank you for helping us honour {name}. Share as many memories as you’d like, skip anything you can’t recall, and take your time. Enjoy remembering them.',
   introCta: 'Begin',
   introSub: 'It only takes a few quiet minutes.',
   thanksTitle: 'Thank you',

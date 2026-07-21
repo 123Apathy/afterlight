@@ -49,8 +49,50 @@ function randomCode(bytes = 6) {
   return crypto.randomBytes(bytes).toString('base64url');
 }
 
-function mapProject(row) {
-  return { id: row.id, name: row.name, slug: row.slug, inviteCode: row.invite_code, createdAt: row.created_at };
+// The family-facing action buttons (MenuOverlay's cards). Admins can hide
+// any of these per memorial, and set what new memorials start with globally
+// -- e.g. turning off "Invite family" for a project the family wants to
+// curate themselves.
+const BUTTON_DEFS = [
+  { key: 'addPhotos', label: 'Add photos' },
+  { key: 'inviteFamily', label: 'Invite family' },
+  { key: 'seeFavourites', label: "See everyone's favourites" },
+  { key: 'shareMemories', label: 'Share your memories' },
+];
+const BUTTON_KEYS = BUTTON_DEFS.map((b) => b.key);
+// Buttons without a real URL (they trigger an in-app action, e.g. the
+// device photo picker) just get a descriptive note in the admin panel
+// instead of a copyable link.
+const BUTTON_LINKS = {
+  inviteFamily: (origin, r) => `${origin}/join/${r.invite_code}`,
+  seeFavourites: (origin, r) => `${origin}/api/report/${r.invite_code}`,
+};
+const FALLBACK_BUTTON_DEFAULTS = Object.fromEntries(BUTTON_KEYS.map((k) => [k, true]));
+
+async function getButtonDefaults() {
+  const { data } = await supabase.from('afterlight_settings').select('value').eq('key', 'button_defaults').maybeSingle();
+  return { ...FALLBACK_BUTTON_DEFAULTS, ...(data && data.value) };
+}
+
+// A project's `enabled_buttons` column is either null (inherit the global
+// defaults) or a full override map written by the admin dashboard.
+function resolveEnabledButtons(overrides, defaults) {
+  const result = {};
+  for (const key of BUTTON_KEYS) {
+    result[key] = overrides && overrides[key] !== undefined ? !!overrides[key] : !!defaults[key];
+  }
+  return result;
+}
+
+function mapProject(row, enabledButtons) {
+  return {
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    inviteCode: row.invite_code,
+    createdAt: row.created_at,
+    enabledButtons,
+  };
 }
 
 function mapRating(row) {
@@ -199,7 +241,8 @@ app.post('/api/projects', async (req, res, next) => {
     if (!project) throw Object.assign(new Error('could not allocate a unique project slug'), { status: 500 });
 
     await seedProjectKanban(project.id);
-    res.status(201).json(mapProject(project));
+    const defaults = await getButtonDefaults();
+    res.status(201).json(mapProject(project, resolveEnabledButtons(project.enabled_buttons, defaults)));
   } catch (err) {
     next(err);
   }
@@ -213,7 +256,8 @@ app.get('/api/projects/:projectId', async (req, res, next) => {
       .eq('id', req.params.projectId)
       .single();
     if (error || !data) return res.status(404).json({ error: 'project not found' });
-    res.json(mapProject(data));
+    const defaults = await getButtonDefaults();
+    res.json(mapProject(data, resolveEnabledButtons(data.enabled_buttons, defaults)));
   } catch (err) {
     next(err);
   }
@@ -227,7 +271,8 @@ app.get('/api/projects/by-invite/:inviteCode', async (req, res, next) => {
       .eq('invite_code', req.params.inviteCode)
       .single();
     if (error || !data) return res.status(404).json({ error: 'invite not found' });
-    res.json(mapProject(data));
+    const defaults = await getButtonDefaults();
+    res.json(mapProject(data, resolveEnabledButtons(data.enabled_buttons, defaults)));
   } catch (err) {
     next(err);
   }
@@ -726,18 +771,6 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
     );
     enriched.sort((a, b) => b.favoritedBy.length - a.favoritedBy.length);
 
-    const { data: columns, error: columnsError } = await supabase
-      .from('afterlight_kanban_columns')
-      .select('*')
-      .eq('project_id', projectId)
-      .order('order', { ascending: true });
-    assertOk(columnsError);
-    const columnIds = (columns || []).map((c) => c.id);
-    const { data: cards, error: cardsError } = columnIds.length
-      ? await supabase.from('afterlight_kanban_cards').select('*').in('column_id', columnIds).order('order', { ascending: true })
-      : { data: [], error: null };
-    assertOk(cardsError);
-
     const { data: tributes, error: tributesError } = await supabase
       .from('afterlight_tribute_responses')
       .select('*')
@@ -766,16 +799,6 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
           <div class="photo-meta">${esc(meta)}</div>
           ${commentHtml}
         </div>`;
-      })
-      .join('');
-
-    const arrangements = (columns || [])
-      .map((column) => {
-        const columnCards = (cards || []).filter((c) => c.column_id === column.id);
-        const items = columnCards
-          .map((c) => `<li>${esc(c.title)}${c.description ? `<span class="card-desc"> — ${esc(c.description)}</span>` : ''}</li>`)
-          .join('');
-        return `<div class="arr-column"><h3>${esc(column.title)} <span class="count">${columnCards.length}</span></h3><ul>${items || '<li class="empty">Nothing here.</li>'}</ul></div>`;
       })
       .join('');
 
@@ -829,12 +852,6 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
   .comments { list-style: none; padding: 0 14px 12px; font-size: 13px; color: rgba(255,255,255,0.75); }
   .comments li { margin-top: 4px; }
   .comments strong { color: #C49A6C; font-weight: 500; }
-  .arr-column { margin-bottom: 22px; }
-  .arr-column h3 { font-size: 15px; font-weight: 500; color: #fff; margin-bottom: 8px; }
-  .arr-column .count { color: rgba(255,255,255,0.4); font-weight: 400; margin-left: 6px; }
-  .arr-column ul { list-style: none; }
-  .arr-column li { padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.07); font-size: 14px; }
-  .card-desc { color: rgba(255,255,255,0.45); }
   .empty { color: rgba(255,255,255,0.35); }
   .story { margin-bottom: 32px; break-inside: avoid; }
   .story h3 { font-family: 'Playfair Display', Georgia, serif; font-size: 21px; font-weight: 500; color: #C49A6C; margin-bottom: 12px; }
@@ -852,8 +869,6 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
     .photo-meta, .comments { color: #555; }
     .comments strong { color: #9a744a; }
     h1 { color: #1a1613; } h2 { color: #9a744a; }
-    .arr-column h3 { color: #1a1613; }
-    .arr-column li { border-color: #ddd; }
     .story h3 { color: #9a744a; } .qa .q { color: #777; } .qa .a { color: #222; }
     footer .slogan { color: #333; } footer .brand { color: #9a744a; }
   }
@@ -887,9 +902,6 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
   <div class="grid">${photoCards || '<p class="empty">No photos uploaded yet.</p>'}</div>
 
   ${tributeHtml ? `<h2>Memories &amp; stories shared</h2><div class="stories">${tributeHtml}</div>` : ''}
-
-  <h2>Arrangements</h2>
-  ${arrangements || '<p class="empty">No arrangements board.</p>'}
 
   <footer>
     <div class="slogan">A memory you can hold.</div>
@@ -943,10 +955,14 @@ app.get('/join/:code', async (req, res, next) => {
       // escaped since it's untrusted user input reflected straight into HTML.
       const fromRaw = typeof req.query.from === 'string' ? req.query.from.trim().slice(0, 60) : '';
       const from = esc(fromRaw);
-      const title = from ? `${from} invited you — remembering ${name}` : `In loving memory of ${name}`;
+      // Same voice as the WhatsApp share message itself (MenuOverlay's
+      // inviteMessage) -- this preview card is the first thing family sees
+      // before they even open the link, so it shouldn't read as different
+      // copy from the message that brought them here.
+      const title = from ? `${from} invited you to honour ${name}` : `Add your photos and memories for ${name}`;
       const desc = from
-        ? `${from} would love your photos and memories of ${name} here. It's a keepsake for the whole family to treasure — no app or account needed.`
-        : `Please add your photos and memories of ${name} here. It's a keepsake for the whole family to treasure — no app or account needed.`;
+        ? `${from} is gathering photos and memories to honour ${name}. Add yours here, it's a keepsake for the whole family to treasure, no app or account needed.`
+        : `We're gathering photos and memories to honour ${name}. Add yours here, it's a keepsake for the whole family to treasure, no app or account needed.`;
       const meta = `
     <title>${title}</title>
     <meta name="description" content="${desc}" />
@@ -1040,6 +1056,51 @@ app.delete('/api/admin/projects/:projectId/video', requireAdmin, async (req, res
 // answers, the uploaded tribute video, and the project row itself. There's
 // no undo — this is only reachable from the admin dashboard's Delete button,
 // which requires typing the memorial's name to confirm before calling this.
+// --- Admin: which family-facing buttons show, globally and per memorial ---
+
+app.get('/api/admin/settings/button-defaults', requireAdmin, async (req, res, next) => {
+  try {
+    res.json({ buttons: BUTTON_DEFS, defaults: await getButtonDefaults() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.patch('/api/admin/settings/button-defaults', requireAdmin, async (req, res, next) => {
+  try {
+    const { defaults } = req.body || {};
+    if (!defaults || typeof defaults !== 'object') {
+      return res.status(400).json({ error: 'defaults object is required' });
+    }
+    const value = resolveEnabledButtons(defaults, await getButtonDefaults());
+    const { error } = await supabase
+      .from('afterlight_settings')
+      .upsert({ key: 'button_defaults', value }, { onConflict: 'key' });
+    assertOk(error);
+    res.json({ defaults: value });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.patch('/api/admin/projects/:projectId/buttons', requireAdmin, async (req, res, next) => {
+  try {
+    const { enabledButtons } = req.body || {};
+    // enabledButtons: an explicit override map, or null to go back to
+    // inheriting the global defaults.
+    const value = enabledButtons === null ? null : resolveEnabledButtons(enabledButtons, await getButtonDefaults());
+    const { error } = await supabase
+      .from('afterlight_projects')
+      .update({ enabled_buttons: value })
+      .eq('id', req.params.projectId);
+    assertOk(error);
+    const defaults = await getButtonDefaults();
+    res.json({ enabledButtons: resolveEnabledButtons(value, defaults) });
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.delete('/api/admin/projects/:projectId', requireAdmin, async (req, res, next) => {
   try {
     const { projectId } = req.params;
@@ -1218,7 +1279,7 @@ app.get('/admin/:secret', async (req, res, next) => {
       await Promise.all([
         supabase
           .from('afterlight_projects')
-          .select('id, name, invite_code, created_at, video_storage_path, video_published'),
+          .select('id, name, invite_code, created_at, video_storage_path, video_published, enabled_buttons'),
         supabase.from('afterlight_photos').select('id, project_id, created_at'),
         supabase.from('afterlight_tribute_responses').select('project_id, created_at'),
         supabase.from('afterlight_ratings').select('photo_id, created_at'),
@@ -1253,6 +1314,26 @@ app.get('/admin/:secret', async (req, res, next) => {
       .sort((a, b) => String(b.last || '').localeCompare(String(a.last || '')));
 
     const origin = `https://${req.get('host')}`;
+    const buttonDefaults = await getButtonDefaults();
+    const buttonsPanel = (r) => {
+      const effective = resolveEnabledButtons(r.enabled_buttons, buttonDefaults);
+      const rows2 = BUTTON_DEFS.map((b) => {
+        const link = BUTTON_LINKS[b.key] ? BUTTON_LINKS[b.key](origin, r) : null;
+        return `<label class="button-row">
+          <input type="checkbox" class="button-toggle" data-key="${b.key}" ${effective[b.key] ? 'checked' : ''} />
+          <span class="button-label">${esc(b.label)}</span>
+          ${link ? `<code class="button-link">${esc(link)}</code>` : '<span class="button-link muted">Inside the app</span>'}
+        </label>`;
+      }).join('');
+      return `<div class="buttons-panel">
+        <div class="buttons-grid">${rows2}</div>
+        <div class="buttons-actions">
+          <button class="buttons-save" type="button" data-project-id="${esc(r.id)}">Save</button>
+          <button class="buttons-reset" type="button" data-project-id="${esc(r.id)}" ${r.enabled_buttons ? '' : 'disabled'}>Reset to global defaults</button>
+          <span class="buttons-status" id="buttons-status-${esc(r.id)}"></span>
+        </div>
+      </div>`;
+    };
     const body = rows
       .map((r) => {
         const shareLink = `${origin}/join/${esc(r.invite_code)}`;
@@ -1267,6 +1348,7 @@ app.get('/admin/:secret', async (req, res, next) => {
         <td class="link"><code class="share-code" data-base="${shareLink}">${shareLink}</code><button class="copy" data-link="${shareLink}" data-base="${shareLink}" type="button">Copy</button></td>
         <td><a href="${origin}/api/report/${esc(r.invite_code)}" target="_blank">results ↗</a></td>
         <td><button class="kanban-toggle" data-project-id="${esc(r.id)}" type="button">Arrangements ▾</button></td>
+        <td><button class="buttons-toggle" data-project-id="${esc(r.id)}" type="button">Buttons ▾</button></td>
         <td class="video-cell">
           <span class="video-status" id="video-status-${esc(r.id)}">${videoStatus}</span>
           <label class="video-upload-label">
@@ -1290,7 +1372,10 @@ app.get('/admin/:secret', async (req, res, next) => {
         </td>
       </tr>
       <tr class="kanban-row" id="kanban-row-${esc(r.id)}" style="display:none">
-        <td colspan="12"><div class="kanban-board" id="kanban-${esc(r.id)}">Loading…</div></td>
+        <td colspan="13"><div class="kanban-board" id="kanban-${esc(r.id)}">Loading…</div></td>
+      </tr>
+      <tr class="buttons-row" id="buttons-row-${esc(r.id)}" style="display:none">
+        <td colspan="13">${buttonsPanel(r)}</td>
       </tr>`;
       })
       .join('');
@@ -1348,6 +1433,25 @@ app.get('/admin/:secret', async (req, res, next) => {
   .archive-list .archive-row { display:flex; align-items:center; gap:6px; color:rgba(255,255,255,0.55); }
   .archive-list a { color:#C49A6C; }
   .archive-list button { font-size:11px; color:#e08787; background:none; border:none; cursor:pointer; padding:0; text-decoration:underline; }
+  .buttons-toggle { font-size:12px; color:#C49A6C; background:none; border:1px solid rgba(196,154,108,0.4); border-radius:6px; padding:5px 10px; cursor:pointer; white-space:nowrap; }
+  .buttons-toggle:hover { background:rgba(196,154,108,0.12); }
+  .buttons-row td { padding:16px 10px 20px; }
+  .buttons-panel { display:flex; flex-direction:column; gap:14px; }
+  .buttons-grid { display:flex; flex-direction:column; gap:8px; }
+  .button-row { display:flex; align-items:center; gap:10px; font-size:13px; }
+  .button-row input { accent-color:#C49A6C; width:15px; height:15px; }
+  .button-label { min-width:170px; color:#fff; }
+  .button-link { font-size:12px; color:rgba(255,255,255,0.55); background:rgba(255,255,255,0.06); padding:3px 7px; border-radius:6px; }
+  .button-link.muted { background:none; font-style:italic; }
+  .buttons-actions { display:flex; align-items:center; gap:10px; }
+  .buttons-save, .buttons-reset, .defaults-save { font-size:12px; color:#C49A6C; background:none; border:1px solid rgba(196,154,108,0.4); border-radius:6px; padding:5px 10px; cursor:pointer; }
+  .buttons-save:hover, .buttons-reset:hover:not(:disabled), .defaults-save:hover { background:rgba(196,154,108,0.12); }
+  .buttons-reset:disabled { opacity:0.35; cursor:not-allowed; }
+  .buttons-status, .defaults-status { font-size:12px; color:rgba(196,154,108,0.9); }
+  .defaults-card { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:18px 20px; margin-bottom:26px; }
+  .defaults-card h2 { font-family:'Playfair Display',serif; font-weight:500; font-size:17px; color:#fff; margin-bottom:4px; }
+  .defaults-card .hint { font-size:12px; color:rgba(255,255,255,0.45); margin-bottom:14px; }
+  .defaults-card .buttons-grid { margin-bottom:14px; }
 </style></head><body><div class="page">
   <h1>Memorials</h1>
   <div class="sub">Everlit · activity dashboard</div>
@@ -1355,9 +1459,21 @@ app.get('/admin/:secret', async (req, res, next) => {
     <label for="sender-name">Your name (added to share links so family sees who sent them)</label>
     <input id="sender-name" type="text" placeholder="e.g. Keegan" maxlength="60" />
   </div>
+  <div class="defaults-card">
+    <h2>Default buttons for new memorials</h2>
+    <div class="hint">What a brand-new memorial starts with. Each memorial can still override this below.</div>
+    <div class="buttons-grid">
+      ${BUTTON_DEFS.map(
+        (b) =>
+          `<label class="button-row"><input type="checkbox" class="default-toggle" data-key="${b.key}" ${buttonDefaults[b.key] ? 'checked' : ''} /><span class="button-label">${esc(b.label)}</span></label>`
+      ).join('')}
+    </div>
+    <button class="defaults-save" type="button">Save defaults</button>
+    <span class="defaults-status" id="defaults-status"></span>
+  </div>
   ${
     rows.length
-      ? `<table><thead><tr><th>Memorial</th><th>Photos</th><th>Favourites</th><th>Comments</th><th>Stories</th><th>Last activity</th><th>Share link</th><th></th><th>Arrangements</th><th>Tribute video</th><th>Archive</th><th></th></tr></thead><tbody>${body}</tbody></table>`
+      ? `<table><thead><tr><th>Memorial</th><th>Photos</th><th>Favourites</th><th>Comments</th><th>Stories</th><th>Last activity</th><th>Share link</th><th></th><th>Arrangements</th><th>Buttons</th><th>Tribute video</th><th>Archive</th><th></th></tr></thead><tbody>${body}</tbody></table>`
       : '<p class="empty">No memorials yet.</p>'
   }
 </div>
@@ -1428,6 +1544,92 @@ app.get('/admin/:secret', async (req, res, next) => {
       }
     });
   });
+
+  document.querySelectorAll('.buttons-toggle').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const projectId = btn.dataset.projectId;
+      const row = document.getElementById('buttons-row-' + projectId);
+      const isOpen = row.style.display !== 'none';
+      row.style.display = isOpen ? 'none' : '';
+      btn.textContent = isOpen ? 'Buttons ▾' : 'Buttons ▴';
+    });
+  });
+
+  function flashStatus(el, text) {
+    el.textContent = text;
+    setTimeout(() => { el.textContent = ''; }, 2000);
+  }
+
+  document.querySelectorAll('.buttons-save').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const projectId = btn.dataset.projectId;
+      const panel = btn.closest('.buttons-panel');
+      const enabledButtons = {};
+      panel.querySelectorAll('.button-toggle').forEach((input) => {
+        enabledButtons[input.dataset.key] = input.checked;
+      });
+      const statusEl = document.getElementById('buttons-status-' + projectId);
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/admin/projects/' + projectId + '/buttons', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': ADMIN_SECRET },
+          body: JSON.stringify({ enabledButtons }),
+        });
+        if (!res.ok) throw new Error('server rejected the update');
+        panel.querySelector('.buttons-reset').disabled = false;
+        flashStatus(statusEl, 'Saved');
+      } catch (err) {
+        flashStatus(statusEl, 'Could not save: ' + err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+
+  document.querySelectorAll('.buttons-reset').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const projectId = btn.dataset.projectId;
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/admin/projects/' + projectId + '/buttons', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': ADMIN_SECRET },
+          body: JSON.stringify({ enabledButtons: null }),
+        });
+        if (!res.ok) throw new Error('server rejected the reset');
+        location.reload();
+      } catch (err) {
+        btn.disabled = false;
+        alert('Could not reset: ' + err.message);
+      }
+    });
+  });
+
+  const defaultsSave = document.querySelector('.defaults-save');
+  if (defaultsSave) {
+    defaultsSave.addEventListener('click', async () => {
+      const defaults = {};
+      document.querySelectorAll('.default-toggle').forEach((input) => {
+        defaults[input.dataset.key] = input.checked;
+      });
+      const statusEl = document.getElementById('defaults-status');
+      defaultsSave.disabled = true;
+      try {
+        const res = await fetch('/api/admin/settings/button-defaults', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': ADMIN_SECRET },
+          body: JSON.stringify({ defaults }),
+        });
+        if (!res.ok) throw new Error('server rejected the update');
+        flashStatus(statusEl, 'Saved');
+      } catch (err) {
+        flashStatus(statusEl, 'Could not save: ' + err.message);
+      } finally {
+        defaultsSave.disabled = false;
+      }
+    });
+  }
 
   document.querySelectorAll('.video-upload').forEach((input) => {
     input.addEventListener('change', async (e) => {

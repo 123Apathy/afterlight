@@ -76,10 +76,10 @@ export default function TributeScreen() {
 
   return (
     <View style={styles.page}>
-      <BackdropVideo />
+      <BackdropVideo focusY="30%" />
       <LinearGradient
-        colors={['rgba(18, 14, 12, 0.94)', 'rgba(22, 17, 14, 0.86)', 'rgba(15, 12, 10, 0.96)']}
-        locations={[0, 0.5, 1]}
+        colors={['rgba(18, 14, 12, 0.94)', 'rgba(20, 16, 14, 0.8)', 'rgba(20, 16, 14, 0.2)']}
+        locations={[0, 0.55, 1]}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
         style={StyleSheet.absoluteFill}

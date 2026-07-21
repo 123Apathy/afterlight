@@ -23,7 +23,9 @@ export default function ViewModeButton({ mode, onPress }: ViewModeButtonProps) {
       ) : (
         <View style={styles.stack}>
           <View style={[styles.stackCard, styles.stackCardBack]} />
-          <View style={[styles.stackCard, styles.stackCardFront]} />
+          <View style={[styles.stackCard, styles.stackCardFront]}>
+            <View style={styles.stackCardDot} />
+          </View>
         </View>
       )}
     </PressableScale>
@@ -51,25 +53,33 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   stack: {
-    width: 18,
-    height: 18,
+    width: 20,
+    height: 20,
   },
   stackCard: {
     position: 'absolute',
-    width: 14,
-    height: 18,
-    borderRadius: 2,
-    borderWidth: 1.5,
+    width: 13,
+    height: 16,
+    borderRadius: 2.5,
+    borderWidth: 1.4,
     borderColor: colors.white,
+    alignItems: 'flex-end',
+    padding: 2,
   },
   stackCardBack: {
-    left: 4,
+    left: 7,
     top: 0,
-    opacity: 0.5,
+    opacity: 0.45,
   },
   stackCardFront: {
     left: 0,
-    top: 2,
-    backgroundColor: 'transparent',
+    top: 4,
+    backgroundColor: colors.dark,
+  },
+  stackCardDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: colors.white,
   },
 });
