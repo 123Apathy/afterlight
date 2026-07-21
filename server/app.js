@@ -752,6 +752,9 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
   .photo-meta { padding: 11px 14px; font-size: 13px; color: rgba(255,255,255,0.6); }
   .photo-missing { aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.4); font-size: 13px; background: rgba(255,255,255,0.03); }
   .print-tip { margin-top: 10px; font-size: 13px; color: rgba(255,255,255,0.45); }
+  .bg-video { position: fixed; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; object-position: 75% center; z-index: 0; }
+  .bg-scrim { position: fixed; inset: 0; background: linear-gradient(180deg, rgba(20,16,14,0.90), rgba(24,19,16,0.75) 40%, rgba(20,16,14,0.92)); z-index: 1; }
+  .page { position: relative; z-index: 2; }
   .video-wrap { background: rgba(255,255,255,0.045); border: 1px solid rgba(196,154,108,0.12); border-radius: 14px; padding: 14px; }
   .video-wrap video { width: 100%; border-radius: 8px; display: block; background: #000; }
   .video-download { display: inline-block; margin-top: 12px; font-size: 13px; color: #C49A6C; }
@@ -775,6 +778,7 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
   footer .brand { margin-top: 8px; font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; color: rgba(196,154,108,0.75); }
   @media print {
     .video-wrap { display: none; }
+    .bg-video, .bg-scrim { display: none; }
     body { background: #fff; color: #1a1613; }
     .photo-card { background: #f7f2ea; border-color: #e5d9c4; }
     .photo-meta, .comments { color: #555; }
@@ -788,6 +792,8 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
 </style>
 </head>
 <body>
+<video class="bg-video" autoplay loop muted playsinline src="/landing-loop.mp4"></video>
+<div class="bg-scrim"></div>
 <div class="page">
   <header>
     <svg width="60" height="60" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
