@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const sharp = require('sharp');
+const archiver = require('archiver');
 const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
@@ -29,7 +30,7 @@ const KANBAN_TEMPLATE = [
   { column: 'progress', title: 'Book transport / hearse', description: '' },
   { column: 'progress', title: 'Prepare order of service / program', description: 'Hymns, readings, eulogy speakers.' },
   { column: 'progress', title: 'Select music & readings', description: '' },
-  { column: 'confirmed', title: 'Book photographer/videographer for tribute', description: 'Coordinate with the Afterlight tribute video team.' },
+  { column: 'confirmed', title: 'Book photographer/videographer for tribute', description: 'Coordinate with the Everlit tribute video team.' },
   { column: 'confirmed', title: 'Confirm guest list & send notices', description: '' },
   { column: 'confirmed', title: 'Arrange venue for reception', description: '' },
 ];
@@ -416,7 +417,7 @@ app.post('/api/projects/:projectId/tribute', async (req, res, next) => {
       const origin = `https://${req.get('host')}`;
       const answered = answers.filter((a) => a && String(a.answer || '').trim()).length;
       await notify(
-        `📝 Afterlight — ${respondent.trim()} shared memories for "${proj.name}" (${answered} answers).\nResults: ${origin}/api/report/${proj.invite_code}`
+        `📝 Everlit — ${respondent.trim()} shared memories for "${proj.name}" (${answered} answers).\nResults: ${origin}/api/report/${proj.invite_code}`
       );
     }
 
@@ -730,7 +731,7 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>${esc(projectRow.name)} — Afterlight results</title>
+<title>${esc(projectRow.name)} — Everlit results</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet" />
@@ -822,7 +823,7 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
 
   <footer>
     <div class="slogan">A memory you can hold.</div>
-    <div class="brand">Afterlight · Memorial Films</div>
+    <div class="brand">Everlit · Memorial Films</div>
   </footer>
 </div>
 </body>
@@ -882,7 +883,7 @@ app.get('/join/:code', async (req, res, next) => {
     <meta property="og:title" content="${title}" />
     <meta property="og:description" content="${desc}" />
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Afterlight · Memorial Films" />
+    <meta property="og:site_name" content="Everlit · Memorial Films" />
     <meta property="og:image" content="https://${esc(host)}/favicon.ico" />
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="${title}" />
@@ -964,6 +965,178 @@ app.delete('/api/admin/projects/:projectId/video', requireAdmin, async (req, res
   }
 });
 
+// Permanently delete a memorial and everything under it: photos + their
+// ratings/comments, arrangements (kanban columns/cards/notes), tribute
+// answers, the uploaded tribute video, and the project row itself. There's
+// no undo — this is only reachable from the admin dashboard's Delete button,
+// which requires typing the memorial's name to confirm before calling this.
+app.delete('/api/admin/projects/:projectId', requireAdmin, async (req, res, next) => {
+  try {
+    const { projectId } = req.params;
+
+    const { data: project } = await supabase
+      .from('afterlight_projects')
+      .select('video_storage_path')
+      .eq('id', projectId)
+      .maybeSingle();
+
+    const { data: photos } = await supabase
+      .from('afterlight_photos')
+      .select('id, storage_path')
+      .eq('project_id', projectId);
+    const photoIds = (photos || []).map((p) => p.id);
+
+    const { data: columns } = await supabase
+      .from('afterlight_kanban_columns')
+      .select('id')
+      .eq('project_id', projectId);
+    const columnIds = (columns || []).map((c) => c.id);
+
+    const { data: cards } = columnIds.length
+      ? await supabase.from('afterlight_kanban_cards').select('id').in('column_id', columnIds)
+      : { data: [] };
+    const cardIds = (cards || []).map((c) => c.id);
+
+    // Best-effort storage cleanup — a storage hiccup shouldn't block removing
+    // the memorial itself, so failures here are swallowed intentionally.
+    const storagePaths = (photos || []).map((p) => p.storage_path).filter(Boolean);
+    if (project?.video_storage_path) storagePaths.push(project.video_storage_path);
+    if (storagePaths.length) {
+      try {
+        await supabase.storage.from(PHOTOS_BUCKET).remove(storagePaths);
+      } catch {
+        /* swallow */
+      }
+    }
+
+    if (cardIds.length) await supabase.from('afterlight_card_notes').delete().in('card_id', cardIds);
+    if (columnIds.length) await supabase.from('afterlight_kanban_cards').delete().in('column_id', columnIds);
+    await supabase.from('afterlight_kanban_columns').delete().eq('project_id', projectId);
+    if (photoIds.length) {
+      await supabase.from('afterlight_ratings').delete().in('photo_id', photoIds);
+      await supabase.from('afterlight_comments').delete().in('photo_id', photoIds);
+    }
+    await supabase.from('afterlight_photos').delete().eq('project_id', projectId);
+    await supabase.from('afterlight_tribute_responses').delete().eq('project_id', projectId);
+
+    const { error } = await supabase.from('afterlight_projects').delete().eq('id', projectId);
+    assertOk(error);
+
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
+
+// --- Admin: photo archive (zip all of a project's photos into one file in
+// Supabase Storage). No separate DB table — the archives/<projectId>/ storage
+// folder itself is the source of truth for what exists, so there's nothing
+// to keep in sync and no migration needed to add this feature.
+
+const ARCHIVE_TTL_SECONDS = 60 * 60 * 24; // download links stay valid for a day
+
+app.get('/api/admin/projects/:projectId/archives', requireAdmin, async (req, res, next) => {
+  try {
+    const { data: files, error } = await supabase.storage
+      .from(PHOTOS_BUCKET)
+      .list(`archives/${req.params.projectId}`, { sortBy: { column: 'created_at', order: 'desc' } });
+    assertOk(error);
+    const archives = await Promise.all(
+      (files || [])
+        .filter((f) => f.name.endsWith('.zip'))
+        .map(async (f) => ({
+          path: `archives/${req.params.projectId}/${f.name}`,
+          sizeBytes: f.metadata?.size ?? null,
+          createdAt: f.created_at,
+          url: await signPhotoUrl(`archives/${req.params.projectId}/${f.name}`, ARCHIVE_TTL_SECONDS),
+        }))
+    );
+    res.json({ archives });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post('/api/admin/projects/:projectId/archive', requireAdmin, async (req, res, next) => {
+  try {
+    const { projectId } = req.params;
+    const { data: photos, error } = await supabase
+      .from('afterlight_photos')
+      .select('storage_path, original_name')
+      .eq('project_id', projectId);
+    assertOk(error);
+    if (!photos || !photos.length) {
+      return res.status(400).json({ error: 'This memorial has no photos to archive.' });
+    }
+
+    const archive = archiver('zip', { zlib: { level: 9 } });
+    const chunks = [];
+    archive.on('data', (chunk) => chunks.push(chunk));
+    const finished = new Promise((resolve, reject) => {
+      archive.on('end', resolve);
+      archive.on('error', reject);
+    });
+
+    // Downloaded with a concurrency cap rather than one-at-a-time — sequential
+    // was ~1s/photo (network round-trip per file), which blew past Netlify's
+    // sync function time limit on a 49-photo memorial. 8-wide keeps memory
+    // bounded while staying well inside the timeout at this app's photo counts.
+    const CONCURRENCY = 8;
+    const downloaded = new Array(photos.length).fill(null);
+    let nextIndex = 0;
+    async function downloadWorker() {
+      while (nextIndex < photos.length) {
+        const i = nextIndex++;
+        const photo = photos[i];
+        const { data: blob, error: dlErr } = await supabase.storage.from(PHOTOS_BUCKET).download(photo.storage_path);
+        if (dlErr || !blob) continue; // skip a missing/broken photo rather than fail the whole archive
+        downloaded[i] = {
+          name: photo.original_name || path.basename(photo.storage_path),
+          buffer: Buffer.from(await blob.arrayBuffer()),
+        };
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, photos.length) }, downloadWorker));
+
+    const seenNames = new Map();
+    for (const item of downloaded) {
+      if (!item) continue;
+      let name = item.name;
+      const seenCount = (seenNames.get(name) || 0) + 1;
+      seenNames.set(name, seenCount);
+      if (seenCount > 1) name = `${seenCount}-${name}`;
+      archive.append(item.buffer, { name });
+    }
+    archive.finalize();
+    await finished;
+
+    const zipBuffer = Buffer.concat(chunks);
+    const archivePath = `archives/${projectId}/${Date.now()}.zip`;
+    const { error: upErr } = await supabase.storage
+      .from(PHOTOS_BUCKET)
+      .upload(archivePath, zipBuffer, { contentType: 'application/zip' });
+    assertOk(upErr);
+
+    res.status(201).json({ path: archivePath, sizeBytes: zipBuffer.length });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.delete('/api/admin/archive', requireAdmin, async (req, res, next) => {
+  try {
+    const { path: archivePath } = req.body || {};
+    if (!archivePath || typeof archivePath !== 'string' || !archivePath.startsWith('archives/')) {
+      return res.status(400).json({ error: 'invalid archive path' });
+    }
+    const { error } = await supabase.storage.from(PHOTOS_BUCKET).remove([archivePath]);
+    assertOk(error);
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Private owner dashboard — every memorial + its activity, at a secret path.
 // Guarded by ADMIN_SECRET (route 404s if the env var is unset or mismatched).
 app.get('/admin/:secret', async (req, res, next) => {
@@ -1038,15 +1211,22 @@ app.get('/admin/:secret', async (req, res, next) => {
             ${r.video_storage_path ? '' : 'disabled'}
           >${r.video_published ? 'Unpublish' : 'Publish'}</button>
         </td>
+        <td class="archive-cell">
+          <button class="archive-create" type="button" data-project-id="${esc(r.id)}">Archive photos</button>
+          <div class="archive-list" id="archive-list-${esc(r.id)}"></div>
+        </td>
+        <td>
+          <button class="delete-project" type="button" data-project-id="${esc(r.id)}" data-name="${esc(r.name)}">Delete</button>
+        </td>
       </tr>
       <tr class="kanban-row" id="kanban-row-${esc(r.id)}" style="display:none">
-        <td colspan="10"><div class="kanban-board" id="kanban-${esc(r.id)}">Loading…</div></td>
+        <td colspan="12"><div class="kanban-board" id="kanban-${esc(r.id)}">Loading…</div></td>
       </tr>`;
       })
       .join('');
 
     res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" />
-<title>Afterlight — dashboard</title><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Everlit — dashboard</title><meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet" />
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
@@ -1087,16 +1267,27 @@ app.get('/admin/:secret', async (req, res, next) => {
   .sender-row label { font-size:12px; color:rgba(255,255,255,0.5); }
   .sender-row input { background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:6px; padding:6px 10px; font-size:13px; color:#fff; font-family:inherit; width:160px; }
   .sender-row input:focus { outline:1px solid rgba(196,154,108,0.6); }
+  .delete-project { font-size:12px; color:#e08787; background:none; border:1px solid rgba(224,135,135,0.4); border-radius:6px; padding:5px 10px; cursor:pointer; white-space:nowrap; }
+  .delete-project:hover { background:rgba(224,135,135,0.12); }
+  .delete-project:disabled { opacity:0.5; cursor:not-allowed; }
+  .archive-cell { font-size:12px; white-space:nowrap; }
+  .archive-create { font-size:12px; color:#C49A6C; background:none; border:1px solid rgba(196,154,108,0.4); border-radius:6px; padding:4px 9px; cursor:pointer; }
+  .archive-create:hover:not(:disabled) { background:rgba(196,154,108,0.12); }
+  .archive-create:disabled { opacity:0.5; cursor:not-allowed; }
+  .archive-list { margin-top:6px; display:flex; flex-direction:column; gap:4px; }
+  .archive-list .archive-row { display:flex; align-items:center; gap:6px; color:rgba(255,255,255,0.55); }
+  .archive-list a { color:#C49A6C; }
+  .archive-list button { font-size:11px; color:#e08787; background:none; border:none; cursor:pointer; padding:0; text-decoration:underline; }
 </style></head><body><div class="page">
   <h1>Memorials</h1>
-  <div class="sub">Afterlight · activity dashboard</div>
+  <div class="sub">Everlit · activity dashboard</div>
   <div class="sender-row">
     <label for="sender-name">Your name (added to share links so family sees who sent them)</label>
     <input id="sender-name" type="text" placeholder="e.g. Keegan" maxlength="60" />
   </div>
   ${
     rows.length
-      ? `<table><thead><tr><th>Memorial</th><th>Photos</th><th>Favourites</th><th>Comments</th><th>Stories</th><th>Last activity</th><th>Share link</th><th></th><th>Arrangements</th><th>Tribute video</th></tr></thead><tbody>${body}</tbody></table>`
+      ? `<table><thead><tr><th>Memorial</th><th>Photos</th><th>Favourites</th><th>Comments</th><th>Stories</th><th>Last activity</th><th>Share link</th><th></th><th>Arrangements</th><th>Tribute video</th><th>Archive</th><th></th></tr></thead><tbody>${body}</tbody></table>`
       : '<p class="empty">No memorials yet.</p>'
   }
 </div>
@@ -1223,6 +1414,105 @@ app.get('/admin/:secret', async (req, res, next) => {
       } catch (err) {
         btn.disabled = false;
         alert('Could not update publish state: ' + err.message);
+      }
+    });
+  });
+
+  document.querySelectorAll('.delete-project').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const projectId = btn.dataset.projectId;
+      const name = btn.dataset.name;
+      const typed = prompt(
+        "This permanently deletes \\"" + name + "\\" \\u2014 every photo, comment, favourite, arrangement, and the tribute video. This cannot be undone.\\n\\nType the memorial's name exactly to confirm:"
+      );
+      if (typed === null) return;
+      if (typed !== name) {
+        alert("That didn't match \\"" + name + "\\" \\u2014 nothing was deleted.");
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = 'Deleting…';
+      try {
+        const res = await fetch('/api/admin/projects/' + projectId, {
+          method: 'DELETE',
+          headers: { 'X-Admin-Secret': ADMIN_SECRET },
+        });
+        if (!res.ok) throw new Error('server rejected the delete');
+        location.reload();
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = 'Delete';
+        alert('Could not delete: ' + err.message);
+      }
+    });
+  });
+
+  function formatBytes(n) {
+    if (!n) return '';
+    const mb = n / (1024 * 1024);
+    return mb >= 1 ? mb.toFixed(1) + ' MB' : Math.round(n / 1024) + ' KB';
+  }
+
+  function renderArchives(projectId, archives) {
+    const el = document.getElementById('archive-list-' + projectId);
+    el.innerHTML = archives.map((a) =>
+      '<div class="archive-row"><a href="' + a.url + '" target="_blank">zip (' + formatBytes(a.sizeBytes) + ')</a>' +
+      '<button class="archive-delete" data-project-id="' + projectId + '" data-path="' + escHtml(a.path) + '" type="button">delete</button></div>'
+    ).join('');
+    el.querySelectorAll('.archive-delete').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Delete this archive zip? This cannot be undone.')) return;
+        btn.disabled = true;
+        try {
+          const res = await fetch('/api/admin/archive', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': ADMIN_SECRET },
+            body: JSON.stringify({ path: btn.dataset.path }),
+          });
+          if (!res.ok) throw new Error('server rejected the delete');
+          loadArchives(btn.dataset.projectId);
+        } catch (err) {
+          btn.disabled = false;
+          alert('Could not delete archive: ' + err.message);
+        }
+      });
+    });
+  }
+
+  async function loadArchives(projectId) {
+    try {
+      const res = await fetch('/api/admin/projects/' + projectId + '/archives', {
+        headers: { 'X-Admin-Secret': ADMIN_SECRET },
+      });
+      const data = await res.json();
+      renderArchives(projectId, data.archives || []);
+    } catch {
+      /* leave list empty on failure */
+    }
+  }
+
+  document.querySelectorAll('.archive-create').forEach((btn) => {
+    loadArchives(btn.dataset.projectId);
+    btn.addEventListener('click', async () => {
+      const projectId = btn.dataset.projectId;
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Zipping…';
+      try {
+        const res = await fetch('/api/admin/projects/' + projectId + '/archive', {
+          method: 'POST',
+          headers: { 'X-Admin-Secret': ADMIN_SECRET },
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || 'server rejected the request');
+        }
+        await loadArchives(projectId);
+      } catch (err) {
+        alert('Could not create archive: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = original;
       }
     });
   });
