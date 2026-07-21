@@ -884,7 +884,7 @@ app.get('/join/:code', async (req, res, next) => {
     <meta property="og:description" content="${desc}" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Everlit · Memorial Films" />
-    <meta property="og:image" content="https://${esc(host)}/favicon.ico" />
+    <meta property="og:image" content="https://${esc(host)}/social-share.png" />
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="${title}" />
     <meta name="twitter:description" content="${desc}" />`;
