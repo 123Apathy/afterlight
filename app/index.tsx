@@ -23,6 +23,7 @@ import { DEMO, DEMO_PHOTOS } from '../constants/demo';
 import { API_BASE, api, heartCount, isFavoritedBy, photoUrl, type Photo, type Project } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
 import { useLocalStorage } from '../lib/useLocalStorage';
+import { glassBlur, glassSurface } from '../lib/glass';
 
 const DOUBLE_TAP_MS = 280;
 const MOTION_DURATION = 240;
@@ -590,7 +591,7 @@ function PhotoDeck({
           onPress={() => goTo(index - 1)}
           scaleTo={0.9}
           hitSlop={10}
-          style={[styles.navButton, index === 0 && styles.navButtonDisabled]}
+          style={[styles.navButton, glassSurface, glassBlur, index === 0 && styles.navButtonDisabled]}
         >
           <Text style={styles.navButtonText}>‹</Text>
         </PressableScale>
@@ -598,7 +599,7 @@ function PhotoDeck({
           onPress={() => goTo(index + 1)}
           scaleTo={0.9}
           hitSlop={10}
-          style={[styles.navButton, index === lastIndex && styles.navButtonDisabled]}
+          style={[styles.navButton, glassSurface, glassBlur, index === lastIndex && styles.navButtonDisabled]}
         >
           <Text style={styles.navButtonText}>›</Text>
         </PressableScale>
@@ -746,7 +747,12 @@ function PhotoSlide({
           ) : (
             <Text style={styles.heartCountLabel}>Tap ♡ to favourite</Text>
           )}
-          <PressableScale onPress={() => onOpenComments(photo)} scaleTo={0.96} hitSlop={8}>
+          <PressableScale
+            onPress={() => onOpenComments(photo)}
+            scaleTo={0.96}
+            hitSlop={8}
+            style={[styles.commentPill, glassSurface, glassBlur]}
+          >
             <Text style={styles.commentLink}>
               {photo.comments.length > 0
                 ? `${photo.comments.length} comment${photo.comments.length === 1 ? '' : 's'}`
@@ -1127,11 +1133,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: 'rgba(255, 255, 255, 0.92)',
   },
+  commentPill: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    paddingHorizontal: 12,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+  },
   commentLink: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.75)',
-    marginTop: 6,
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.85)',
   },
   heartButtonContainer: {
     position: 'relative',

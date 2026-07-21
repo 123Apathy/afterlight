@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -8,7 +8,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { colors } from '../constants/theme';
-import { COMMENT_REACTION_EMOJI, type Photo } from '../lib/api';
+import { COMMENT_REACTION_EMOJI, reactionSummary, type Photo } from '../lib/api';
+import { glassBlur, glassSurface } from '../lib/glass';
 import PressableScale from './PressableScale';
 import GoldButton from './GoldButton';
 
@@ -27,6 +28,10 @@ export default function CommentSheet({ photo, onClose, onSubmit, onReact, raterN
   const reduceMotion = useReducedMotion();
   const progress = useSharedValue(0);
   const [draft, setDraft] = useState('');
+  // Which comment's emoji picker is open, Facebook/LinkedIn "Like" style --
+  // tapping "React" reveals a small strip of options instead of showing all
+  // five all the time; picking one closes it again.
+  const [pickerFor, setPickerFor] = useState<string | null>(null);
   const visible = !!photo;
 
   useEffect(() => {
@@ -35,6 +40,10 @@ export default function CommentSheet({ photo, onClose, onSubmit, onReact, raterN
       easing: visible ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
     });
   }, [visible, reduceMotion]);
+
+  useEffect(() => {
+    if (!visible) setPickerFor(null);
+  }, [visible]);
 
   const style = useAnimatedStyle(() => ({
     opacity: progress.value,
@@ -50,8 +59,12 @@ export default function CommentSheet({ photo, onClose, onSubmit, onReact, raterN
     setDraft('');
   };
 
+  const react = (commentId: string, emoji: string) => {
+    if (photo) onReact(photo, commentId, emoji);
+    setPickerFor(null);
+  };
+
   const comments = photo?.comments ?? [];
-  const myName = raterName.trim().toLowerCase();
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents={visible ? 'auto' : 'none'}>
@@ -71,33 +84,43 @@ export default function CommentSheet({ photo, onClose, onSubmit, onReact, raterN
         {comments.length === 0 ? (
           <Text style={styles.empty}>No comments yet. Share a memory of this moment.</Text>
         ) : (
-          comments.map((c) => (
-            <View key={c.id} style={styles.comment}>
-              <Text style={styles.author}>{c.author}</Text>
-              <Text style={styles.text}>{c.text}</Text>
-              <View style={styles.reactionRow}>
-                {COMMENT_REACTION_EMOJI.map((emoji) => {
-                  const withEmoji = c.reactions.filter((r) => r.emoji === emoji);
-                  const mine = withEmoji.some((r) => r.rater.toLowerCase() === myName);
-                  return (
+          comments.map((c) => {
+            const summary = reactionSummary(c, raterName);
+            const pickerOpen = pickerFor === c.id;
+            return (
+              <View key={c.id} style={styles.comment}>
+                <Text style={styles.author}>{c.author}</Text>
+                <Text style={styles.text}>{c.text}</Text>
+
+                <View style={styles.reactionRow}>
+                  {summary.map(({ emoji, count, mine }) => (
                     <PressableScale
                       key={emoji}
-                      onPress={() => photo && onReact(photo, c.id, emoji)}
-                      scaleTo={0.88}
-                      style={[styles.reactionChip, mine && styles.reactionChipActive]}
+                      onPress={() => react(c.id, emoji)}
+                      scaleTo={0.9}
+                      style={[styles.reactionPill, mine && styles.reactionPillActive]}
                     >
                       <Text style={styles.reactionEmoji}>{emoji}</Text>
-                      {withEmoji.length > 0 && (
-                        <Text style={[styles.reactionCount, mine && styles.reactionCountActive]}>
-                          {withEmoji.length}
-                        </Text>
-                      )}
+                      <Text style={[styles.reactionCount, mine && styles.reactionCountActive]}>{count}</Text>
                     </PressableScale>
-                  );
-                })}
+                  ))}
+                  <PressableScale onPress={() => setPickerFor(pickerOpen ? null : c.id)} hitSlop={6}>
+                    <Text style={styles.reactLink}>React</Text>
+                  </PressableScale>
+                </View>
+
+                {pickerOpen && (
+                  <View style={[styles.picker, glassSurface, glassBlur]}>
+                    {COMMENT_REACTION_EMOJI.map((emoji) => (
+                      <PressableScale key={emoji} onPress={() => react(c.id, emoji)} scaleTo={0.82} hitSlop={4}>
+                        <Text style={styles.pickerEmoji}>{emoji}</Text>
+                      </PressableScale>
+                    ))}
+                  </View>
+                )}
               </View>
-            </View>
-          ))
+            );
+          })
         )}
       </ScrollView>
 
@@ -117,14 +140,6 @@ export default function CommentSheet({ photo, onClose, onSubmit, onReact, raterN
     </View>
   );
 }
-
-// Frosted-glass panel: a blurred backdrop is what keeps this legible over a
-// busy photo -- translucency alone just looks muddy. Web-only property RN's
-// types don't know about, so it's applied separately from StyleSheet.create.
-const glassBlur =
-  Platform.OS === 'web'
-    ? ({ backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)' } as object)
-    : undefined;
 
 const styles = StyleSheet.create({
   backdrop: {
@@ -206,26 +221,27 @@ const styles = StyleSheet.create({
   reactionRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    alignItems: 'center',
+    gap: 8,
     marginTop: 6,
   },
-  reactionChip: {
+  reactionPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     paddingHorizontal: 8,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.10)',
   },
-  reactionChipActive: {
+  reactionPillActive: {
     backgroundColor: 'rgba(212,169,118,0.22)',
     borderColor: 'rgba(212,169,118,0.55)',
   },
   reactionEmoji: {
-    fontSize: 13,
+    fontSize: 12,
   },
   reactionCount: {
     fontFamily: 'Poppins_500Medium',
@@ -234,6 +250,23 @@ const styles = StyleSheet.create({
   },
   reactionCountActive: {
     color: colors.gold,
+  },
+  reactLink: {
+    fontFamily: 'Poppins_500Medium',
+    fontSize: 13,
+    color: colors.textFainter,
+  },
+  picker: {
+    flexDirection: 'row',
+    alignSelf: 'flex-start',
+    gap: 10,
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  pickerEmoji: {
+    fontSize: 20,
   },
   inputRow: {
     flexDirection: 'row',
