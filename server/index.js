@@ -16,5 +16,5 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 4400;
 app.listen(PORT, () => {
-  console.log(`Afterlight local server (Supabase-backed) listening on http://localhost:${PORT}`);
+  console.log(`Everlit local server (Supabase-backed) listening on http://localhost:${PORT}`);
 });
