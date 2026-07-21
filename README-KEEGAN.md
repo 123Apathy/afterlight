@@ -1,6 +1,6 @@
-# Afterlight — local preview
+# Everlit — local preview
 
-Hey Keegan — this is a local preview of the Afterlight app so you can swipe
+Hey Keegan — this is a local preview of the Everlit app so you can swipe
 through it and get a feel. It runs on your machine with sample photos built
 in; you don't need any server, login, or internet database.
 

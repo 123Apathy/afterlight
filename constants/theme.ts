@@ -23,7 +23,7 @@ export const colors = {
 };
 
 export const images = {
-  // The Afterlight horizon mark (transparent PNG, from brand/logo.html).
+  // The Everlit horizon mark (transparent PNG, from brand/logo.html).
   logo: require('../assets/images/logo-mark.png'),
   // Landing backdrop: golden-hour glow through cloud (Pexels #29150580,
   // free/commercial, no attribution required). The "afterglow" the name means.
@@ -36,6 +36,6 @@ export const copy = {
   slogan: 'A memory you can hold.',
   landing: {
     title: "We're sorry for your loss.",
-    subtitle: "Afterlight gathers photos from everyone who knew them—a digital space where their life can be honored, one favorite at a time. Not a eulogy. Just the moments that mattered.",
+    subtitle: "Everlit gathers photos from everyone who knew them—a digital space where their life can be honored, one favorite at a time. Not a eulogy. Just the moments that mattered.",
   },
 };

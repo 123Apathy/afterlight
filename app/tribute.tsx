@@ -24,7 +24,7 @@ type Phase = 'intro' | 'questions' | 'thanks';
 export default function TributeScreen() {
   const router = useRouter();
   const { projectId, projectName } = useActiveProject();
-  const [rater, setRater] = useLocalStorage('afterlight.rater', '');
+  const [rater, setRater] = useLocalStorage('everlit.rater', '');
   const [nameDraft, setNameDraft] = useState('');
   const [phase, setPhase] = useState<Phase>('intro');
   const [index, setIndex] = useState(0);

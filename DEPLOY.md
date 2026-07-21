@@ -1,11 +1,11 @@
-# Deploying Afterlight
+# Deploying Everlit
 
-Afterlight runs as **one Node process**: the Express server (`server/index.js`)
+Everlit runs as **one Node process**: the Express server (`server/index.js`)
 serves the API *and* the compiled web app (`dist/`) on a single origin.
 
 ## Live deploy — Google Cloud Run (current)
 
-Afterlight is deployed as its own Cloud Run service in the same project as PL@4M
+Everlit is deployed as its own Cloud Run service in the same project as PL@4M
 (`hosting-and-sharing-platform`, region `europe-west1`), isolated from the other
 services. The `Dockerfile` builds the web export and runs the server; Cloud Run
 provides HTTPS and scales to zero.
@@ -52,4 +52,4 @@ afterlight`), reverse-proxy the subdomain to the port, and `certbot --nginx -d
 
 - The offline **demo mode** (`EXPO_PUBLIC_DEMO=1`) is for local previews only.
 - RLS on the shared Supabase project is still open (server uses the publishable
-  key). Lock it down with the secret key when moving to Afterlight's own project.
+  key). Lock it down with the secret key when moving to Everlit's own project.

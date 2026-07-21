@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "Afterlight",
-    "slug": "afterlight",
+    "name": "Everlit",
+    "slug": "everlit",
     "version": "1.0.0",
-    "scheme": "afterlight",
+    "scheme": "everlit",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -30,7 +30,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Afterlight needs access to your photos so you can upload them for the memorial video."
+          "photosPermission": "Everlit needs access to your photos so you can upload them for the memorial video."
         }
       ]
     ]

@@ -180,7 +180,7 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
 
       <View style={styles.footer} pointerEvents="none">
         <Image source={images.logo} style={styles.footerMark} resizeMode="contain" />
-        <Text style={styles.footerText}>Afterlight</Text>
+        <Text style={styles.footerText}>Everlit</Text>
       </View>
     </Animated.View>
   );

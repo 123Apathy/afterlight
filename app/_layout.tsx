@@ -22,7 +22,7 @@ import { APP_MAX_WIDTH, colors } from '../constants/theme';
 // scope (before React's first commit) rather than in a useEffect, or every
 // element that never repaints again keeps its original fringed rasterization.
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
-  document.title = 'Afterlight';
+  document.title = 'Everlit';
   const style = document.createElement('style');
   style.textContent = `
     [class^="css-text"], [class*=" css-text"] {

@@ -34,7 +34,7 @@ export default function SwipeScreen() {
   const width = Math.min(winWidth, APP_MAX_WIDTH);
   const reduceMotion = useReducedMotion();
   const { projectId, setProject, known } = useActiveProject();
-  const [raterName, setRaterName] = useLocalStorage('afterlight.rater', '');
+  const [raterName, setRaterName] = useLocalStorage('everlit.rater', '');
   const [nameDraft, setNameDraft] = useState('');
   const [newProjectName, setNewProjectName] = useState('');
   const [creatingProject, setCreatingProject] = useState(false);
@@ -168,7 +168,7 @@ export default function SwipeScreen() {
           <View style={styles.header}>
             <View style={styles.brand}>
               <Image source={images.logo} style={styles.logo} resizeMode="contain" />
-              <Text style={styles.brandText}>Afterlight</Text>
+              <Text style={styles.brandText}>Everlit</Text>
             </View>
           </View>
         </View>
@@ -225,7 +225,7 @@ export default function SwipeScreen() {
           <View style={styles.header}>
             <View style={styles.brand}>
               <Image source={images.logo} style={styles.logo} resizeMode="contain" />
-              <Text style={styles.brandText}>Afterlight</Text>
+              <Text style={styles.brandText}>Everlit</Text>
             </View>
           </View>
         </View>
@@ -301,7 +301,7 @@ export default function SwipeScreen() {
         <View style={styles.header}>
           <View style={styles.brand}>
             <Image source={images.logo} style={styles.logo} resizeMode="contain" />
-            <Text style={styles.brandText}>Afterlight</Text>
+            <Text style={styles.brandText}>Everlit</Text>
           </View>
           <View style={styles.headerActions}>
             {photos.length > 0 && (

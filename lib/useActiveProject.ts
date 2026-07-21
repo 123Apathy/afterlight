@@ -17,9 +17,9 @@ function parseKnown(raw: string): KnownProject[] {
 // you to a chooser instead of a dead end — you never lose a memorial you were
 // part of. Families still enter a new one via their invite link (/join/<code>).
 export function useActiveProject() {
-  const [projectId, setProjectId] = useLocalStorage('afterlight.activeProjectId', '');
-  const [projectName, setProjectName] = useLocalStorage('afterlight.activeProjectName', '');
-  const [knownRaw, setKnownRaw] = useLocalStorage('afterlight.knownProjects', '[]');
+  const [projectId, setProjectId] = useLocalStorage('everlit.activeProjectId', '');
+  const [projectName, setProjectName] = useLocalStorage('everlit.activeProjectName', '');
+  const [knownRaw, setKnownRaw] = useLocalStorage('everlit.knownProjects', '[]');
   const known = parseKnown(knownRaw);
 
   // Add/refresh a memorial in the remembered list (most-recent first).
