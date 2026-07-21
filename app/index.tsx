@@ -17,6 +17,7 @@ import CommentSheet from '../components/CommentSheet';
 import PhotoGrid from '../components/PhotoGrid';
 import PressableScale from '../components/PressableScale';
 import GoldButton from '../components/GoldButton';
+import BackdropVideo from '../components/BackdropVideo';
 import { APP_MAX_WIDTH, colors, copy, images } from '../constants/theme';
 import { DEMO, DEMO_PHOTOS } from '../constants/demo';
 import { API_BASE, api, heartCount, isFavoritedBy, photoUrl, type Photo, type Project } from '../lib/api';
@@ -398,25 +399,15 @@ function EmptyState({ onUpload }: { onUpload: () => void }) {
   );
 }
 
-// Landing/gate backdrop: a looping candle-flame video on web (falls back to
-// the static golden-hour photo on native, which has no video element here
-// and isn't worth an expo-video dependency for a background loop), dimmed
-// under a warm dark scrim so it reads as depth behind the copy — not a
-// bright flame fighting white text. Scrim is darkest top & bottom (text
-// zones), lets the glow through the middle where the hero mark sits.
+// Landing/gate backdrop: the shared looping candle-flame video (see
+// components/BackdropVideo), dimmed under a warm dark scrim so it reads as
+// depth behind the copy — not a bright flame fighting white text. Scrim is
+// darkest top & bottom (text zones), lets the glow through the middle where
+// the hero mark sits.
 function HorizonGlow() {
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      {Platform.OS === 'web'
-        ? React.createElement('video', {
-            src: '/landing-loop.mp4',
-            autoPlay: true,
-            loop: true,
-            muted: true,
-            playsInline: true,
-            style: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', objectFit: 'cover' },
-          })
-        : <Image source={images.landingSky} style={StyleSheet.absoluteFill} resizeMode="cover" />}
+      <BackdropVideo />
       <LinearGradient
         colors={['rgba(20, 16, 14, 0.92)', 'rgba(24, 19, 16, 0.62)', 'rgba(20, 16, 14, 0.95)']}
         locations={[0, 0.5, 1]}

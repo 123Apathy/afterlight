@@ -791,14 +791,10 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
 <div class="page">
   <header>
     <svg width="60" height="60" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
-      <line x1="52" y1="170" x2="188" y2="170" stroke="#C49A6C" stroke-width="4" stroke-linecap="round" opacity="0.9" />
-      <path d="M66,170 A54,54 0 0 1 174,170" fill="none" stroke="#C49A6C" stroke-width="8" stroke-linecap="round" />
-      <line x1="120" y1="108" x2="120" y2="66" stroke="#C49A6C" stroke-width="6" stroke-linecap="round" />
-      <line x1="99" y1="108" x2="102" y2="74" stroke="#C49A6C" stroke-width="5" stroke-linecap="round" opacity="0.85" />
-      <line x1="141" y1="108" x2="138" y2="74" stroke="#C49A6C" stroke-width="5" stroke-linecap="round" opacity="0.85" />
-      <line x1="78" y1="108" x2="84" y2="82" stroke="#C49A6C" stroke-width="4" stroke-linecap="round" opacity="0.7" />
-      <line x1="162" y1="108" x2="156" y2="82" stroke="#C49A6C" stroke-width="4" stroke-linecap="round" opacity="0.7" />
-      <circle cx="120" cy="170" r="5" fill="#A6794A" />
+      <g transform="translate(27.14,32.6) scale(1.857)">
+        <path fill-rule="evenodd" d="M50 18 C 45.5 27, 41 36, 41 49.5 C 41 63.5, 45.2 74, 50.4 74 C 55.8 74, 59.2 64.5, 59.2 53 C 59.2 42.5, 55 33.5, 52 26.5 C 51.3 24.8, 50.7 21, 50 18 Z M50 31 C 46.6 37, 45 43, 45 51 C 45 61.5, 47.4 69.4, 50.3 69.4 C 53.6 69.4, 55.4 62.5, 55.4 54.2 C 55.4 46, 52.7 40.5, 51 35.8 C 50.6 34.2, 50.4 32.5, 50 31 Z" fill="#C49A6C" />
+        <circle cx="50" cy="57" r="4.2" fill="#C49A6C" />
+      </g>
     </svg>
     <div>
       <h1>${esc(projectRow.name)}</h1>

@@ -9,11 +9,11 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import PressableScale from '../components/PressableScale';
 import GoldButton from '../components/GoldButton';
-import { colors, images } from '../constants/theme';
+import BackdropVideo from '../components/BackdropVideo';
+import { colors } from '../constants/theme';
 import { fillName, tributeCopy, tributeQuestions } from '../constants/tribute';
 import { api } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
@@ -76,7 +76,7 @@ export default function TributeScreen() {
 
   return (
     <View style={styles.page}>
-      <Image source={images.landingSky} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      <BackdropVideo />
       <LinearGradient
         colors={['rgba(18, 14, 12, 0.94)', 'rgba(22, 17, 14, 0.86)', 'rgba(15, 12, 10, 0.96)']}
         locations={[0, 0.5, 1]}
