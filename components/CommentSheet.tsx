@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -54,7 +54,7 @@ export default function CommentSheet({ photo, onClose, onSubmit }: CommentSheetP
       <Animated.View style={[styles.backdrop, backdropStyle]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
-      <Animated.View style={[styles.sheet, style]}>
+      <Animated.View style={[styles.sheet, glassBlur, style]}>
       <View style={styles.header}>
         <Text style={styles.title}>Comments</Text>
         <PressableScale onPress={onClose} hitSlop={12} style={styles.close}>
@@ -95,6 +95,14 @@ export default function CommentSheet({ photo, onClose, onSubmit }: CommentSheetP
   );
 }
 
+// Frosted-glass panel: a blurred backdrop is what keeps this legible over a
+// busy photo -- translucency alone just looks muddy. Web-only property RN's
+// types don't know about, so it's applied separately from StyleSheet.create.
+const glassBlur =
+  Platform.OS === 'web'
+    ? ({ backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)' } as object)
+    : undefined;
+
 const styles = StyleSheet.create({
   backdrop: {
     position: 'absolute',
@@ -110,7 +118,10 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     maxHeight: '72%',
-    backgroundColor: colors.darkWarm,
+    backgroundColor: 'rgba(32, 26, 24, 0.68)',
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 20,
@@ -179,7 +190,9 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 48,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.09)',
+    backgroundColor: 'rgba(255,255,255,0.13)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
     paddingHorizontal: 16,
     color: colors.white,
     fontFamily: 'Poppins_400Regular',
