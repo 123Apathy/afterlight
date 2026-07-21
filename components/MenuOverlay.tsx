@@ -64,7 +64,21 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
   const inviteMessage = (p: Project) =>
     `We're gathering photos and memories to honour ${p.name}. Add yours here: ${inviteUrl(p)}`;
 
-  const handleShare = async () => {
+  // The primary action: tapping "Invite family" opens WhatsApp directly
+  // with the message ready to send, not a clipboard copy -- that's what was
+  // actually agreed on ("tap opens a pre-filled WhatsApp"), copying to the
+  // clipboard is the fallback for anyone who wants a different app instead.
+  const handleWhatsAppShare = () => {
+    if (!project) {
+      window.alert("We couldn't get the link just now. Please close this, check your internet, and try again.");
+      return;
+    }
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.open(`https://wa.me/?text=${encodeURIComponent(inviteMessage(project))}`, '_blank');
+    }
+  };
+
+  const handleCopyLink = async () => {
     if (!project) {
       window.alert("We couldn't get the link just now. Please close this, check your internet, and try again.");
       return;
@@ -77,16 +91,6 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
     } catch {
       // navigator.clipboard needs a secure origin — fall back to a copyable prompt.
       window.prompt('Copy this and send it to your family:', message);
-    }
-  };
-
-  const handleWhatsAppShare = () => {
-    if (!project) {
-      window.alert("We couldn't get the link just now. Please close this, check your internet, and try again.");
-      return;
-    }
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      window.open(`https://wa.me/?text=${encodeURIComponent(inviteMessage(project))}`, '_blank');
     }
   };
 
@@ -176,17 +180,13 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
             {showButton('inviteFamily') && (
               <View>
                 <ActionCard
-                  icon={<IconInvite />}
+                  icon={<IconWhatsApp />}
                   title="Invite family"
-                  subtitle={copied ? 'Copied, now paste it into a message' : 'Send a link so they can add their photos too'}
-                  onPress={handleShare}
-                  highlight={copied}
+                  subtitle="Opens WhatsApp with a message ready to send"
+                  onPress={handleWhatsAppShare}
                 />
-                <PressableScale onPress={handleWhatsAppShare} style={styles.whatsappLink} scaleTo={0.97}>
-                  <View style={styles.waIconBox}>
-                    <IconWhatsApp />
-                  </View>
-                  <Text style={styles.whatsappText}>Share via WhatsApp</Text>
+                <PressableScale onPress={handleCopyLink} style={styles.whatsappLink} scaleTo={0.97}>
+                  <Text style={styles.copyLinkText}>{copied ? 'Copied' : 'Copy link instead'}</Text>
                 </PressableScale>
               </View>
             )}
@@ -254,16 +254,6 @@ function IconAdd() {
     <View style={styles.iconInner}>
       <View style={styles.plusBar} />
       <View style={[styles.plusBar, { transform: [{ rotate: '90deg' }] }]} />
-    </View>
-  );
-}
-
-function IconInvite() {
-  // Envelope: a bordered rectangle with a downward triangular flap.
-  return (
-    <View style={styles.iconInner}>
-      <View style={styles.envBox} />
-      <View style={styles.envFlap} />
     </View>
   );
 }
@@ -389,25 +379,6 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: colors.goldWarm,
   },
-  envBox: {
-    width: 28,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 2.4,
-    borderColor: colors.goldWarm,
-  },
-  envFlap: {
-    position: 'absolute',
-    top: 4,
-    width: 0,
-    height: 0,
-    borderLeftWidth: 12,
-    borderRightWidth: 12,
-    borderTopWidth: 9,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: colors.goldWarm,
-  },
   iconHeart: {
     fontSize: 26,
     lineHeight: 30,
@@ -431,23 +402,15 @@ const styles = StyleSheet.create({
     borderRightColor: 'transparent',
   },
   whatsappLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
     marginTop: 8,
     marginLeft: 8,
     paddingVertical: 4,
   },
-  waIconBox: {
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  whatsappText: {
-    fontFamily: 'Poppins_500Medium',
-    fontSize: 14,
-    color: '#4FCE7E',
+  copyLinkText: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 13,
+    color: colors.textFainter,
+    textDecorationLine: 'underline',
   },
   storyLine: {
     height: 2.6,

@@ -830,6 +830,8 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Poppins', system-ui, sans-serif; background: #191413; color: rgba(255,255,255,0.85); padding: 48px 28px; }
   .page { max-width: 900px; margin: 0 auto; }
+  .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #C49A6C; text-decoration: none; border: 1px solid rgba(196,154,108,0.4); border-radius: 20px; padding: 8px 16px; margin-bottom: 20px; }
+  .back-link:hover { background: rgba(196,154,108,0.12); }
   header { display: flex; align-items: center; gap: 18px; margin-bottom: 8px; }
   header svg { flex-shrink: 0; }
   h1 { font-family: 'Playfair Display', Georgia, serif; font-size: 38px; font-weight: 600; letter-spacing: -0.6px; color: #fff; }
@@ -864,6 +866,7 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
   @media print {
     .video-wrap { display: none; }
     .bg-video, .bg-scrim { display: none; }
+    .back-link { display: none; }
     body { background: #fff; color: #1a1613; }
     .photo-card { background: #f7f2ea; border-color: #e5d9c4; }
     .photo-meta, .comments { color: #555; }
@@ -878,6 +881,7 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
 <video class="bg-video" autoplay loop muted playsinline src="/landing-loop.mp4"></video>
 <div class="bg-scrim"></div>
 <div class="page">
+  <a class="back-link" href="/">&larr; Back to photos</a>
   <header>
     <svg width="60" height="60" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
       <g transform="translate(27.14,32.6) scale(1.857)">
