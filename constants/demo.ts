@@ -28,7 +28,7 @@ export const DEMO_PHOTOS: Photo[] = seeds.map((s, i) => {
     id: `demo-r-${i}-${j}`, photoId: id, rater, score: 1, createdAt: '',
   }));
   const comments = (s.comments ?? []).map((c, j) => ({
-    id: `demo-c-${i}-${j}`, photoId: id, author: c.author, text: c.text, createdAt: '',
+    id: `demo-c-${i}-${j}`, photoId: id, author: c.author, text: c.text, createdAt: '', reactions: [],
   }));
   return {
     id, url: '', originalName: `photo-${i}.jpg`, createdAt: '', avgRating: null,

@@ -57,8 +57,19 @@ function mapRating(row) {
   return { id: row.id, photoId: row.photo_id, rater: row.rater, score: row.score, createdAt: row.created_at };
 }
 
-function mapComment(row) {
-  return { id: row.id, photoId: row.photo_id, author: row.author, text: row.body, createdAt: row.created_at };
+function mapComment(row, reactions = []) {
+  return {
+    id: row.id,
+    photoId: row.photo_id,
+    author: row.author,
+    text: row.body,
+    createdAt: row.created_at,
+    reactions: reactions.map(mapReaction),
+  };
+}
+
+function mapReaction(row) {
+  return { id: row.id, commentId: row.comment_id, rater: row.rater, emoji: row.emoji, createdAt: row.created_at };
 }
 
 function mapColumn(row) {
@@ -244,6 +255,12 @@ app.get('/api/projects/:projectId/photos', async (req, res, next) => {
     assertOk(ratingsError);
     assertOk(commentsError);
 
+    const commentIds = comments.map((c) => c.id);
+    const { data: reactions, error: reactionsError } = commentIds.length
+      ? await supabase.from('afterlight_comment_reactions').select('*').in('comment_id', commentIds)
+      : { data: [], error: null };
+    assertOk(reactionsError);
+
     const result = await Promise.all(
       photos.map(async (photo) => {
         const photoRatings = ratings.filter((r) => r.photo_id === photo.id);
@@ -257,7 +274,7 @@ app.get('/api/projects/:projectId/photos', async (req, res, next) => {
           originalName: photo.original_name,
           createdAt: photo.created_at,
           ratings: photoRatings.map(mapRating),
-          comments: photoComments.map(mapComment),
+          comments: photoComments.map((c) => mapComment(c, reactions.filter((r) => r.comment_id === c.id))),
           avgRating,
           ratingCount: photoRatings.length,
         };
@@ -461,6 +478,57 @@ app.delete('/api/comments/:commentId', async (req, res, next) => {
     const { error } = await supabase.from('afterlight_comments').delete().eq('id', req.params.commentId);
     assertOk(error);
     res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
+
+// A small, curated set rather than an open emoji keyboard -- keeps the UI to
+// a quick tap instead of a picker, and keeps stored values predictable.
+const COMMENT_REACTION_EMOJI = ['❤️', '😂', '😢', '🙏', '😊'];
+
+// Tap-to-toggle: posting the same rater+emoji again removes it. Returns the
+// comment's full current reaction list so the client can just replace state.
+app.post('/api/comments/:commentId/reactions', async (req, res, next) => {
+  try {
+    const { commentId } = req.params;
+    const { rater, emoji } = req.body || {};
+    if (!rater || typeof rater !== 'string' || !rater.trim()) {
+      return res.status(400).json({ error: 'rater is required' });
+    }
+    if (!COMMENT_REACTION_EMOJI.includes(emoji)) {
+      return res.status(400).json({ error: 'unsupported emoji' });
+    }
+    const raterTrimmed = rater.trim();
+
+    const { data: existing, error: existingError } = await supabase
+      .from('afterlight_comment_reactions')
+      .select('id')
+      .eq('comment_id', commentId)
+      .eq('rater', raterTrimmed)
+      .eq('emoji', emoji)
+      .maybeSingle();
+    assertOk(existingError);
+
+    if (existing) {
+      const { error } = await supabase.from('afterlight_comment_reactions').delete().eq('id', existing.id);
+      assertOk(error);
+    } else {
+      const { error } = await supabase
+        .from('afterlight_comment_reactions')
+        .insert({ comment_id: commentId, rater: raterTrimmed, emoji });
+      if (error) {
+        if (error.code === '23503') return res.status(404).json({ error: 'comment not found' });
+        throw Object.assign(new Error(error.message), { status: 500 });
+      }
+    }
+
+    const { data: reactions, error: reactionsError } = await supabase
+      .from('afterlight_comment_reactions')
+      .select('*')
+      .eq('comment_id', commentId);
+    assertOk(reactionsError);
+    res.json(reactions.map(mapReaction));
   } catch (err) {
     next(err);
   }

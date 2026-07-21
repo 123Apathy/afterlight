@@ -146,6 +146,7 @@ export default function SwipeScreen() {
       author: raterName,
       text,
       createdAt: new Date().toISOString(),
+      reactions: [],
     };
     setPhotos((prev) =>
       prev.map((p) => (p.id === photo.id ? { ...p, comments: [...p.comments, optimistic] } : p))
@@ -156,6 +157,40 @@ export default function SwipeScreen() {
     } catch {
       if (typeof window !== 'undefined') {
         window.alert("That comment didn't save — check your connection and try again.");
+      }
+      refresh();
+    }
+  };
+
+  // Tap-to-toggle, matching how favoriting works: add the reaction
+  // optimistically, or drop it if the rater already reacted with this
+  // emoji. Scoped to whichever photo the comment belongs to so we don't
+  // have to search every photo's comment list.
+  const reactToComment = async (photo: Photo, commentId: string, emoji: string) => {
+    const comment = photo.comments.find((c) => c.id === commentId);
+    if (!comment) return;
+    const already = comment.reactions.some(
+      (r) => r.emoji === emoji && r.rater.toLowerCase() === raterName.toLowerCase()
+    );
+    const nextReactions = already
+      ? comment.reactions.filter((r) => !(r.emoji === emoji && r.rater.toLowerCase() === raterName.toLowerCase()))
+      : [
+          ...comment.reactions,
+          { id: 'optimistic', commentId, rater: raterName, emoji, createdAt: new Date().toISOString() },
+        ];
+    setPhotos((prev) =>
+      prev.map((p) =>
+        p.id !== photo.id
+          ? p
+          : { ...p, comments: p.comments.map((c) => (c.id === commentId ? { ...c, reactions: nextReactions } : c)) }
+      )
+    );
+    if (DEMO) return; // in-memory only, no backend
+    try {
+      await api.toggleCommentReaction(commentId, raterName, emoji);
+    } catch {
+      if (typeof window !== 'undefined') {
+        window.alert("That reaction didn't save — check your connection and try again.");
       }
       refresh();
     }
@@ -296,6 +331,8 @@ export default function SwipeScreen() {
         photo={photos.find((p) => p.id === commentPhotoId) ?? null}
         onClose={() => setCommentPhotoId(null)}
         onSubmit={addComment}
+        onReact={reactToComment}
+        raterName={raterName}
       />
 
       <View style={styles.headerOverlay} pointerEvents="box-none">

@@ -13,13 +13,27 @@ export type Project = {
   createdAt: string;
 };
 
+export type Reaction = {
+  id: string;
+  commentId: string;
+  rater: string;
+  emoji: string;
+  createdAt: string;
+};
+
 export type Comment = {
   id: string;
   photoId: string;
   author: string;
   text: string;
   createdAt: string;
+  reactions: Reaction[];
 };
+
+// Curated set the UI offers per comment -- keep in sync with
+// COMMENT_REACTION_EMOJI in server/app.js (server is the source of truth /
+// validator; this just needs to match so taps never get silently rejected).
+export const COMMENT_REACTION_EMOJI = ['❤️', '😂', '😢', '🙏', '😊'];
 
 export type Rating = {
   id: string;
@@ -91,6 +105,17 @@ export function heartCount(photo: Photo) {
   return photo.ratingCount;
 }
 
+// Groups a comment's flat reaction list into [{ emoji, count, mine }] in a
+// stable order (COMMENT_REACTION_EMOJI order, only emoji that have at least
+// one reaction), so the UI can render pills without re-deriving this itself.
+export function reactionSummary(comment: Comment, rater: string) {
+  const name = rater.trim().toLowerCase();
+  return COMMENT_REACTION_EMOJI.map((emoji) => {
+    const withEmoji = comment.reactions.filter((r) => r.emoji === emoji);
+    return { emoji, count: withEmoji.length, mine: withEmoji.some((r) => r.rater.toLowerCase() === name) };
+  }).filter((r) => r.count > 0);
+}
+
 export function inviteUrl(project: Project) {
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   return `${origin}/join/${project.inviteCode}`;
@@ -147,6 +172,13 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ author, text }),
+    }),
+
+  toggleCommentReaction: (commentId: string, rater: string, emoji: string) =>
+    request<Reaction[]>(`/api/comments/${commentId}/reactions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rater, emoji }),
     }),
 
   getKanban: (projectId: string) =>

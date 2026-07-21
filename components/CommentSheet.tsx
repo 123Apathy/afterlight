@@ -8,19 +8,22 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { colors } from '../constants/theme';
-import type { Photo } from '../lib/api';
+import { COMMENT_REACTION_EMOJI, type Photo } from '../lib/api';
 import PressableScale from './PressableScale';
+import GoldButton from './GoldButton';
 
 type CommentSheetProps = {
   photo: Photo | null;
   onClose: () => void;
   onSubmit: (photo: Photo, text: string) => void;
+  onReact: (photo: Photo, commentId: string, emoji: string) => void;
+  raterName: string;
 };
 
 // Facebook-style comment thread as a slide-up sheet over the photo. The photo
 // prop is looked up fresh from parent state each render, so optimistic
 // comments appear the moment they're added.
-export default function CommentSheet({ photo, onClose, onSubmit }: CommentSheetProps) {
+export default function CommentSheet({ photo, onClose, onSubmit, onReact, raterName }: CommentSheetProps) {
   const reduceMotion = useReducedMotion();
   const progress = useSharedValue(0);
   const [draft, setDraft] = useState('');
@@ -48,6 +51,7 @@ export default function CommentSheet({ photo, onClose, onSubmit }: CommentSheetP
   };
 
   const comments = photo?.comments ?? [];
+  const myName = raterName.trim().toLowerCase();
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents={visible ? 'auto' : 'none'}>
@@ -71,6 +75,27 @@ export default function CommentSheet({ photo, onClose, onSubmit }: CommentSheetP
             <View key={c.id} style={styles.comment}>
               <Text style={styles.author}>{c.author}</Text>
               <Text style={styles.text}>{c.text}</Text>
+              <View style={styles.reactionRow}>
+                {COMMENT_REACTION_EMOJI.map((emoji) => {
+                  const withEmoji = c.reactions.filter((r) => r.emoji === emoji);
+                  const mine = withEmoji.some((r) => r.rater.toLowerCase() === myName);
+                  return (
+                    <PressableScale
+                      key={emoji}
+                      onPress={() => photo && onReact(photo, c.id, emoji)}
+                      scaleTo={0.88}
+                      style={[styles.reactionChip, mine && styles.reactionChipActive]}
+                    >
+                      <Text style={styles.reactionEmoji}>{emoji}</Text>
+                      {withEmoji.length > 0 && (
+                        <Text style={[styles.reactionCount, mine && styles.reactionCountActive]}>
+                          {withEmoji.length}
+                        </Text>
+                      )}
+                    </PressableScale>
+                  );
+                })}
+              </View>
             </View>
           ))
         )}
@@ -86,9 +111,7 @@ export default function CommentSheet({ photo, onClose, onSubmit }: CommentSheetP
           onSubmitEditing={send}
           returnKeyType="send"
         />
-        <PressableScale onPress={send} style={styles.sendButton} scaleTo={0.94}>
-          <Text style={styles.sendText}>Post</Text>
-        </PressableScale>
+        <GoldButton label="Post" onPress={send} style={styles.sendButton} textStyle={styles.sendText} />
       </View>
       </Animated.View>
     </View>
@@ -180,6 +203,38 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     color: colors.white,
   },
+  reactionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 6,
+  },
+  reactionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  reactionChipActive: {
+    backgroundColor: 'rgba(212,169,118,0.22)',
+    borderColor: 'rgba(212,169,118,0.55)',
+  },
+  reactionEmoji: {
+    fontSize: 13,
+  },
+  reactionCount: {
+    fontFamily: 'Poppins_500Medium',
+    fontSize: 12,
+    color: colors.textFainter,
+  },
+  reactionCountActive: {
+    color: colors.gold,
+  },
   inputRow: {
     flexDirection: 'row',
     gap: 10,
@@ -200,15 +255,9 @@ const styles = StyleSheet.create({
   },
   sendButton: {
     height: 48,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    backgroundColor: colors.goldWarm,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: 22,
   },
   sendText: {
-    fontFamily: 'Poppins_500Medium',
     fontSize: 15,
-    color: colors.ink,
   },
 });
