@@ -176,7 +176,11 @@
       right: clamp(16px, 7vw - 24px, 110px);
       width: min(clamp(96px, 11vw + 60px, 230px), 17vh);
       aspect-ratio: 9 / 19.5;
-      transform: rotate(-3deg);
+      /* Upright, not tilted -- a rotated frame around a perfectly rectilinear
+         UI (straight header row, grid-square icons, right-angle chevrons)
+         read as broken/misaligned rather than a stylistic tilt; a photo can
+         carry a tilt naturally, a screenshot of a UI can't. The floating-
+         device depth cue stays entirely in the drop-shadow. */
       filter: drop-shadow(0 30px 60px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 40px rgba(196, 154, 108, 0.18));
       pointer-events: none;
     }
@@ -427,29 +431,38 @@
 
     .navbar-inner {
       position: relative;
-      background: #000;
-      border-radius: 0 0 1.5rem 1.5rem;
-      padding: 8px 32px;
+      background: rgba(10, 8, 7, 0.92);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 0 0 1.25rem 1.25rem;
+      border: 1px solid rgba(212, 169, 118, 0.14);
+      border-top: none;
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
+      padding: 11px 26px;
       display: flex;
       align-items: center;
-      gap: 32px;
+      gap: 26px;
     }
 
+    /* Was 60px -- badly oversized next to 14px nav links, made the pill read
+       heavy/blocky. 34px reads as a mark, not a logo lockup competing with
+       the links for attention. */
     .navbar-mark {
-      width: 60px;
-      height: 60px;
+      width: 34px;
+      height: 34px;
       object-fit: contain;
     }
 
     .navbar-links {
       display: flex;
       align-items: center;
-      gap: 56px;
+      gap: 38px;
       list-style: none;
     }
 
     .navbar-links a {
-      font-size: 14px;
+      font-size: 13.5px;
+      letter-spacing: 0.2px;
       color: var(--primary-80);
       text-decoration: none;
       transition: color 0.2s;
