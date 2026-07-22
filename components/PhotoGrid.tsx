@@ -1,5 +1,6 @@
 import React from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import { colors } from '../constants/theme';
 import { heartCount, photoUrl, type Photo } from '../lib/api';
 import PressableScale from './PressableScale';
@@ -17,6 +18,7 @@ const GAP = 2;
 // the swipe view at that exact photo.
 export default function PhotoGrid({ photos, width, onSelect }: PhotoGridProps) {
   const cellSize = (width - GAP * (COLUMNS - 1)) / COLUMNS;
+  const reduceMotion = useReducedMotion();
 
   return (
     <ScrollView
@@ -28,23 +30,30 @@ export default function PhotoGrid({ photos, width, onSelect }: PhotoGridProps) {
         {photos.map((photo, i) => {
           const count = heartCount(photo);
           return (
-            <PressableScale
+            <Animated.View
               key={photo.id}
-              onPress={() => onSelect(i)}
-              scaleTo={0.96}
+              // Soft staggered entrance, wave restarting every 4 rows so a
+              // long grid's tail doesn't wait seconds for its turn.
+              entering={reduceMotion ? undefined : FadeIn.duration(320).delay((i % 12) * 35)}
               style={{ width: cellSize, height: cellSize }}
             >
-              <Image
-                source={photo.localSource ?? { uri: photoUrl(photo) }}
-                style={styles.cellImage}
-                resizeMode="cover"
-              />
-              {count > 0 && (
-                <View style={styles.heartBadge}>
-                  <Text style={styles.heartBadgeText}>♥ {count}</Text>
-                </View>
-              )}
-            </PressableScale>
+              <PressableScale
+                onPress={() => onSelect(i)}
+                scaleTo={0.96}
+                style={{ width: '100%', height: '100%' }}
+              >
+                <Image
+                  source={photo.localSource ?? { uri: photoUrl(photo) }}
+                  style={styles.cellImage}
+                  resizeMode="cover"
+                />
+                {count > 0 && (
+                  <View style={styles.heartBadge}>
+                    <Text style={styles.heartBadgeText}>♥ {count}</Text>
+                  </View>
+                )}
+              </PressableScale>
+            </Animated.View>
           );
         })}
       </View>

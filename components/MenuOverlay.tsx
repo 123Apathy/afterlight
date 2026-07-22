@@ -248,8 +248,38 @@ function ActionCard({ icon, title, subtitle, onPress, highlight }: ActionCardPro
   );
 }
 
-// Icons drawn with plain Views — no icon library, no emoji.
+// Icons: thin-line gold SVGs on web, matching the engraved-line style of the
+// nav chevrons and the logo suite (the plain-View shapes read as a different,
+// heavier icon language). Native keeps the original View fallbacks — same
+// web-only inline-SVG escape hatch as NavChevron/RadialGlow in app/app.tsx.
+function lineIcon(paths: { d: string; stroke?: string; opacity?: number }[], stroke = colors.goldWarm) {
+  return React.createElement(
+    'svg',
+    { width: 26, height: 26, viewBox: '0 0 28 28' },
+    ...paths.map((p, i) =>
+      React.createElement('path', {
+        key: i,
+        d: p.d,
+        stroke: p.stroke || stroke,
+        strokeWidth: 1.8,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+        fill: 'none',
+        opacity: p.opacity ?? 1,
+      })
+    )
+  );
+}
+
 function IconAdd() {
+  if (Platform.OS === 'web') {
+    // A photo frame with a small sun/plus — "add pictures".
+    return lineIcon([
+      { d: 'M4 6.5 h20 v15 h-20 z' },
+      { d: 'M4 17 L11 11.5 L17 16.5 L21 13.5 L24 15.5', opacity: 0.75 },
+      { d: 'M19.5 9.5 h0.01' },
+    ]);
+  }
   return (
     <View style={styles.iconInner}>
       <View style={styles.plusBar} />
@@ -259,11 +289,25 @@ function IconAdd() {
 }
 
 function IconHeart() {
+  if (Platform.OS === 'web') {
+    return lineIcon(
+      [{ d: 'M14 22.5 S5 17 3.8 11.4 C3 7.6 5.4 5 8.5 5 c2.3 0 4.2 1.3 5.5 3.2 C15.3 6.3 17.2 5 19.5 5 c3.1 0 5.5 2.6 4.7 6.4 C23 17 14 22.5 14 22.5 Z' }],
+      colors.heart
+    );
+  }
   return <Text style={styles.iconHeart}>♥</Text>;
 }
 
 function IconStory() {
-  // Lines of writing — a story/note.
+  if (Platform.OS === 'web') {
+    // Lines of writing with a short trailing line — a told story.
+    return lineIcon([
+      { d: 'M5 8 h18' },
+      { d: 'M5 13 h18' },
+      { d: 'M5 18 h11' },
+      { d: 'M19 18 h4', opacity: 0.45 },
+    ]);
+  }
   return (
     <View style={styles.iconInner}>
       <View style={[styles.storyLine, { width: 26 }]} />
@@ -274,9 +318,14 @@ function IconStory() {
 }
 
 function IconWhatsApp() {
-  // Chat bubble with a small tail -- a placeholder shape, not a WhatsApp
-  // trademark asset. Swap for a real brand icon whenever the button pack
-  // gets designed.
+  // Chat bubble with a small tail -- a generic shape, not a WhatsApp
+  // trademark asset. Green keeps the "this opens WhatsApp" affordance.
+  if (Platform.OS === 'web') {
+    return lineIcon(
+      [{ d: 'M7 6 h14 a2.5 2.5 0 0 1 2.5 2.5 v8 a2.5 2.5 0 0 1 -2.5 2.5 h-9.5 l-5 4.5 v-4.5 h0.5 a2.5 2.5 0 0 1 -2.5 -2.5 v-8 A2.5 2.5 0 0 1 7 6 Z' }],
+      '#25D366'
+    );
+  }
   return (
     <View style={styles.iconInner}>
       <View style={styles.waBubble} />

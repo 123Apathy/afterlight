@@ -2,14 +2,17 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
+  interpolate,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withRepeat,
   withSequence,
   withSpring,
   withTiming,
   Easing,
   useReducedMotion,
+  type SharedValue,
 } from 'react-native-reanimated';
 import HamburgerButton from '../components/HamburgerButton';
 import ViewModeButton from '../components/ViewModeButton';
@@ -61,14 +64,35 @@ export default function SwipeScreen() {
   const [resetSeq, setResetSeq] = useState(0);
   const [projectDetails, setProjectDetails] = useState<Project | null>(null);
 
-  // Gentle one-time entrance for the welcome screen (fade + slight rise).
-  const enter = useSharedValue(0);
+  // Staggered entrance for the gate screens (fade + slight rise, three beats:
+  // overline/mark → title/streak → body/input). Re-runs when the visible gate
+  // changes so the name gate gets its own entrance, not the welcome gate's
+  // leftovers.
+  const enterA = useSharedValue(0);
+  const enterB = useSharedValue(0);
+  const enterC = useSharedValue(0);
+  const gateKey = !projectId && !DEMO ? 'welcome' : !raterName ? 'name' : 'app';
   useEffect(() => {
-    enter.value = reduceMotion ? 1 : withTiming(1, { duration: 520, easing: Easing.out(Easing.cubic) });
-  }, []);
-  const enterStyle = useAnimatedStyle(() => ({
-    opacity: enter.value,
-    transform: [{ translateY: (1 - enter.value) * 14 }],
+    if (gateKey === 'app') return;
+    const rise = (v: SharedValue<number>, delay: number) => {
+      v.value = 0;
+      v.value = reduceMotion ? 1 : withDelay(delay, withTiming(1, { duration: 520, easing: Easing.out(Easing.cubic) }));
+    };
+    rise(enterA, 0);
+    rise(enterB, 90);
+    rise(enterC, 180);
+  }, [gateKey]);
+  const enterStyleA = useAnimatedStyle(() => ({
+    opacity: enterA.value,
+    transform: [{ translateY: (1 - enterA.value) * 14 }],
+  }));
+  const enterStyleB = useAnimatedStyle(() => ({
+    opacity: enterB.value,
+    transform: [{ translateY: (1 - enterB.value) * 14 }],
+  }));
+  const enterStyleC = useAnimatedStyle(() => ({
+    opacity: enterC.value,
+    transform: [{ translateY: (1 - enterC.value) * 14 }],
   }));
 
   const refresh = async () => {
@@ -239,45 +263,52 @@ export default function SwipeScreen() {
           </View>
         </View>
         <View style={styles.gate}>
-          <Animated.View style={[styles.gateInner, enterStyle]}>
-            <Image source={images.lockup} style={styles.lockup} resizeMode="contain" />
-            <Text style={styles.gateTitle}>{copy.landing.title}</Text>
-            <Text style={styles.gateSubtitle}>
-              {copy.landing.subtitle}
-            </Text>
-            <TextInput
-              value={newProjectName}
-              onChangeText={setNewProjectName}
-              placeholder="Person's name or occasion…"
-              placeholderTextColor={colors.textFaintest}
-              style={[styles.gateInput, inputFocused && styles.gateInputFocused]}
-              onFocus={() => setInputFocused(true)}
-              onBlur={() => setInputFocused(false)}
-              onSubmitEditing={handleCreateProject}
-            />
-            <GoldButton
-              label={creatingProject ? 'Creating…' : 'Begin'}
-              onPress={handleCreateProject}
-              style={styles.gateButton}
-            />
+          <View style={styles.gateInner}>
+            <Animated.View style={[styles.gateSegment, enterStyleA]}>
+              <Image source={images.lockup} style={styles.lockup} resizeMode="contain" />
+            </Animated.View>
+            <Animated.View style={[styles.gateSegment, enterStyleB]}>
+              <Text style={styles.gateTitle}>{copy.landing.title}</Text>
+              <StreakDivider />
+            </Animated.View>
+            <Animated.View style={[styles.gateSegment, enterStyleC]}>
+              <Text style={styles.gateSubtitle}>
+                {copy.landing.subtitle}
+              </Text>
+              <TextInput
+                value={newProjectName}
+                onChangeText={setNewProjectName}
+                placeholder="Person's name or occasion…"
+                placeholderTextColor={colors.textFaintest}
+                style={[styles.gateInput, inputFocused && styles.gateInputFocused]}
+                onFocus={() => setInputFocused(true)}
+                onBlur={() => setInputFocused(false)}
+                onSubmitEditing={handleCreateProject}
+              />
+              <GoldButton
+                label={creatingProject ? 'Creating…' : 'Begin'}
+                onPress={handleCreateProject}
+                style={styles.gateButton}
+              />
 
-            {known.length > 0 && (
-              <View style={styles.knownBlock}>
-                <Text style={styles.knownLabel}>Or open one you&rsquo;re already part of</Text>
-                {known.map((k) => (
-                  <PressableScale
-                    key={k.id}
-                    style={styles.knownRow}
-                    onPress={() => setProject(k)}
-                    scaleTo={0.98}
-                  >
-                    <Text style={styles.knownName}>{k.name}</Text>
-                    <Text style={styles.knownChevron}>›</Text>
-                  </PressableScale>
-                ))}
-              </View>
-            )}
-          </Animated.View>
+              {known.length > 0 && (
+                <View style={styles.knownBlock}>
+                  <Text style={styles.knownLabel}>Or open one you&rsquo;re already part of</Text>
+                  {known.map((k) => (
+                    <PressableScale
+                      key={k.id}
+                      style={styles.knownRow}
+                      onPress={() => setProject(k)}
+                      scaleTo={0.98}
+                    >
+                      <Text style={styles.knownName}>{k.name}</Text>
+                      <Text style={styles.knownChevron}>›</Text>
+                    </PressableScale>
+                  ))}
+                </View>
+              )}
+            </Animated.View>
+          </View>
         </View>
       </View>
     );
@@ -296,23 +327,31 @@ export default function SwipeScreen() {
           </View>
         </View>
         <View style={styles.gate}>
-          <Text style={styles.gateTitle}>Who&rsquo;s here?</Text>
-          <Text style={styles.gateSubtitle}>
-            Your name will appear with your favorites so we can see whose moments resonated most.
-          </Text>
-          <TextInput
-            value={nameDraft}
-            onChangeText={setNameDraft}
-            placeholder="Your name"
-            placeholderTextColor={colors.textFaintest}
-            style={styles.gateInput}
-            onSubmitEditing={() => setRaterName(nameDraft.trim())}
-          />
-          <GoldButton
-            label="Enter"
-            onPress={() => nameDraft.trim() && setRaterName(nameDraft.trim())}
-            style={styles.gateButton}
-          />
+          <Animated.View style={[styles.gateSegment, enterStyleA]}>
+            <Text style={styles.gateOverline}>Everlit · Memorial Films</Text>
+          </Animated.View>
+          <Animated.View style={[styles.gateSegment, enterStyleB]}>
+            <Text style={styles.gateTitle}>Who&rsquo;s here?</Text>
+            <StreakDivider />
+          </Animated.View>
+          <Animated.View style={[styles.gateSegment, enterStyleC]}>
+            <Text style={styles.gateSubtitle}>
+              Your name will appear with your favorites so we can see whose moments resonated most.
+            </Text>
+            <TextInput
+              value={nameDraft}
+              onChangeText={setNameDraft}
+              placeholder="Your name"
+              placeholderTextColor={colors.textFaintest}
+              style={styles.gateInput}
+              onSubmitEditing={() => setRaterName(nameDraft.trim())}
+            />
+            <GoldButton
+              label="Enter"
+              onPress={() => nameDraft.trim() && setRaterName(nameDraft.trim())}
+              style={styles.gateButton}
+            />
+          </Animated.View>
         </View>
       </View>
     );
@@ -418,24 +457,45 @@ export default function SwipeScreen() {
   );
 }
 
+// The gold streak divider from the memorial films' own intro cards — ties the
+// app's gate screens to the deliverable's visual language.
+function StreakDivider() {
+  return (
+    <LinearGradient
+      colors={['rgba(196,154,108,0)', 'rgba(212,169,118,0.9)', 'rgba(196,154,108,0)']}
+      start={{ x: 0, y: 0.5 }}
+      end={{ x: 1, y: 0.5 }}
+      style={styles.streak}
+    />
+  );
+}
+
+// A slowly-breathing candle glow instead of a generic pulsing dot — the same
+// gold radial language as HorizonGlow and the heart's glowPulse.
 function LoadingState({ reduceMotion }: { reduceMotion: boolean }) {
-  const opacity = useSharedValue(0.5);
+  const breath = useSharedValue(0);
 
   useEffect(() => {
     if (reduceMotion) return;
-    opacity.value = withSequence(
-      withTiming(1, { duration: 800, easing: Easing.bezier(0.25, 0.46, 0.45, 0.94) }),
-      withTiming(0.5, { duration: 800, easing: Easing.bezier(0.25, 0.46, 0.45, 0.94) })
+    breath.value = withRepeat(
+      withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      true
     );
   }, []);
 
-  const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  const style = useAnimatedStyle(() => ({
+    opacity: 0.45 + breath.value * 0.45,
+    transform: [{ scale: 0.92 + breath.value * 0.12 }],
+  }));
 
   return (
     <View style={styles.pageContent}>
       <View style={styles.emptyState}>
         <View style={styles.emptyCard}>
-          <Animated.Text style={[styles.loadingDot, style]}>•</Animated.Text>
+          <Animated.View style={[styles.loadingGlow, style]}>
+            <RadialGlow color={colors.goldWarm} />
+          </Animated.View>
           <Text style={styles.emptySubtitle}>Opening the space…</Text>
         </View>
       </View>
@@ -541,6 +601,22 @@ type PhotoDeckProps = {
   reportUrl: string | null;
 };
 
+// A count that breathes in on change instead of popping — used for the heart
+// and comment tallies under the controls row.
+function SoftCount({ value, style }: { value: number; style: object }) {
+  const o = useSharedValue(1);
+  const prev = useRef(value);
+  useEffect(() => {
+    if (prev.current !== value) {
+      prev.current = value;
+      o.value = 0;
+      o.value = withTiming(1, { duration: 220, easing: Easing.out(Easing.quad) });
+    }
+  }, [value]);
+  const s = useAnimatedStyle(() => ({ opacity: o.value }));
+  return <Animated.Text style={[style, s]}>{value}</Animated.Text>;
+}
+
 // Centers an element (whatever its own content width) exactly on a given
 // pixel X, regardless of the element's own size -- the alignment-grid trick
 // used by the header and the bottom controls row.
@@ -575,6 +651,7 @@ function PhotoDeck({
   reportUrl,
 }: PhotoDeckProps) {
   const scrollRef = useRef<ScrollView>(null);
+  const scrollX = useSharedValue(initialIndex * width);
   const [index, setIndex] = useState(initialIndex);
   const indexRef = useRef(index);
   const navEnabledRef = useRef(navEnabled);
@@ -675,12 +752,20 @@ function PhotoDeck({
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         style={StyleSheet.absoluteFill}
+        scrollEventThrottle={16}
+        onScroll={(e) => {
+          // Feeds the per-slide crossfade/parallax styles. Plain JS handler on
+          // purpose (works identically on web); paging is untouched.
+          scrollX.value = e.nativeEvent.contentOffset.x;
+        }}
         onMomentumScrollEnd={(e) => setIndex(Math.round(e.nativeEvent.contentOffset.x / width))}
       >
         {photos.map((photo, i) => (
           <PhotoSlide
             key={photo.id}
             photo={photo}
+            index={i}
+            scrollX={scrollX}
             width={width}
             height={height}
             raterName={raterName}
@@ -688,7 +773,14 @@ function PhotoDeck({
             reduceMotion={reduceMotion}
           />
         ))}
-        <EndOfDeckSlide width={width} height={height} projectName={projectName} reportUrl={reportUrl} />
+        <EndOfDeckSlide
+          width={width}
+          height={height}
+          projectName={projectName}
+          reportUrl={reportUrl}
+          photos={photos}
+          reduceMotion={reduceMotion}
+        />
       </ScrollView>
 
       {/* Fixed overlay: unlike the photos themselves, none of this scrolls
@@ -715,7 +807,7 @@ function PhotoDeck({
                 <CommentIcon active={currentPhoto.comments.length > 0} />
               </PressableScale>
               {currentPhoto.comments.length > 0 && (
-                <Text style={styles.commentCount}>{currentPhoto.comments.length}</Text>
+                <SoftCount value={currentPhoto.comments.length} style={styles.commentCount} />
               )}
             </View>
           )}
@@ -752,7 +844,7 @@ function PhotoDeck({
                 </Animated.Text>
               </PressableScale>
               {count > 0 ? (
-                <Text style={styles.heartFixedCount}>{count}</Text>
+                <SoftCount value={count} style={styles.heartFixedCount} />
               ) : (
                 index === 0 &&
                 !favorited && (
@@ -880,9 +972,44 @@ type EndOfDeckSlideProps = {
   height: number;
   projectName: string;
   reportUrl: string | null;
+  photos: Photo[];
+  reduceMotion: boolean;
 };
 
-function EndOfDeckSlide({ width, height, projectName, reportUrl }: EndOfDeckSlideProps) {
+// One layer of the goodbye montage — fades itself in/out as `active` flips.
+function MontageLayer({ uri, active }: { uri: string; active: boolean }) {
+  const o = useSharedValue(0);
+  useEffect(() => {
+    o.value = withTiming(active ? 0.3 : 0, { duration: 1600, easing: Easing.inOut(Easing.quad) });
+  }, [active]);
+  const style = useAnimatedStyle(() => ({ opacity: o.value }));
+  return (
+    <Animated.View style={[StyleSheet.absoluteFill, style]} pointerEvents="none">
+      <Image source={{ uri }} style={StyleSheet.absoluteFill} resizeMode="cover" blurRadius={6} />
+    </Animated.View>
+  );
+}
+
+function EndOfDeckSlide({ width, height, projectName, reportUrl, photos, reduceMotion }: EndOfDeckSlideProps) {
+  // "Here's what you all chose": the most-hearted photos drift behind the
+  // goodbye text — a quiet preview of the film this becomes.
+  const hearted = photos
+    .filter((p) => heartCount(p) > 0 && !p.localSource)
+    .sort((a, b) => heartCount(b) - heartCount(a))
+    .slice(0, 5);
+  const [montageIdx, setMontageIdx] = useState(0);
+  useEffect(() => {
+    if (reduceMotion || hearted.length < 2) return;
+    const t = setInterval(() => setMontageIdx((i) => (i + 1) % hearted.length), 4200);
+    return () => clearInterval(t);
+  }, [hearted.length, reduceMotion]);
+
+  // Two-tone name treatment from the memorial films' outro cards: first word
+  // carries the weight, the rest breathes.
+  const nameParts = projectName.trim().split(/\s+/);
+  const nameFirst = nameParts[0] || 'their';
+  const nameRest = nameParts.slice(1).join(' ');
+
   const openFavourites = () => {
     if (!reportUrl) return;
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -894,6 +1021,9 @@ function EndOfDeckSlide({ width, height, projectName, reportUrl }: EndOfDeckSlid
     <View style={[styles.endSlide, { width, height }]}>
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         <BackdropVideo />
+        {hearted.map((p, i) => (
+          <MontageLayer key={p.id} uri={photoUrl(p)} active={i === montageIdx} />
+        ))}
         <LinearGradient
           colors={['rgba(20, 16, 14, 0.92)', 'rgba(24, 19, 16, 0.62)', 'rgba(20, 16, 14, 0.95)']}
           locations={[0, 0.5, 1]}
@@ -902,7 +1032,12 @@ function EndOfDeckSlide({ width, height, projectName, reportUrl }: EndOfDeckSlid
           style={StyleSheet.absoluteFill}
         />
       </View>
-      <Text style={styles.endTitle}>Thank you for going through {projectName}&rsquo;s photos.</Text>
+      <Text style={styles.endTitle}>
+        Thank you for going through{' '}
+        <Text style={styles.endNameFirst}>{nameFirst}</Text>
+        {nameRest ? <Text style={styles.endNameRest}> {nameRest}</Text> : null}
+        &rsquo;s photos.
+      </Text>
       <Text style={styles.endSubtitle}>
         Now you can see what everyone else loved. Tap below to look through the favourites, and the
         memories, your whole family shared.
@@ -914,6 +1049,8 @@ function EndOfDeckSlide({ width, height, projectName, reportUrl }: EndOfDeckSlid
 
 type PhotoSlideProps = {
   photo: Photo;
+  index: number;
+  scrollX: SharedValue<number>;
   width: number;
   height: number;
   raterName: string;
@@ -921,25 +1058,117 @@ type PhotoSlideProps = {
   reduceMotion: boolean;
 };
 
+// A single gold ember drifting up from the heart burst. Deterministic offsets
+// (no randomness — HyperFrames-style discipline), staggered via `delay` as a
+// fraction of the shared burst progress.
+type EmberSpec = { dx: number; dy: number; size: number; delay: number };
+const EMBER_SPECS: EmberSpec[] = [
+  { dx: -26, dy: -64, size: 5, delay: 0 },
+  { dx: -8, dy: -92, size: 4, delay: 0.08 },
+  { dx: 12, dy: -74, size: 6, delay: 0.04 },
+  { dx: 32, dy: -96, size: 4, delay: 0.12 },
+  { dx: 2, dy: -56, size: 3.5, delay: 0.16 },
+];
+
+function Ember({ progress, spec }: { progress: SharedValue<number>; spec: EmberSpec }) {
+  const style = useAnimatedStyle(() => {
+    const lp = Math.min(1, Math.max(0, (progress.value - spec.delay) / (1 - spec.delay)));
+    return {
+      opacity: interpolate(lp, [0, 0.12, 1], [0, 1, 0]),
+      transform: [
+        { translateX: spec.dx * lp },
+        { translateY: spec.dy * lp },
+        { scale: 0.6 + lp * 0.5 },
+      ],
+    };
+  });
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[styles.ember, { width: spec.size, height: spec.size, borderRadius: spec.size / 2 }, style]}
+    />
+  );
+}
+
 // The photo itself, plus the double-tap-to-favourite gesture and its burst
 // animation. Everything else that used to live here (counter, comment
 // button, heart button) is now a fixed overlay in PhotoDeck instead, so it
 // doesn't slide away with the photo mid-swipe -- see PhotoDeck.
-function PhotoSlide({ photo, width, height, raterName, onToggleFavorite, reduceMotion }: PhotoSlideProps) {
+function PhotoSlide({ photo, index, scrollX, width, height, raterName, onToggleFavorite, reduceMotion }: PhotoSlideProps) {
   const favorited = isFavoritedBy(photo, raterName);
   const burst = useSharedValue(0);
+  const emberP = useSharedValue(0);
+  const vignette = useSharedValue(0);
+  const bgBreath = useSharedValue(0);
   const lastTap = useRef(0);
+  // Natural photo size, for the print-style frame. Until known (or if lookup
+  // fails) the slide falls back to the old full-bleed contain treatment.
+  const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    try {
+      if (photo.localSource) {
+        const src = (Image as any).resolveAssetSource?.(photo.localSource);
+        if (src && src.width && src.height) setDims({ w: src.width, h: src.height });
+      } else {
+        Image.getSize(
+          photoUrl(photo),
+          (w, h) => {
+            if (alive && w && h) setDims({ w, h });
+          },
+          () => {}
+        );
+      }
+    } catch {
+      /* fall back to contain */
+    }
+    return () => {
+      alive = false;
+    };
+  }, [photo.id]);
+
+  // The blurred backdrop slowly breathes (the photo itself stays still and
+  // reverent) — scene feels alive without the memory moving.
+  useEffect(() => {
+    if (reduceMotion) return;
+    bgBreath.value = withRepeat(withTiming(1, { duration: 9000, easing: Easing.inOut(Easing.quad) }), -1, true);
+  }, [reduceMotion]);
+
+  const bgStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1.02 + bgBreath.value * 0.045 }],
+  }));
+
+  // Crossfade + parallax between pages: the page slides at scroll speed, its
+  // content drifts at ~65% and fades toward the edges — memory-page turning,
+  // not a slideshow shove.
+  const pageStyle = useAnimatedStyle(() => {
+    if (reduceMotion) return { opacity: 1 };
+    const p = (scrollX.value - index * width) / width;
+    return {
+      opacity: interpolate(p, [-1, -0.4, 0, 0.4, 1], [0.2, 1, 1, 1, 0.2]),
+      transform: [{ translateX: p * width * 0.35 }],
+    };
+  });
 
   const burstStyle = useAnimatedStyle(() => ({
     opacity: burst.value,
     transform: [{ scale: 0.5 + burst.value * 0.7 }],
   }));
 
+  const vignetteStyle = useAnimatedStyle(() => ({ opacity: vignette.value }));
+
   const playBurst = () => {
     if (reduceMotion) return;
     burst.value = withSequence(
       withTiming(1, { duration: 160, easing: Easing.out(Easing.cubic) }),
       withTiming(0, { duration: 340, easing: Easing.in(Easing.cubic) })
+    );
+    emberP.value = 0;
+    emberP.value = withTiming(1, { duration: 1100, easing: Easing.out(Easing.quad) });
+    vignette.value = withSequence(
+      withTiming(0.35, { duration: 140, easing: Easing.out(Easing.cubic) }),
+      withTiming(0, { duration: 700, easing: Easing.in(Easing.quad) })
     );
   };
 
@@ -956,32 +1185,60 @@ function PhotoSlide({ photo, width, height, raterName, onToggleFavorite, reduceM
     }
   };
 
-  return (
-    <Pressable onPress={handleTap} style={{ width, height }}>
-      {/* Blurred, dimmed copy fills the letterbox area behind the fitted photo. */}
-      <Image
-        source={photo.localSource ?? { uri: photoUrl(photo) }}
-        style={StyleSheet.absoluteFill}
-        resizeMode="cover"
-        blurRadius={24}
-      />
-      <View style={styles.fillDim} pointerEvents="none" />
-      {/* The whole photo, fit to screen (no cropping / bleed). */}
-      <Image
-        source={photo.localSource ?? { uri: photoUrl(photo) }}
-        style={StyleSheet.absoluteFill}
-        resizeMode="contain"
-      />
-      <LinearGradient colors={['rgba(0,0,0,0.4)', 'transparent']} style={styles.topScrim} pointerEvents="none" />
-      <LinearGradient
-        colors={['transparent', 'rgba(16, 14, 12, 0.75)']}
-        style={styles.bottomScrim}
-        pointerEvents="none"
-      />
+  // Fitted print box: photo at its own ratio inside the safe area between the
+  // header and the controls row, framed like a physical print.
+  const frame = dims
+    ? (() => {
+        const availW = width - 48;
+        const availH = height - 96 - 132;
+        const scale = Math.min(availW / dims.w, availH / dims.h);
+        return { w: Math.round(dims.w * scale), h: Math.round(dims.h * scale) };
+      })()
+    : null;
 
-      <Animated.Text style={[styles.burstHeart, burstStyle]} pointerEvents="none">
-        ♥
-      </Animated.Text>
+  const source = photo.localSource ?? { uri: photoUrl(photo) };
+
+  return (
+    <Pressable onPress={handleTap} style={{ width, height, overflow: 'hidden' }}>
+      <Animated.View style={[StyleSheet.absoluteFill, pageStyle]}>
+        {/* Blurred, dimmed, slowly-breathing copy behind the framed print. */}
+        <Animated.View style={[StyleSheet.absoluteFill, bgStyle]}>
+          <Image source={source} style={StyleSheet.absoluteFill} resizeMode="cover" blurRadius={24} />
+        </Animated.View>
+        <View style={styles.fillDim} pointerEvents="none" />
+
+        {frame ? (
+          <View style={styles.printArea} pointerEvents="none">
+            <View style={[styles.printFrame, { width: frame.w, height: frame.h }]}>
+              <Image source={source} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+            </View>
+          </View>
+        ) : (
+          <Image source={source} style={StyleSheet.absoluteFill} resizeMode="contain" />
+        )}
+
+        <LinearGradient colors={['rgba(0,0,0,0.4)', 'transparent']} style={styles.topScrim} pointerEvents="none" />
+        <LinearGradient
+          colors={['transparent', 'rgba(16, 14, 12, 0.75)']}
+          style={styles.bottomScrim}
+          pointerEvents="none"
+        />
+
+        {/* Warm pulse over the whole slide when a favourite lands. */}
+        <Animated.View style={[styles.vignettePulse, vignetteStyle]} pointerEvents="none">
+          <RadialGlow color={colors.goldWarm} />
+        </Animated.View>
+
+        <View style={styles.emberField} pointerEvents="none">
+          {EMBER_SPECS.map((spec, i) => (
+            <Ember key={i} progress={emberP} spec={spec} />
+          ))}
+        </View>
+
+        <Animated.Text style={[styles.burstHeart, burstStyle]} pointerEvents="none">
+          ♥
+        </Animated.Text>
+      </Animated.View>
     </Pressable>
   );
 }
@@ -1060,6 +1317,85 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     color: colors.goldWarm,
     textAlign: 'center',
+  },
+  gateSegment: {
+    width: '100%',
+    alignItems: 'center',
+    gap: 18,
+  },
+  gateOverline: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 11,
+    letterSpacing: 3,
+    textTransform: 'uppercase',
+    color: colors.goldWarm,
+    textAlign: 'center',
+    marginBottom: 14,
+  },
+  streak: {
+    width: 170,
+    height: 1.5,
+    borderRadius: 1,
+    alignSelf: 'center',
+    marginTop: -6,
+    marginBottom: 6,
+  },
+  loadingGlow: {
+    width: 96,
+    height: 96,
+  },
+  printArea: {
+    position: 'absolute',
+    top: 96,
+    bottom: 132,
+    left: 24,
+    right: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  printFrame: {
+    borderWidth: 3,
+    borderColor: 'rgba(245, 240, 235, 0.92)',
+    borderRadius: 6,
+    overflow: 'hidden',
+    backgroundColor: colors.ink,
+    shadowColor: '#000',
+    shadowOpacity: 0.55,
+    shadowRadius: 30,
+    shadowOffset: { width: 0, height: 18 },
+  },
+  vignettePulse: {
+    position: 'absolute',
+    top: '-15%',
+    bottom: '-15%',
+    left: '-15%',
+    right: '-15%',
+  },
+  emberField: {
+    position: 'absolute',
+    top: '38%',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  ember: {
+    position: 'absolute',
+    top: 30,
+    backgroundColor: colors.gold,
+    shadowColor: colors.gold,
+    shadowOpacity: 0.9,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  endNameFirst: {
+    fontFamily: 'PlayfairDisplay_600SemiBold',
+    color: colors.white,
+  },
+  endNameRest: {
+    fontFamily: 'Poppins_300Light',
+    fontSize: 24,
+    letterSpacing: 2,
+    color: colors.textFaint,
   },
   endSlide: {
     alignItems: 'center',
@@ -1169,11 +1505,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_400Regular',
     fontSize: 26,
     color: colors.textFaintest,
-  },
-  loadingDot: {
-    fontSize: 64,
-    color: colors.goldWarm,
-    lineHeight: 64,
   },
   lockup: {
     width: 280,
