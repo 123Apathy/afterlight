@@ -22,7 +22,7 @@ import PhotoGrid from '../components/PhotoGrid';
 import PressableScale from '../components/PressableScale';
 import GoldButton from '../components/GoldButton';
 import BackdropVideo from '../components/BackdropVideo';
-import { colors, copy, images, stageWidth } from '../constants/theme';
+import { colors, copy, images, stageWidth, CONTROLS_BAND_MAX } from '../constants/theme';
 import { DEMO, DEMO_PHOTOS } from '../constants/demo';
 import { API_BASE, api, heartCount, isFavoritedBy, photoUrl, setInviteCode, type Photo, type Project } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
@@ -706,6 +706,10 @@ function PhotoDeck({
     return () => window.removeEventListener('wheel', handleWheel);
   }, [width, photos.length]);
 
+  // Controls band: full width on phones, capped + centered on desktop.
+  const band = Math.min(width, CONTROLS_BAND_MAX);
+  const bandLeft = (width - band) / 2;
+
   const favorited = currentPhoto ? isFavoritedBy(currentPhoto, raterName) : false;
   const count = currentPhoto ? heartCount(currentPhoto) : 0;
   const heartScale = useSharedValue(1);
@@ -788,11 +792,13 @@ function PhotoDeck({
           of living inside each per-slide component. A single flex row (not
           three independently-absolute-positioned pieces) so a long comment
           count can never overlap the centered nav buttons. */}
-      {/* Same alignment grid as the header: comment pill centers on the 1st
-          divider (1/4 width), the midpoint between the two arrows centers
-          on the 2nd (1/2), the heart centers on the 3rd (3/4). */}
+      {/* Same alignment grid as the header, but on wide (desktop) viewports
+          the three controls cluster in a centered band instead of spreading
+          across the full window — a heart 1400px from its comment button
+          isn't a usable row. band == width on phones, so nothing changes
+          there. */}
       <View style={styles.controlsRow} pointerEvents="box-none">
-        <View style={[styles.commentPillWrap, quarterCenterStyle(width / 4)]}>
+        <View style={[styles.commentPillWrap, quarterCenterStyle(bandLeft + band / 4)]}>
           {currentPhoto && (
             <View style={styles.commentPillInner}>
               <Animated.View style={[styles.commentGlow, commentGlowStyle]} pointerEvents="none">
@@ -813,7 +819,7 @@ function PhotoDeck({
           )}
         </View>
 
-        <View style={[styles.navRow, quarterCenterStyle(width / 2)]} pointerEvents="box-none">
+        <View style={[styles.navRow, quarterCenterStyle(bandLeft + band / 2)]} pointerEvents="box-none">
           <PressableScale
             onPress={() => goTo(index - 1)}
             scaleTo={0.9}
@@ -832,7 +838,7 @@ function PhotoDeck({
           </PressableScale>
         </View>
 
-        <View style={[styles.heartFixed, quarterCenterStyle((width * 3) / 4)]} pointerEvents="box-none">
+        <View style={[styles.heartFixed, quarterCenterStyle(bandLeft + (band * 3) / 4)]} pointerEvents="box-none">
           {currentPhoto && (
             <View style={styles.heartFixedInner}>
               <Animated.View style={[styles.glowPulse, glowStyle]} pointerEvents="none">

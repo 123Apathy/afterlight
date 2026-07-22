@@ -195,6 +195,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    // Desktop: a full-window-wide sheet reads as a wall — cap and center it.
+    // marginHorizontal 'auto' is a no-op while the cap exceeds the viewport
+    // (phones), so mobile is untouched.
+    maxWidth: 640,
+    marginHorizontal: 'auto',
     maxHeight: '72%',
     backgroundColor: 'rgba(32, 26, 24, 0.52)',
     borderWidth: 1,

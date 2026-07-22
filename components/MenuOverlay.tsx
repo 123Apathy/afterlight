@@ -147,6 +147,7 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
+      <View style={styles.content}>
       <View style={styles.header}>
         <Text style={styles.title}>Menu</Text>
         <PressableScale onPress={onClose} style={styles.closeButton} scaleTo={0.94}>
@@ -222,6 +223,7 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
       <View style={styles.footer} pointerEvents="none">
         <Image source={images.logo} style={styles.footerMark} resizeMode="contain" />
         <Text style={styles.footerText}>Everlit</Text>
+      </View>
       </View>
     </Animated.View>
   );
@@ -346,6 +348,14 @@ const styles = StyleSheet.create({
     zIndex: 100,
     paddingTop: 44,
     paddingHorizontal: 20,
+    // Desktop: the overlay still covers the window, but its content column
+    // stays a comfortable phone-ish width, centered. No-op on phones.
+    alignItems: 'center',
+  },
+  content: {
+    width: '100%',
+    maxWidth: 620,
+    flex: 1, // keeps the footer's marginTop:'auto' pinned to the bottom
   },
   header: {
     flexDirection: 'row',

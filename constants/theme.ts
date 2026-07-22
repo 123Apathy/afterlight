@@ -1,20 +1,15 @@
-// Mobile-first: the app is a portrait "device" card. APP_MAX_WIDTH is the
-// comfortable phone width it floors to on desktop; APP_STAGE_MAX caps how wide
-// it may grow so photos never get oversized.
-export const APP_MAX_WIDTH = 460;
-export const APP_STAGE_MAX = 560;
-
-// The width of the app card for a given viewport. On a phone it equals the
-// viewport width (fills the screen edge-to-edge). On a larger window it grows
-// with the viewport HEIGHT -- so it scales up as a device instead of sitting as
-// a tiny fixed column -- but never exceeds the viewport width, never grows past
-// APP_STAGE_MAX, and never shrinks below APP_MAX_WIDTH on desktop. Used by both
-// the root frame (app/_layout) and the app's internal layout (app/app) so they
-// stay in lockstep.
-export function stageWidth(viewportWidth: number, viewportHeight: number): number {
-  const grown = Math.max(APP_MAX_WIDTH, viewportHeight * 0.55);
-  return Math.min(viewportWidth, grown, APP_STAGE_MAX);
+// The app fills the browser at every size. The earlier "portrait device card"
+// treatment (letterboxed ~560px column on desktop) was reverted by request —
+// on a PC the swipe screen should be a full-bleed desktop experience, not a
+// phone simulator. stageWidth is kept as the single width source both
+// app/_layout and app/app read, so any future cap goes in ONE place.
+export function stageWidth(viewportWidth: number, _viewportHeight: number): number {
+  return viewportWidth;
 }
+
+// Interactive controls still cluster in a comfortable centered band on wide
+// screens (a heart 1400px away from its comment button is not a UI).
+export const CONTROLS_BAND_MAX = 680;
 
 export const colors = {
   dark: 'rgb(25, 20, 19)',

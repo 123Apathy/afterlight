@@ -11,13 +11,22 @@ type PhotoGridProps = {
   onSelect: (index: number) => void;
 };
 
-const COLUMNS = 3;
 const GAP = 2;
+
+// Column count grows with the viewport so desktop gets a real wall of
+// memories instead of three enormous cells.
+function columnsFor(width: number) {
+  if (width >= 1400) return 6;
+  if (width >= 1000) return 5;
+  if (width >= 700) return 4;
+  return 3;
+}
 
 // Instagram-style overview: everyone's photos at a glance, tap one to open
 // the swipe view at that exact photo.
 export default function PhotoGrid({ photos, width, onSelect }: PhotoGridProps) {
-  const cellSize = (width - GAP * (COLUMNS - 1)) / COLUMNS;
+  const columns = columnsFor(width);
+  const cellSize = (width - GAP * (columns - 1)) / columns;
   const reduceMotion = useReducedMotion();
 
   return (
