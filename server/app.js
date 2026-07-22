@@ -1201,12 +1201,29 @@ app.get('/join/:code', async (req, res, next) => {
     }
     const { data: project } = await supabase
       .from('afterlight_projects')
-      .select('name')
+      .select('name, cover_photo_id')
       .eq('invite_code', req.params.code)
       .maybeSingle();
     if (project && project.name) {
       const name = esc(project.name);
       const host = req.get('host');
+      // A real photo of the person being honoured, if the admin set one --
+      // otherwise fall back to the generic brand share image. Long TTL (same
+      // as the report page) since WhatsApp/Facebook cache link previews for
+      // a long time and re-scrape infrequently; a short-lived signed URL
+      // would go stale and break the preview image later.
+      let ogImage = `https://${esc(host)}/social-share.png`;
+      if (project.cover_photo_id) {
+        const { data: coverPhoto } = await supabase
+          .from('afterlight_photos')
+          .select('storage_path')
+          .eq('id', project.cover_photo_id)
+          .maybeSingle();
+        if (coverPhoto) {
+          const signedCover = await signPhotoUrl(coverPhoto.storage_path, REPORT_IMAGE_TTL_SECONDS);
+          if (signedCover) ogImage = signedCover;
+        }
+      }
       // Optional ?from=<name> personalizes the preview with whoever shared the
       // link (e.g. a family member forwarding it on WhatsApp). Capped and
       // escaped since it's untrusted user input reflected straight into HTML.
@@ -1227,10 +1244,11 @@ app.get('/join/:code', async (req, res, next) => {
     <meta property="og:description" content="${desc}" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Everlit · Memorial Films" />
-    <meta property="og:image" content="https://${esc(host)}/social-share.png" />
-    <meta name="twitter:card" content="summary" />
+    <meta property="og:image" content="${esc(ogImage)}" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="${title}" />
-    <meta name="twitter:description" content="${desc}" />`;
+    <meta name="twitter:description" content="${desc}" />
+    <meta name="twitter:image" content="${esc(ogImage)}" />`;
       html = html.replace(/<title>[^<]*<\/title>/i, '').replace(/<head>/i, `<head>${meta}`);
     }
     res.type('html').send(html);
@@ -1265,6 +1283,35 @@ app.patch('/api/admin/projects/:projectId/video', requireAdmin, async (req, res,
     const { error } = await supabase
       .from('afterlight_projects')
       .update({ video_storage_path: storagePath, video_published: false, video_uploaded_at: new Date().toISOString() })
+      .eq('id', req.params.projectId);
+    assertOk(error);
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
+
+// The photo used as the WhatsApp/Facebook link-preview image when someone
+// shares the invite link -- e.g. a real photo of the person being honoured,
+// instead of the generic brand share image.
+app.patch('/api/admin/projects/:projectId/cover-photo', requireAdmin, async (req, res, next) => {
+  try {
+    const { photoId } = req.body || {};
+    if (photoId !== null && typeof photoId !== 'string') {
+      return res.status(400).json({ error: 'photoId is required (or null to clear)' });
+    }
+    if (photoId) {
+      const { data: photo } = await supabase
+        .from('afterlight_photos')
+        .select('id')
+        .eq('id', photoId)
+        .eq('project_id', req.params.projectId)
+        .maybeSingle();
+      if (!photo) return res.status(400).json({ error: 'photo does not belong to this project' });
+    }
+    const { error } = await supabase
+      .from('afterlight_projects')
+      .update({ cover_photo_id: photoId })
       .eq('id', req.params.projectId);
     assertOk(error);
     res.status(204).end();
