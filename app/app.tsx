@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'expo-router';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -24,7 +25,7 @@ import GoldButton from '../components/GoldButton';
 import BackdropVideo from '../components/BackdropVideo';
 import { colors, copy, images, stageWidth, CONTROLS_BAND_MAX } from '../constants/theme';
 import { DEMO, DEMO_PHOTOS } from '../constants/demo';
-import { API_BASE, api, heartCount, isFavoritedBy, photoUrl, setInviteCode, type Photo, type Project } from '../lib/api';
+import { API_BASE, api, heartCount, isFavoritedBy, photoThumbUrl, photoUrl, setInviteCode, type Photo, type Project } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
 import { useLocalStorage } from '../lib/useLocalStorage';
 import { glassBlur, glassSurface } from '../lib/glass';
@@ -393,7 +394,6 @@ export default function SwipeScreen() {
           onIndexChange={setLiveIndex}
           reduceMotion={reduceMotion}
           projectName={projectDetails?.name || 'their'}
-          reportUrl={projectDetails ? `${API_BASE}/api/report/${projectDetails.inviteCode}` : null}
         />
       )}
 
@@ -598,7 +598,6 @@ type PhotoDeckProps = {
   onIndexChange?: (index: number) => void;
   reduceMotion: boolean;
   projectName: string;
-  reportUrl: string | null;
 };
 
 // A count that breathes in on change instead of popping — used for the heart
@@ -648,7 +647,6 @@ function PhotoDeck({
   onIndexChange,
   reduceMotion,
   projectName,
-  reportUrl,
 }: PhotoDeckProps) {
   const scrollRef = useRef<ScrollView>(null);
   const scrollX = useSharedValue(initialIndex * width);
@@ -771,24 +769,31 @@ function PhotoDeck({
         }}
         onMomentumScrollEnd={(e) => setIndex(Math.round(e.nativeEvent.contentOffset.x / width))}
       >
-        {photos.map((photo, i) => (
-          <PhotoSlide
-            key={photo.id}
-            photo={photo}
-            index={i}
-            scrollX={scrollX}
-            width={width}
-            height={height}
-            raterName={raterName}
-            onToggleFavorite={onToggleFavorite}
-            reduceMotion={reduceMotion}
-          />
-        ))}
+        {photos.map((photo, i) =>
+          // Windowed mounting: only the current slide and its neighbours carry
+          // the two full-res Images + blur + animations; the rest are empty
+          // spacers holding the scroll geometry. A 100-photo memorial no
+          // longer decodes 200 full-res images up front.
+          Math.abs(i - index) <= 2 ? (
+            <PhotoSlide
+              key={photo.id}
+              photo={photo}
+              index={i}
+              scrollX={scrollX}
+              width={width}
+              height={height}
+              raterName={raterName}
+              onToggleFavorite={onToggleFavorite}
+              reduceMotion={reduceMotion}
+            />
+          ) : (
+            <View key={photo.id} style={{ width, height }} />
+          )
+        )}
         <EndOfDeckSlide
           width={width}
           height={height}
           projectName={projectName}
-          reportUrl={reportUrl}
           photos={photos}
           reduceMotion={reduceMotion}
         />
@@ -984,7 +989,6 @@ type EndOfDeckSlideProps = {
   width: number;
   height: number;
   projectName: string;
-  reportUrl: string | null;
   photos: Photo[];
   reduceMotion: boolean;
 };
@@ -1003,7 +1007,8 @@ function MontageLayer({ uri, active }: { uri: string; active: boolean }) {
   );
 }
 
-function EndOfDeckSlide({ width, height, projectName, reportUrl, photos, reduceMotion }: EndOfDeckSlideProps) {
+function EndOfDeckSlide({ width, height, projectName, photos, reduceMotion }: EndOfDeckSlideProps) {
+  const router = useRouter();
   // "Here's what you all chose": the most-hearted photos drift behind the
   // goodbye text — a quiet preview of the film this becomes.
   const hearted = photos
@@ -1023,19 +1028,17 @@ function EndOfDeckSlide({ width, height, projectName, reportUrl, photos, reduceM
   const nameFirst = nameParts[0] || 'their';
   const nameRest = nameParts.slice(1).join(' ');
 
-  const openFavourites = () => {
-    if (!reportUrl) return;
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      window.open(reportUrl, '_blank');
-    }
-  };
+  // In-app favourites screen now — no external report bounce, works even
+  // before projectDetails resolves (the old reportUrl null-check dead-ended
+  // this button silently).
+  const openFavourites = () => router.push('/favourites');
 
   return (
     <View style={[styles.endSlide, { width, height }]}>
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         <BackdropVideo />
         {hearted.map((p, i) => (
-          <MontageLayer key={p.id} uri={photoUrl(p)} active={i === montageIdx} />
+          <MontageLayer key={p.id} uri={photoThumbUrl(p)} active={i === montageIdx} />
         ))}
         <LinearGradient
           colors={['rgba(20, 16, 14, 0.92)', 'rgba(24, 19, 16, 0.62)', 'rgba(20, 16, 14, 0.95)']}

@@ -12,7 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { colors, images } from '../constants/theme';
 import { DEMO } from '../constants/demo';
-import { API_BASE, api, inviteUrl, type ButtonKey, type Project } from '../lib/api';
+import { api, inviteUrl, type ButtonKey, type Project } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
 import BackdropVideo from './BackdropVideo';
 import PressableScale from './PressableScale';
@@ -124,14 +124,16 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
   // flash and then disappear.
   const showButton = (key: ButtonKey) => DEMO || !project || project.enabledButtons?.[key] !== false;
 
+  // In-app now (app/favourites.tsx) — the server report page stays as the
+  // operator's print/PDF artifact, families no longer get bounced to it.
   const handleSeeFavourites = () => {
-    if (!project) {
-      window.alert("We couldn't open the favourites just now. Please close this, check your internet, and try again.");
-      return;
-    }
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      window.open(`${API_BASE}/api/report/${project.inviteCode}`, '_blank');
-    }
+    onClose();
+    router.push('/favourites');
+  };
+
+  const handleWatchFilm = () => {
+    onClose();
+    router.push('/film');
   };
 
   return (
@@ -170,6 +172,15 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
           {!!projectName && <Text style={styles.contextLine}>{projectName}</Text>}
 
           <View style={styles.cards}>
+            {!!project?.videoUrl && (
+              <ActionCard
+                icon={<IconPlay />}
+                title="Watch the film"
+                subtitle="The tribute film is ready"
+                onPress={handleWatchFilm}
+                highlight
+              />
+            )}
             {showButton('addPhotos') && (
               <ActionCard
                 icon={<IconAdd />}
@@ -270,6 +281,20 @@ function lineIcon(paths: { d: string; stroke?: string; opacity?: number }[], str
         opacity: p.opacity ?? 1,
       })
     )
+  );
+}
+
+function IconPlay() {
+  if (Platform.OS === 'web') {
+    return lineIcon([
+      { d: 'M14 25 a11 11 0 1 1 0 -22 a11 11 0 0 1 0 22 Z' },
+      { d: 'M11.5 9.5 L18.5 14 L11.5 18.5 Z' },
+    ]);
+  }
+  return (
+    <View style={styles.iconInner}>
+      <View style={styles.playTriangle} />
+    </View>
   );
 }
 
@@ -430,6 +455,17 @@ const styles = StyleSheet.create({
     height: 28,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  playTriangle: {
+    width: 0,
+    height: 0,
+    borderTopWidth: 9,
+    borderBottomWidth: 9,
+    borderLeftWidth: 15,
+    borderTopColor: 'transparent',
+    borderBottomColor: 'transparent',
+    borderLeftColor: colors.goldWarm,
+    marginLeft: 4,
   },
   plusBar: {
     position: 'absolute',

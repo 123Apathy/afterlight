@@ -2,7 +2,7 @@ import React from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import { colors } from '../constants/theme';
-import { heartCount, photoUrl, type Photo } from '../lib/api';
+import { heartCount, photoThumbUrl, type Photo } from '../lib/api';
 import PressableScale from './PressableScale';
 
 type PhotoGridProps = {
@@ -52,7 +52,7 @@ export default function PhotoGrid({ photos, width, onSelect }: PhotoGridProps) {
                 style={{ width: '100%', height: '100%' }}
               >
                 <Image
-                  source={photo.localSource ?? { uri: photoUrl(photo) }}
+                  source={photo.localSource ?? { uri: photoThumbUrl(photo) }}
                   style={styles.cellImage}
                   resizeMode="cover"
                 />

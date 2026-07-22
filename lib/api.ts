@@ -15,6 +15,8 @@ export type Project = {
   inviteCode: string;
   createdAt: string;
   enabledButtons: Record<ButtonKey, boolean>;
+  // Signed URL of the finished tribute film, present only once published.
+  videoUrl?: string | null;
 };
 
 export type Reaction = {
@@ -50,6 +52,9 @@ export type Rating = {
 export type Photo = {
   id: string;
   url: string;
+  // Small display thumbnail (~640px), generated client-side at upload.
+  // Null for photos uploaded before thumbnails existed.
+  thumbUrl?: string | null;
   originalName: string;
   createdAt: string;
   ratings: Rating[];
@@ -125,6 +130,36 @@ export function photoUrl(photo: Photo) {
   return photo.url;
 }
 
+// Display-sized image for grids/backdrops/montages — falls back to full-res
+// for photos that predate thumbnails.
+export function photoThumbUrl(photo: Photo) {
+  return photo.thumbUrl || photo.url;
+}
+
+// ~640px JPEG thumbnail via canvas. imageOrientation:'from-image' bakes EXIF
+// rotation in (the direct-to-storage upload path no longer passes through the
+// server's sharp normalization). Returns null if anything fails — thumbnails
+// are an optimization, never a reason to fail an upload.
+async function makeThumb(blob: Blob): Promise<Blob | null> {
+  if (typeof document === 'undefined' || typeof createImageBitmap !== 'function') return null;
+  try {
+    const bmp = await createImageBitmap(blob, { imageOrientation: 'from-image' } as ImageBitmapOptions);
+    const scale = Math.min(1, 640 / Math.max(bmp.width, bmp.height));
+    const w = Math.max(1, Math.round(bmp.width * scale));
+    const h = Math.max(1, Math.round(bmp.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.drawImage(bmp, 0, 0, w, h);
+    bmp.close();
+    return await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+  } catch {
+    return null;
+  }
+}
+
 // Favorites reuse the ratings table as a boolean (a row = hearted); there is
 // no tier system anymore. ratingCount doubles as the heart count.
 export function isFavoritedBy(photo: Photo, rater: string) {
@@ -171,14 +206,14 @@ export const api = {
   // route dies on Netlify's ~6MB function body limit; this path has no size
   // ceiling on our side and never buffers files through the function.
   uploadPhotos: async (projectId: string, files: { uri: string; name: string; type: string }[]) => {
-    const slots = await request<{ signedUrl: string; path: string; originalName: string }[]>(
-      `/api/projects/${projectId}/photos/upload-urls`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ files: files.map((f) => ({ name: f.name, type: f.type })) }),
-      }
-    );
+    const slots = await request<
+      { signedUrl: string; path: string; thumbSignedUrl: string; thumbPath: string; originalName: string }[]
+    >(`/api/projects/${projectId}/photos/upload-urls`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: files.map((f) => ({ name: f.name, type: f.type })) }),
+    });
+    const uploadedThumb: boolean[] = [];
     await Promise.all(
       slots.map(async (slot, i) => {
         // Fetching the picker's uri to a real Blob works uniformly on both web
@@ -190,12 +225,29 @@ export const api = {
           body: blob,
         });
         if (!put.ok) throw new Error(`upload to storage failed (${put.status})`);
+        const thumb = await makeThumb(blob);
+        if (thumb) {
+          const putThumb = await fetch(slot.thumbSignedUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'image/jpeg' },
+            body: thumb,
+          });
+          uploadedThumb[i] = putThumb.ok; // thumb failure never fails the upload
+        } else {
+          uploadedThumb[i] = false;
+        }
       })
     );
     return request<Photo[]>(`/api/projects/${projectId}/photos/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ photos: slots.map((s) => ({ path: s.path, originalName: s.originalName })) }),
+      body: JSON.stringify({
+        photos: slots.map((s, i) => ({
+          path: s.path,
+          thumbPath: uploadedThumb[i] ? s.thumbPath : null,
+          originalName: s.originalName,
+        })),
+      }),
     });
   },
 

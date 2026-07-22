@@ -142,7 +142,7 @@ function resolveEnabledButtons(overrides, defaults) {
   return result;
 }
 
-function mapProject(row, enabledButtons) {
+function mapProject(row, enabledButtons, videoUrl = null) {
   return {
     id: row.id,
     name: row.name,
@@ -150,7 +150,17 @@ function mapProject(row, enabledButtons) {
     inviteCode: row.invite_code,
     createdAt: row.created_at,
     enabledButtons,
+    // Signed URL for the finished tribute film — only when the admin has
+    // published it. Families see the in-app film screen the moment this is set.
+    videoUrl,
   };
+}
+
+// Sign the tribute film's URL for a project row, when published. Long TTL —
+// families keep the tab open / return to it.
+async function signProjectVideo(row) {
+  if (!row.video_storage_path || !row.video_published) return null;
+  return signPhotoUrl(row.video_storage_path, 60 * 60 * 24 * 7);
 }
 
 function mapRating(row) {
@@ -376,7 +386,7 @@ app.get('/api/projects/:projectId', async (req, res, next) => {
       .single();
     if (error || !data) return res.status(404).json({ error: 'project not found' });
     const defaults = await getButtonDefaults();
-    res.json(mapProject(data, resolveEnabledButtons(data.enabled_buttons, defaults)));
+    res.json(mapProject(data, resolveEnabledButtons(data.enabled_buttons, defaults), await signProjectVideo(data)));
   } catch (err) {
     next(err);
   }
@@ -391,7 +401,7 @@ app.get('/api/projects/by-invite/:inviteCode', async (req, res, next) => {
       .single();
     if (error || !data) return res.status(404).json({ error: 'invite not found' });
     const defaults = await getButtonDefaults();
-    res.json(mapProject(data, resolveEnabledButtons(data.enabled_buttons, defaults)));
+    res.json(mapProject(data, resolveEnabledButtons(data.enabled_buttons, defaults), await signProjectVideo(data)));
   } catch (err) {
     next(err);
   }
@@ -435,6 +445,7 @@ app.get('/api/projects/:projectId/photos', async (req, res, next) => {
         return {
           id: photo.id,
           url: await signPhotoUrl(photo.storage_path),
+          thumbUrl: photo.thumb_path ? await signPhotoUrl(photo.thumb_path) : null,
           originalName: photo.original_name,
           createdAt: photo.created_at,
           ratings: photoRatings.map(mapRating),
@@ -526,10 +537,24 @@ app.post('/api/projects/:projectId/photos/upload-urls', rateLimit(10), requireIn
     }
     const urls = await Promise.all(
       files.map(async (f) => {
-        const storagePath = `${req.params.projectId}/${crypto.randomUUID()}${ALLOWED_IMAGE_MIME.get(f.type)}`;
-        const { data, error } = await supabase.storage.from(PHOTOS_BUCKET).createSignedUploadUrl(storagePath);
+        const id = crypto.randomUUID();
+        const storagePath = `${req.params.projectId}/${id}${ALLOWED_IMAGE_MIME.get(f.type)}`;
+        // Display thumbnail slot (client generates a ~640px JPEG via canvas).
+        const thumbPath = `${req.params.projectId}/${id}.thumb.jpg`;
+        const [{ data, error }, { data: thumbData, error: thumbError }] = await Promise.all([
+          supabase.storage.from(PHOTOS_BUCKET).createSignedUploadUrl(storagePath),
+          supabase.storage.from(PHOTOS_BUCKET).createSignedUploadUrl(thumbPath),
+        ]);
         assertOk(error);
-        return { signedUrl: data.signedUrl, token: data.token, path: storagePath, originalName: String(f.name || 'photo') };
+        assertOk(thumbError);
+        return {
+          signedUrl: data.signedUrl,
+          token: data.token,
+          path: storagePath,
+          thumbSignedUrl: thumbData.signedUrl,
+          thumbPath,
+          originalName: String(f.name || 'photo'),
+        };
       })
     );
     res.json(urls);
@@ -548,20 +573,27 @@ app.post('/api/projects/:projectId/photos/register', rateLimit(10), requireInvit
     // Only paths under this project's own prefix may be registered — a path
     // from another project's folder (or a traversal) is rejected outright.
     const prefix = `${projectId}/`;
-    const bad = photos.find((p) => !p || typeof p.path !== 'string' || !p.path.startsWith(prefix) || p.path.includes('..'));
+    const badPath = (v) => typeof v !== 'string' || !v.startsWith(prefix) || v.includes('..');
+    const bad = photos.find((p) => !p || badPath(p.path) || (p.thumbPath != null && badPath(p.thumbPath)));
     if (bad) return res.status(400).json({ error: 'invalid storage path' });
 
     const created = [];
     for (const p of photos) {
       const { data: row, error: insertError } = await supabase
         .from('afterlight_photos')
-        .insert({ storage_path: p.path, original_name: String(p.originalName || 'photo'), project_id: projectId })
+        .insert({
+          storage_path: p.path,
+          thumb_path: p.thumbPath || null,
+          original_name: String(p.originalName || 'photo'),
+          project_id: projectId,
+        })
         .select()
         .single();
       assertOk(insertError);
       created.push({
         id: row.id,
         url: await signPhotoUrl(row.storage_path),
+        thumbUrl: row.thumb_path ? await signPhotoUrl(row.thumb_path) : null,
         originalName: row.original_name,
         createdAt: row.created_at,
         ratings: [],
@@ -580,11 +612,12 @@ app.delete('/api/photos/:photoId', rateLimit(30), requireInvite(projectFromPhoto
   try {
     const { data: photo } = await supabase
       .from('afterlight_photos')
-      .select('storage_path')
+      .select('storage_path, thumb_path')
       .eq('id', req.params.photoId)
       .single();
     if (photo) {
-      await supabase.storage.from(PHOTOS_BUCKET).remove([photo.storage_path]);
+      const paths = [photo.storage_path, photo.thumb_path].filter(Boolean);
+      await supabase.storage.from(PHOTOS_BUCKET).remove(paths);
     }
     const { error } = await supabase.from('afterlight_photos').delete().eq('id', req.params.photoId);
     assertOk(error);
