@@ -21,7 +21,7 @@ import GoldButton from '../components/GoldButton';
 import BackdropVideo from '../components/BackdropVideo';
 import { colors, copy, images, stageWidth } from '../constants/theme';
 import { DEMO, DEMO_PHOTOS } from '../constants/demo';
-import { API_BASE, api, heartCount, isFavoritedBy, photoUrl, type Photo, type Project } from '../lib/api';
+import { API_BASE, api, heartCount, isFavoritedBy, photoUrl, setInviteCode, type Photo, type Project } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
 import { useLocalStorage } from '../lib/useLocalStorage';
 import { glassBlur, glassSurface } from '../lib/glass';
@@ -102,7 +102,12 @@ export default function SwipeScreen() {
     }
     api
       .getProject(projectId)
-      .then(setProjectDetails)
+      .then((details) => {
+        setProjectDetails(details);
+        // Server-fresh invite code backfills older remembered projects that
+        // were stored before inviteCode was kept client-side (write auth).
+        setInviteCode(details.inviteCode);
+      })
       .catch(() => setProjectDetails(null));
   }, [projectId]);
 

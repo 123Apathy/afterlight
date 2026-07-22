@@ -83,11 +83,38 @@ export type KanbanCard = {
   notes: CardNote[];
 };
 
+// Family writes are authorized by the project's invite code (sent as
+// X-Invite-Code). Set explicitly when a project is opened; falls back to the
+// remembered-projects list in localStorage so a page reload doesn't lose it.
+let activeInviteCode = '';
+export function setInviteCode(code: string | undefined) {
+  activeInviteCode = code || '';
+}
+function inviteCodeHeader(): Record<string, string> {
+  let code = activeInviteCode;
+  if (!code && typeof localStorage !== 'undefined') {
+    try {
+      const id = localStorage.getItem('everlit.activeProjectId');
+      const known = JSON.parse(localStorage.getItem('everlit.knownProjects') || '[]');
+      const match = Array.isArray(known) && known.find((k: any) => k && k.id === id);
+      if (match && match.inviteCode) code = match.inviteCode;
+    } catch {
+      /* storage blocked / malformed — send nothing, server will 403 */
+    }
+  }
+  return code ? { 'X-Invite-Code': code } : {};
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, options);
+  const method = options?.method || 'GET';
+  const headers =
+    method === 'GET'
+      ? options?.headers
+      : { ...inviteCodeHeader(), ...(options?.headers as Record<string, string>) };
+  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    throw new Error(`${options?.method || 'GET'} ${path} failed (${res.status}): ${body}`);
+    throw new Error(`${method} ${path} failed (${res.status}): ${body}`);
   }
   if (res.status === 204) return undefined as T;
   return res.json();
@@ -139,17 +166,37 @@ export const api = {
 
   getPhotos: (projectId: string) => request<Photo[]>(`/api/projects/${projectId}/photos`),
 
+  // Direct-to-Storage upload: mint signed URLs, PUT each file straight to
+  // Supabase Storage, then register the paths. The old multipart-to-server
+  // route dies on Netlify's ~6MB function body limit; this path has no size
+  // ceiling on our side and never buffers files through the function.
   uploadPhotos: async (projectId: string, files: { uri: string; name: string; type: string }[]) => {
-    const form = new FormData();
-    for (const file of files) {
-      // Fetching the picker's uri to a real Blob works uniformly on both web
-      // (blob:/data: uris) and native (file:// uris) -- the RN-only
-      // {uri,name,type} object shape that native prefers doesn't survive
-      // react-native-web's fetch/FormData polyfill.
-      const blob = await (await fetch(file.uri)).blob();
-      form.append('photos', blob, file.name);
-    }
-    return request<Photo[]>(`/api/projects/${projectId}/photos`, { method: 'POST', body: form });
+    const slots = await request<{ signedUrl: string; path: string; originalName: string }[]>(
+      `/api/projects/${projectId}/photos/upload-urls`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ files: files.map((f) => ({ name: f.name, type: f.type })) }),
+      }
+    );
+    await Promise.all(
+      slots.map(async (slot, i) => {
+        // Fetching the picker's uri to a real Blob works uniformly on both web
+        // (blob:/data: uris) and native (file:// uris).
+        const blob = await (await fetch(files[i].uri)).blob();
+        const put = await fetch(slot.signedUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': files[i].type || 'application/octet-stream' },
+          body: blob,
+        });
+        if (!put.ok) throw new Error(`upload to storage failed (${put.status})`);
+      })
+    );
+    return request<Photo[]>(`/api/projects/${projectId}/photos/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ photos: slots.map((s) => ({ path: s.path, originalName: s.originalName })) }),
+    });
   },
 
   deletePhoto: (photoId: string) => request<void>(`/api/photos/${photoId}`, { method: 'DELETE' }),

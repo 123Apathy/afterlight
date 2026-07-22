@@ -11,7 +11,10 @@ app.get(/^\/(?!api\/).*/, (req, res, next) => {
 
 app.use((err, req, res, next) => {
   console.error(err);
-  res.status(err.status || 500).json({ error: err.message || 'Internal error' });
+  // 4xx messages are ours (validation etc.) and safe to show; 5xx details are
+  // raw Supabase/Postgres errors — log them, never send them to clients.
+  const status = err.status || 500;
+  res.status(status).json({ error: status < 500 ? err.message || 'Request failed' : 'Something went wrong on our side. Please try again.' });
 });
 
 const PORT = process.env.PORT || 4400;

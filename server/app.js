@@ -10,13 +10,71 @@ const { supabase, PHOTOS_BUCKET, SIGNED_URL_TTL_SECONDS } = require('./supabaseC
 
 const app = express();
 
-app.use(cors());
+// Locked-down CORS: only our own origins may drive the API from a browser.
+// ALLOWED_ORIGINS env (comma-separated) extends the list without a deploy.
+const DEFAULT_ORIGINS = [
+  'https://everlit.co.za',
+  'https://www.everlit.co.za',
+  'http://localhost:4400',
+  'http://localhost:8081',
+];
+const ALLOWED_ORIGINS = new Set(
+  (process.env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean).concat(DEFAULT_ORIGINS)
+);
+app.use(
+  cors({
+    origin(origin, cb) {
+      // No Origin header = same-origin nav / curl — allow (CORS can't protect those anyway).
+      if (!origin || ALLOWED_ORIGINS.has(origin)) return cb(null, true);
+      cb(null, false);
+    },
+  })
+);
 app.use(express.json({ limit: '2mb' }));
+
+// Minimal per-IP sliding-window rate limiter for write endpoints. In-memory
+// (per-instance) — enough to blunt abuse/DoS/storage-cost inflation without a
+// new dependency; not a distributed guarantee.
+const RATE_WINDOW_MS = 60_000;
+const rateBuckets = new Map();
+function rateLimit(maxPerMinute) {
+  return (req, res, next) => {
+    const now = Date.now();
+    const key = `${req.ip}:${req.method}:${req.route ? req.route.path : req.path}`;
+    let hits = rateBuckets.get(key);
+    if (!hits) rateBuckets.set(key, (hits = []));
+    while (hits.length && now - hits[0] > RATE_WINDOW_MS) hits.shift();
+    if (hits.length >= maxPerMinute) {
+      return res.status(429).json({ error: 'too many requests, slow down' });
+    }
+    hits.push(now);
+    // Opportunistic cleanup so the map can't grow unbounded.
+    if (rateBuckets.size > 10_000) {
+      for (const [k, v] of rateBuckets) {
+        if (!v.length || now - v[v.length - 1] > RATE_WINDOW_MS) rateBuckets.delete(k);
+      }
+    }
+    next();
+  };
+}
 
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 25 * 1024 * 1024 },
 });
+
+// Only real images may enter the bucket. Client-supplied MIME + filename are
+// otherwise attacker-controlled — an uploaded HTML/SVG served from our storage
+// domain is a stored-XSS/phishing vector.
+const ALLOWED_IMAGE_MIME = new Map([
+  ['image/jpeg', '.jpg'],
+  ['image/png', '.png'],
+  ['image/webp', '.webp'],
+  ['image/gif', '.gif'],
+  ['image/heic', '.heic'],
+  ['image/heif', '.heif'],
+  ['image/tiff', '.tif'],
+]);
 
 const KANBAN_TEMPLATE = [
   { column: 'todo', title: 'Choose & confirm venue', description: 'Church, funeral home, or outdoor site — check availability and capacity.' },
@@ -133,13 +191,74 @@ function mapNote(row) {
   return { id: row.id, cardId: row.card_id, author: row.author, text: row.body, createdAt: row.created_at };
 }
 
+// Header-only (query-string secrets land in proxy/CDN access logs, browser
+// history and Referer headers) + constant-time compare. The /admin/:secret
+// dashboard route is the one sanctioned path-based entry; it forwards the
+// secret to fetches via header.
+function secretMatches(provided) {
+  const expected = process.env.ADMIN_SECRET;
+  if (!expected || !provided) return false;
+  const a = Buffer.from(String(provided));
+  const b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
 function requireAdmin(req, res, next) {
-  const provided = req.get('x-admin-secret') || req.query.secret;
-  if (!process.env.ADMIN_SECRET || provided !== process.env.ADMIN_SECRET) {
+  if (!secretMatches(req.get('x-admin-secret'))) {
     return res.status(404).json({ error: 'not found' });
   }
   next();
 }
+
+// Family-side write auth: the invite code IS the capability. Bare numeric ids
+// were previously enough to write/delete anything; now every family write must
+// carry the project's invite code in X-Invite-Code (or body.inviteCode).
+// `resolveProjectId` maps the route's resource to its owning project.
+function requireInvite(resolveProjectId) {
+  return async (req, res, next) => {
+    try {
+      const provided = String(req.get('x-invite-code') || (req.body && req.body.inviteCode) || '').trim();
+      if (!provided) return res.status(403).json({ error: 'invite code required' });
+      const projectId = await resolveProjectId(req);
+      if (!projectId) return res.status(404).json({ error: 'not found' });
+      const { data, error } = await supabase
+        .from('afterlight_projects')
+        .select('id, invite_code')
+        .eq('id', projectId)
+        .maybeSingle();
+      if (error || !data) return res.status(404).json({ error: 'not found' });
+      if (data.invite_code !== provided) return res.status(403).json({ error: 'invalid invite code' });
+      req.projectId = projectId;
+      next();
+    } catch (err) {
+      next(err);
+    }
+  };
+}
+
+const projectFromParam = (req) => req.params.projectId;
+const projectFromPhoto = async (req) => {
+  const { data } = await supabase
+    .from('afterlight_photos')
+    .select('project_id')
+    .eq('id', req.params.photoId)
+    .maybeSingle();
+  return data && data.project_id;
+};
+const projectFromComment = async (req) => {
+  const { data } = await supabase
+    .from('afterlight_comments')
+    .select('photo_id')
+    .eq('id', req.params.commentId)
+    .maybeSingle();
+  if (!data) return null;
+  const { data: photo } = await supabase
+    .from('afterlight_photos')
+    .select('project_id')
+    .eq('id', data.photo_id)
+    .maybeSingle();
+  return photo && photo.project_id;
+};
 
 async function signPhotoUrl(storagePath, ttlSeconds = SIGNED_URL_TTL_SECONDS) {
   const { data, error } = await supabase.storage
@@ -217,7 +336,7 @@ async function seedProjectKanban(projectId) {
 
 // --- Projects ---
 
-app.post('/api/projects', async (req, res, next) => {
+app.post('/api/projects', rateLimit(5), async (req, res, next) => {
   try {
     const { name } = req.body || {};
     if (!name || typeof name !== 'string' || !name.trim()) {
@@ -346,12 +465,16 @@ async function normalizeOrientation(buffer, mimetype) {
   }
 }
 
-app.post('/api/projects/:projectId/photos', upload.array('photos', 40), async (req, res, next) => {
+app.post('/api/projects/:projectId/photos', rateLimit(10), requireInvite(projectFromParam), upload.array('photos', 40), async (req, res, next) => {
   try {
     const { projectId } = req.params;
+    const rejected = (req.files || []).find((f) => !ALLOWED_IMAGE_MIME.has(f.mimetype));
+    if (rejected) {
+      return res.status(400).json({ error: `unsupported file type: ${rejected.mimetype || 'unknown'} — photos only` });
+    }
     const created = [];
     for (const file of req.files || []) {
-      const ext = path.extname(file.originalname) || '.jpg';
+      const ext = ALLOWED_IMAGE_MIME.get(file.mimetype);
       const storagePath = `${projectId}/${crypto.randomUUID()}${ext}`;
       const uploadBuffer = await normalizeOrientation(file.buffer, file.mimetype);
       const { error: uploadError } = await supabase.storage
@@ -383,7 +506,77 @@ app.post('/api/projects/:projectId/photos', upload.array('photos', 40), async (r
   }
 });
 
-app.delete('/api/photos/:photoId', async (req, res, next) => {
+// --- Direct-to-Storage photo upload (the Netlify-safe path) ---
+// Netlify Functions cap request bodies at ~6MB, so multipart uploads through
+// the function break for real photo batches. Same pattern as the admin video
+// upload: the server mints signed upload URLs, the browser PUTs each file
+// straight to Supabase Storage, then registers the uploaded paths here.
+// EXIF orientation is not re-baked on this path (no buffer passes through
+// us); modern browsers apply EXIF orientation natively on display.
+
+app.post('/api/projects/:projectId/photos/upload-urls', rateLimit(10), requireInvite(projectFromParam), async (req, res, next) => {
+  try {
+    const { files } = req.body || {};
+    if (!Array.isArray(files) || files.length === 0 || files.length > 40) {
+      return res.status(400).json({ error: 'files must be a non-empty array of at most 40 entries' });
+    }
+    const bad = files.find((f) => !f || typeof f.type !== 'string' || !ALLOWED_IMAGE_MIME.has(f.type));
+    if (bad) {
+      return res.status(400).json({ error: `unsupported file type: ${(bad && bad.type) || 'unknown'} — photos only` });
+    }
+    const urls = await Promise.all(
+      files.map(async (f) => {
+        const storagePath = `${req.params.projectId}/${crypto.randomUUID()}${ALLOWED_IMAGE_MIME.get(f.type)}`;
+        const { data, error } = await supabase.storage.from(PHOTOS_BUCKET).createSignedUploadUrl(storagePath);
+        assertOk(error);
+        return { signedUrl: data.signedUrl, token: data.token, path: storagePath, originalName: String(f.name || 'photo') };
+      })
+    );
+    res.json(urls);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post('/api/projects/:projectId/photos/register', rateLimit(10), requireInvite(projectFromParam), async (req, res, next) => {
+  try {
+    const { projectId } = req.params;
+    const { photos } = req.body || {};
+    if (!Array.isArray(photos) || photos.length === 0 || photos.length > 40) {
+      return res.status(400).json({ error: 'photos must be a non-empty array of at most 40 entries' });
+    }
+    // Only paths under this project's own prefix may be registered — a path
+    // from another project's folder (or a traversal) is rejected outright.
+    const prefix = `${projectId}/`;
+    const bad = photos.find((p) => !p || typeof p.path !== 'string' || !p.path.startsWith(prefix) || p.path.includes('..'));
+    if (bad) return res.status(400).json({ error: 'invalid storage path' });
+
+    const created = [];
+    for (const p of photos) {
+      const { data: row, error: insertError } = await supabase
+        .from('afterlight_photos')
+        .insert({ storage_path: p.path, original_name: String(p.originalName || 'photo'), project_id: projectId })
+        .select()
+        .single();
+      assertOk(insertError);
+      created.push({
+        id: row.id,
+        url: await signPhotoUrl(row.storage_path),
+        originalName: row.original_name,
+        createdAt: row.created_at,
+        ratings: [],
+        comments: [],
+        avgRating: null,
+        ratingCount: 0,
+      });
+    }
+    res.status(201).json(created);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.delete('/api/photos/:photoId', rateLimit(30), requireInvite(projectFromPhoto), async (req, res, next) => {
   try {
     const { data: photo } = await supabase
       .from('afterlight_photos')
@@ -405,7 +598,7 @@ app.delete('/api/photos/:photoId', async (req, res, next) => {
 // Reuses the ratings table as a boolean signal: a row means "hearted by
 // rater", score is always 1. No tier system anymore.
 
-app.post('/api/photos/:photoId/favorite', async (req, res, next) => {
+app.post('/api/photos/:photoId/favorite', rateLimit(60), requireInvite(projectFromPhoto), async (req, res, next) => {
   try {
     const { rater } = req.body || {};
     if (!rater || typeof rater !== 'string' || !rater.trim()) {
@@ -431,7 +624,7 @@ app.post('/api/photos/:photoId/favorite', async (req, res, next) => {
   }
 });
 
-app.delete('/api/photos/:photoId/favorite', async (req, res, next) => {
+app.delete('/api/photos/:photoId/favorite', rateLimit(60), requireInvite(projectFromPhoto), async (req, res, next) => {
   try {
     const rater = String(req.query.rater || '').trim();
     if (!rater) return res.status(400).json({ error: 'rater is required' });
@@ -449,7 +642,7 @@ app.delete('/api/photos/:photoId/favorite', async (req, res, next) => {
 });
 
 // --- Tribute intake ---
-app.post('/api/projects/:projectId/tribute', async (req, res, next) => {
+app.post('/api/projects/:projectId/tribute', rateLimit(10), requireInvite(projectFromParam), async (req, res, next) => {
   try {
     const { respondent, answers } = req.body || {};
     if (!respondent || typeof respondent !== 'string' || !respondent.trim()) {
@@ -491,7 +684,7 @@ app.post('/api/projects/:projectId/tribute', async (req, res, next) => {
 
 // --- Comments ---
 
-app.post('/api/photos/:photoId/comments', async (req, res, next) => {
+app.post('/api/photos/:photoId/comments', rateLimit(30), requireInvite(projectFromPhoto), async (req, res, next) => {
   try {
     const { author, text } = req.body || {};
     if (!text || typeof text !== 'string' || !text.trim()) {
@@ -518,7 +711,7 @@ app.post('/api/photos/:photoId/comments', async (req, res, next) => {
   }
 });
 
-app.delete('/api/comments/:commentId', async (req, res, next) => {
+app.delete('/api/comments/:commentId', rateLimit(30), requireInvite(projectFromComment), async (req, res, next) => {
   try {
     const { error } = await supabase.from('afterlight_comments').delete().eq('id', req.params.commentId);
     assertOk(error);
@@ -534,7 +727,7 @@ const COMMENT_REACTION_EMOJI = ['❤️', '😂', '😢', '🙏', '😊'];
 
 // Tap-to-toggle: posting the same rater+emoji again removes it. Returns the
 // comment's full current reaction list so the client can just replace state.
-app.post('/api/comments/:commentId/reactions', async (req, res, next) => {
+app.post('/api/comments/:commentId/reactions', rateLimit(60), requireInvite(projectFromComment), async (req, res, next) => {
   try {
     const { commentId } = req.params;
     const { rater, emoji } = req.body || {};
@@ -546,25 +739,37 @@ app.post('/api/comments/:commentId/reactions', async (req, res, next) => {
     }
     const raterTrimmed = rater.trim();
 
-    const { data: existing, error: existingError } = await supabase
+    // Atomic toggle against the (comment_id, rater, emoji) unique constraint:
+    // delete-by-key first — if a row died, this tap was a remove and we're
+    // done. Otherwise insert; a 23505 means a concurrent tap inserted between
+    // our delete and insert, so THIS tap resolves as a remove of that row.
+    // No SELECT-then-act window, so rapid double-taps can't double-insert.
+    const { data: removed, error: removeError } = await supabase
       .from('afterlight_comment_reactions')
-      .select('id')
+      .delete()
       .eq('comment_id', commentId)
       .eq('rater', raterTrimmed)
       .eq('emoji', emoji)
-      .maybeSingle();
-    assertOk(existingError);
+      .select('id');
+    assertOk(removeError);
 
-    if (existing) {
-      const { error } = await supabase.from('afterlight_comment_reactions').delete().eq('id', existing.id);
-      assertOk(error);
-    } else {
+    if (!removed || removed.length === 0) {
       const { error } = await supabase
         .from('afterlight_comment_reactions')
         .insert({ comment_id: commentId, rater: raterTrimmed, emoji });
       if (error) {
         if (error.code === '23503') return res.status(404).json({ error: 'comment not found' });
-        throw Object.assign(new Error(error.message), { status: 500 });
+        if (error.code === '23505') {
+          const { error: retryError } = await supabase
+            .from('afterlight_comment_reactions')
+            .delete()
+            .eq('comment_id', commentId)
+            .eq('rater', raterTrimmed)
+            .eq('emoji', emoji);
+          assertOk(retryError);
+        } else {
+          throw Object.assign(new Error(error.message), { status: 500 });
+        }
       }
     }
 
@@ -612,7 +817,11 @@ app.get('/api/projects/:projectId/kanban', async (req, res, next) => {
   }
 });
 
-app.post('/api/kanban/cards', async (req, res, next) => {
+// Kanban mutations are admin-only: no app screen drives them (the client's
+// kanban API surface is unused) and the admin dashboard only reads. If a
+// family-facing arrangements board ever ships, switch these to requireInvite
+// with card→column→project resolution.
+app.post('/api/kanban/cards', requireAdmin, async (req, res, next) => {
   try {
     const { columnId, title, description } = req.body || {};
     if (!title || typeof title !== 'string' || !title.trim()) {
@@ -645,7 +854,7 @@ app.post('/api/kanban/cards', async (req, res, next) => {
   }
 });
 
-app.patch('/api/kanban/cards/:cardId', async (req, res, next) => {
+app.patch('/api/kanban/cards/:cardId', requireAdmin, async (req, res, next) => {
   try {
     const { columnId, order, title, description } = req.body || {};
     const patch = {};
@@ -668,7 +877,7 @@ app.patch('/api/kanban/cards/:cardId', async (req, res, next) => {
   }
 });
 
-app.delete('/api/kanban/cards/:cardId', async (req, res, next) => {
+app.delete('/api/kanban/cards/:cardId', requireAdmin, async (req, res, next) => {
   try {
     const { error } = await supabase.from('afterlight_kanban_cards').delete().eq('id', req.params.cardId);
     assertOk(error);
@@ -680,7 +889,7 @@ app.delete('/api/kanban/cards/:cardId', async (req, res, next) => {
 
 // --- Card notes ---
 
-app.post('/api/kanban/cards/:cardId/notes', async (req, res, next) => {
+app.post('/api/kanban/cards/:cardId/notes', requireAdmin, async (req, res, next) => {
   try {
     const { author, text } = req.body || {};
     if (!text || typeof text !== 'string' || !text.trim()) {
@@ -707,7 +916,7 @@ app.post('/api/kanban/cards/:cardId/notes', async (req, res, next) => {
   }
 });
 
-app.delete('/api/kanban/notes/:noteId', async (req, res, next) => {
+app.delete('/api/kanban/notes/:noteId', requireAdmin, async (req, res, next) => {
   try {
     const { error } = await supabase.from('afterlight_card_notes').delete().eq('id', req.params.noteId);
     assertOk(error);
@@ -1287,7 +1496,7 @@ app.delete('/api/admin/archive', requireAdmin, async (req, res, next) => {
 // Guarded by ADMIN_SECRET (route 404s if the env var is unset or mismatched).
 app.get('/admin/:secret', async (req, res, next) => {
   try {
-    if (!process.env.ADMIN_SECRET || req.params.secret !== process.env.ADMIN_SECRET) {
+    if (!secretMatches(req.params.secret)) {
       return res.status(404).send('Not found');
     }
     const [{ data: projects, error: projectsError }, { data: photos }, { data: tributes }, { data: ratings }, { data: comments }] =

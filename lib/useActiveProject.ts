@@ -1,5 +1,6 @@
+import { useEffect } from 'react';
 import { useLocalStorage } from './useLocalStorage';
-import type { Project } from './api';
+import { setInviteCode, type Project } from './api';
 
 export type KnownProject = { id: string; name: string; inviteCode?: string };
 
@@ -21,6 +22,12 @@ export function useActiveProject() {
   const [projectName, setProjectName] = useLocalStorage('everlit.activeProjectName', '');
   const [knownRaw, setKnownRaw] = useLocalStorage('everlit.knownProjects', '[]');
   const known = parseKnown(knownRaw);
+
+  // Keep the API layer's write-auth header in sync with the active project.
+  useEffect(() => {
+    const match = known.find((k) => k.id === projectId);
+    setInviteCode(match && match.inviteCode);
+  }, [projectId, knownRaw]);
 
   // Add/refresh a memorial in the remembered list (most-recent first).
   const remember = (p: KnownProject) => {
