@@ -724,15 +724,6 @@
 
     .feature-card {
       overflow: hidden;
-      opacity: 0;
-      transform: scale(0.95);
-      transition: opacity 0.5s, transform 0.5s;
-      transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-    }
-
-    .feature-card.visible {
-      opacity: 1;
-      transform: scale(1);
     }
 
     .feature-card-video {
@@ -1798,30 +1789,12 @@
       });
     }
 
-    // Feature cards scroll reveal
-    function updateFeatureCards() {
-      const grid = document.getElementById('features-grid');
-      const rect = grid.getBoundingClientRect();
-      const windowH = window.innerHeight;
-
-      if (rect.top < windowH - 100) {
-        const cards = grid.querySelectorAll('.feature-card');
-        cards.forEach((card, i) => {
-          setTimeout(() => {
-            card.classList.add('visible');
-          }, i * 150);
-        });
-      }
-    }
-
     window.addEventListener('scroll', () => {
       updateCharReveal();
-      updateFeatureCards();
     }, { passive: true });
 
     // Initial check
     updateCharReveal();
-    updateFeatureCards();
   </script>
 </body>
 </html>
