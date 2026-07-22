@@ -162,20 +162,18 @@
        loops perfectly. Sits above the atmosphere/fluid-cursor layer (z-index
        8) but below the hero text (z-index 10), so the headline always wins
        if they ever overlap. */
+    /* ONE instance, in normal flex flow inside .hero-top next to the tagline
+       block, at every viewport size. It used to be two duplicated copies (an
+       absolutely-positioned corner one + an inline mobile one) swapped per
+       breakpoint; because the corner copy was positioned blind against
+       bottom-anchored siblings, every size tweak found a new collision.
+       In-flow, collisions are structurally impossible.
+       Width is capped three ways: by vw (phones), by vh (short/wide browser
+       windows -- the mock is ~2.17x taller than wide, so width 20vh ≈ height
+       43vh), and by px (huge monitors). */
     .phone-mock {
-      position: absolute;
-      z-index: 8;
-      /* Fully fluid position + size (no breakpoint snaps): everything scales
-         continuously with viewport width so resizing never jumps. Size floors
-         low enough for phones and the offsets grow with vw so the mock drifts
-         toward the corner as the title grows underneath it. */
-      /* vh caps keep the (top-anchored) phone clear of the bottom-anchored
-         title/tagline block on short viewports — the phone is ~2.17× taller
-         than wide, so width ≤19vh + top ≤12vh keeps its bottom clear. Stays
-         top-right on desktop (confirmed), just bigger than before. */
-      top: min(clamp(64px, 6vw + 24px, 130px), 12vh);
-      right: clamp(16px, 7vw - 24px, 110px);
-      width: min(clamp(96px, 14vw + 70px, 300px), 19vh);
+      flex-shrink: 0;
+      width: min(13vw + 60px, 20vh, 260px);
       aspect-ratio: 9 / 19.5;
       /* Upright, not tilted -- a rotated frame around a perfectly rectilinear
          UI (straight header row, grid-square icons, right-angle chevrons)
@@ -184,22 +182,6 @@
          device depth cue stays entirely in the drop-shadow. */
       filter: drop-shadow(0 30px 60px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 40px rgba(196, 154, 108, 0.18));
       pointer-events: none;
-    }
-
-    /* Mobile-only inline instance: sits statically next to the tagline block
-       inside .hero-top instead of floating in the corner. Hidden on desktop;
-       the corner .phone-mock--corner instance is hidden on mobile instead
-       (see the ≤768px breakpoint below). Combined-class selector so it wins
-       regardless of source order vs. the base .phone-mock rule. */
-    .phone-mock.phone-mock--inline {
-      display: none;
-      position: static;
-      flex-shrink: 0;
-      /* aspect-ratio is 9/19.5, so height ≈ width * 2.17 -- cap width by vh
-         too so short/wide viewports (browser window, not a tall phone) can't
-         grow the mock tall enough to collide with the navbar above it. */
-      width: clamp(120px, min(42vw, 22vh), 175px);
-      filter: drop-shadow(0 16px 32px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 24px rgba(196, 154, 108, 0.16));
     }
 
     .phone-mock-frame {
@@ -494,7 +476,7 @@
     /* Was a 2-col grid (title | tagline), both bottom-aligned side by side.
        Now stacked: the tagline/CTA block sits ABOVE the wordmark, which owns
        the bottom on its own -- frees the tagline block to pair with the
-       phone mockup on mobile (see .hero-top / .phone-mock--inline). */
+       phone mockup at every size (see .hero-top / .phone-mock). */
     .hero-content {
       position: absolute;
       bottom: 0;
@@ -509,12 +491,16 @@
 
     .hero-top {
       display: flex;
-      align-items: center;
+      justify-content: space-between;
+      align-items: flex-end;
       gap: 24px;
     }
 
     .hero-title {
-      font-size: 20vw;
+      /* vh cap stops the wordmark growing forever on wide monitors (raw 20vw
+         used to outgrow the frozen 420px tagline block and read as "the
+         layout stopped scaling"). */
+      font-size: min(20vw, 30vh);
       font-weight: 500;
       line-height: 0.85;
       letter-spacing: -0.07em;
@@ -540,15 +526,17 @@
     .hero-right {
       display: flex;
       flex-direction: column;
-      gap: 48px;
+      gap: clamp(20px, 4vh, 48px);
       padding-bottom: 16px;
-      max-width: 420px;
+      /* Fluid so it grows with big screens instead of freezing at 420px
+         while the wordmark keeps scaling. */
+      max-width: clamp(300px, 34vw, 560px);
       min-width: 0;
     }
 
     .hero-tagline {
       font-family: 'Playfair Display', Georgia, serif;
-      font-size: 28px;
+      font-size: clamp(24px, 1.6vw + 8px, 36px);
       line-height: 1.1;
       color: var(--primary);
       opacity: 0;
@@ -558,7 +546,7 @@
 
     .hero-description {
       color: var(--primary-70);
-      font-size: 14px;
+      font-size: clamp(14px, 0.9vw + 4px, 18px);
       line-height: 1.4;
       opacity: 0;
       transform: translateY(20px);
@@ -1322,7 +1310,7 @@
       }
 
       .hero-title {
-        font-size: 24vw;
+        font-size: min(24vw, 28vh);
       }
 
       .navbar-links {
@@ -1344,28 +1332,21 @@
       }
 
       .hero-title {
-        font-size: 26vw;
+        font-size: min(26vw, 26vh);
       }
 
       .hero-right {
         gap: 20px;
         flex: 1;
-        min-width: 0;
       }
 
-      /* Mobile: the corner phone sits next to the tagline block instead of
-         floating alone in the top-right. Swap which instance is visible. */
       .hero-top {
-        align-items: flex-start;
         gap: 16px;
       }
 
-      .phone-mock.phone-mock--corner {
-        display: none;
-      }
-
-      .phone-mock.phone-mock--inline {
-        display: block;
+      /* Phones are tall and narrow: let the mock take real width here. */
+      .phone-mock {
+        width: min(44vw, 24vh, 220px);
       }
 
       .navbar-links {
@@ -1440,49 +1421,6 @@
            prefers-reduced-motion. -->
       <canvas id="fluid-canvas" class="hero-fluid-canvas"></canvas>
 
-      <!-- Device mockup: live recreation of the real app.tsx swipe/heart/
-           comment interaction (see styles above for full rationale). -->
-      <div class="phone-mock phone-mock--corner" aria-hidden="true">
-        <div class="phone-mock-frame">
-          <div class="phone-mock-screen">
-            <img src="/mock-photo-web.jpg" class="mock-photo" alt="" />
-            <div class="mock-topscrim"></div>
-            <div class="mock-bottomscrim"></div>
-            <div class="mock-header">
-              <div class="mock-brand">
-                <img src="/logo-mark-gold.png" alt="" />
-                <span class="mock-brand-text">Everlit</span>
-              </div>
-              <div class="mock-counter"><span>01</span><span class="mock-counter-sep">/</span><span>06</span></div>
-              <div class="mock-header-actions">
-                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2.4"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2.4" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-              </div>
-            </div>
-            <div class="mock-burst">♥</div>
-            <div class="mock-comment-bubble">
-              <span class="mock-bubble-author">Mom</span>
-              <span class="mock-bubble-text">That golden hour again 💛</span>
-            </div>
-            <div class="mock-controls">
-              <div class="mock-comment-btn">
-                <svg viewBox="0 0 30 26" width="18" height="16"><rect x="3" y="3" width="24" height="15" rx="7.5" stroke="currentColor" stroke-width="2.2" fill="none"/><path d="M9 18 L7 24 L14 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
-                <span class="mock-comment-count">1</span>
-              </div>
-              <div class="mock-nav">
-                <div class="mock-nav-btn"><svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></svg></div>
-                <div class="mock-nav-btn"><svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
-              </div>
-              <div class="mock-heart-btn">
-                <span class="mock-heart-outline">♡</span>
-                <span class="mock-heart-filled">♥</span>
-                <span class="mock-heart-count">3</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Navbar -->
       <nav class="navbar">
         <div class="navbar-inner">
@@ -1496,10 +1434,10 @@
         </div>
       </nav>
 
-      <!-- Hero Content: tagline/CTA block above the wordmark. On mobile the
-           corner phone-mock (above) hides and this inline duplicate shows
-           next to the tagline instead -- see .phone-mock--inline / the
-           ≤768px breakpoint. -->
+      <!-- Hero Content: one flex stack -- tagline/CTA block + phone mockup
+           side by side (the mockup is a live CSS recreation of the real
+           app.tsx swipe/heart/comment interaction), wordmark below owning
+           the bottom. Single phone instance at every size; see .phone-mock. -->
       <div class="hero-content">
         <div class="hero-top">
           <div class="hero-right">
@@ -1514,7 +1452,7 @@
               </div>
             </a>
           </div>
-          <div class="phone-mock phone-mock--inline" aria-hidden="true">
+          <div class="phone-mock" aria-hidden="true">
             <div class="phone-mock-frame">
               <div class="phone-mock-screen">
                 <img src="/mock-photo-web.jpg" class="mock-photo" alt="" />
