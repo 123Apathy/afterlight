@@ -57,9 +57,15 @@
     .hero-title,
     .about-heading,
     .features-title,
-    .features-subtitle,
-    .card-header h3 {
+    .features-subtitle {
       font-family: 'Playfair Display', Georgia, serif;
+    }
+
+    /* Card titles all match "Create a memorial." (card 1's title, which was
+       never in the Playfair list above — plain Poppins) instead of the other
+       three defaulting to the serif heading font. */
+    .card-header h3 {
+      font-family: 'Poppins', sans-serif;
     }
 
     /* "Back to your memorial" -- migrated into the nav pill; shown (via JS)
@@ -723,43 +729,114 @@
     }
     .card-icon, .card-header, .card-body { position: relative; z-index: 1; }
 
-    /* Card 2 — invite: a message bubble with the invite link lands, a tick
-       answers. */
-    .invfx-bubble {
+    /* Card 2 — invite: the REAL flow, literally — tap the app's own "Invite
+       family" menu card, WhatsApp opens with the real autofilled message
+       (same copy as MenuOverlay's inviteMessage()), tap send, ticks answer. */
+    .invfx-menucard {
       position: absolute;
-      left: 10%;
-      right: 14%;
-      top: 34%;
-      border-radius: 14px;
-      background: rgba(255, 255, 255, 0.10);
-      border: 1px solid rgba(255, 255, 255, 0.14);
+      left: 8%;
+      right: 8%;
+      top: 30%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
       padding: 12px 14px;
-      opacity: 0;
-      transform: translateY(10px);
-      animation: invBubble 12s -2s infinite;
+      border-radius: 14px;
+      background: rgba(42, 35, 33, 0.9);
+      border: 1px solid rgba(212, 169, 118, 0.16);
+      animation: invMenuFade 14s -4s infinite, invMenuPress 14s -4s infinite;
     }
-    .invfx-line { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.35); margin-bottom: 7px; }
-    .invfx-line.short { width: 60%; }
-    .invfx-link { height: 6px; width: 78%; border-radius: 3px; background: rgba(196, 154, 108, 0.8); margin-bottom: 0; }
-    .invfx-sent {
+    .invfx-menu-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: rgba(212, 169, 118, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .invfx-menu-text { display: flex; flex-direction: column; gap: 2px; }
+    .invfx-menu-title { font-family: 'Poppins', sans-serif; font-weight: 500; font-size: 12px; color: var(--primary); }
+    .invfx-menu-sub { font-family: 'Poppins', sans-serif; font-size: 9px; color: var(--gray-500); }
+    .invfx-tap-ripple {
       position: absolute;
-      right: 16%;
-      top: 62%;
-      font-family: 'Poppins', sans-serif;
-      font-size: 11px;
-      color: rgba(196, 154, 108, 0.9);
+      left: 8%;
+      top: 30%;
+      width: 58px;
+      height: 58px;
+      border-radius: 14px;
+      border: 1.5px solid rgba(212, 169, 118, 0.7);
       opacity: 0;
-      animation: invSent 12s -2s infinite;
+      animation: invTapRipple 14s -4s infinite;
     }
-    @keyframes invBubble {
-      0%, 12% { opacity: 0; transform: translateY(10px); }
-      20%, 82% { opacity: 1; transform: translateY(0); }
-      92%, 100% { opacity: 0; transform: translateY(-6px); }
+    .invfx-wa {
+      position: absolute;
+      left: 8%;
+      right: 8%;
+      top: 28%;
+      opacity: 0;
+      transform: translateY(6px);
+      animation: invWaFade 14s -4s infinite;
     }
-    @keyframes invSent {
-      0%, 34% { opacity: 0; }
-      42%, 82% { opacity: 1; }
-      92%, 100% { opacity: 0; }
+    .invfx-wa-bubble {
+      background: rgba(37, 211, 102, 0.12);
+      border: 1px solid rgba(37, 211, 102, 0.3);
+      border-radius: 4px 14px 14px 14px;
+      padding: 10px 12px;
+    }
+    .invfx-wa-text { font-family: 'Poppins', sans-serif; font-size: 9.5px; line-height: 1.5; color: var(--primary-80); }
+    .invfx-wa-link { font-family: 'Poppins', sans-serif; font-size: 9.5px; color: var(--accent); margin-top: 3px; }
+    .invfx-wa-ticks {
+      font-size: 10px;
+      color: #34B7F1;
+      margin-top: 6px;
+      text-align: right;
+      opacity: 0;
+      animation: invTicksIn 14s -4s infinite;
+    }
+    .invfx-wa-send {
+      position: absolute;
+      right: -6px;
+      bottom: -34px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #25D366;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: invSendPress 14s -4s infinite;
+    }
+    @keyframes invMenuFade {
+      0%, 3% { opacity: 0; }
+      7%, 30% { opacity: 1; }
+      36%, 100% { opacity: 0; }
+    }
+    @keyframes invMenuPress {
+      0%, 26% { transform: scale(1); }
+      29% { transform: scale(0.94); }
+      32%, 100% { transform: scale(1); }
+    }
+    @keyframes invTapRipple {
+      0%, 26% { opacity: 0; transform: scale(0.5); }
+      30% { opacity: 0.7; transform: scale(1); }
+      38%, 100% { opacity: 0; transform: scale(1.5); }
+    }
+    @keyframes invWaFade {
+      0%, 34% { opacity: 0; transform: translateY(6px); }
+      40%, 88% { opacity: 1; transform: translateY(0); }
+      94%, 100% { opacity: 0; transform: translateY(-4px); }
+    }
+    @keyframes invSendPress {
+      0%, 60% { transform: scale(1); }
+      63% { transform: scale(0.82); }
+      66%, 100% { transform: scale(1); }
+    }
+    @keyframes invTicksIn {
+      0%, 64% { opacity: 0; }
+      68%, 88% { opacity: 1; }
+      94%, 100% { opacity: 0; }
     }
 
     /* Card 3 — everyone adds their part: the photo, a heart, a memory. */
@@ -951,10 +1028,14 @@
 
     @media (prefers-reduced-motion: reduce) {
       .mc-inner, .mc-typed, .mc-caret, .mc-btn, .mc-btn::after,
-      .invfx-bubble, .invfx-sent, .partfx-photo, .partfx-burst, .partfx-bubble, .filmfx-progress { animation: none !important; }
+      .invfx-menucard, .invfx-tap-ripple, .invfx-wa, .invfx-wa-ticks, .invfx-wa-send,
+      .partfx-photo, .partfx-burst, .partfx-bubble, .filmfx-progress { animation: none !important; }
       .mc-typed { max-width: 8ch; }
       .mc-caret { opacity: 0; }
-      .invfx-bubble { opacity: 1; transform: none; }
+      .invfx-menucard { opacity: 0; }
+      .invfx-tap-ripple { opacity: 0; }
+      .invfx-wa { opacity: 1; transform: none; }
+      .invfx-wa-ticks { opacity: 1; }
       .partfx-bubble { opacity: 1; transform: none; }
       .filmfx-progress { width: 40%; }
     }
@@ -1329,12 +1410,31 @@
         <!-- Card 2 -->
         <div class="feature-card feature-card-content">
           <div class="card-bgfx" aria-hidden="true">
-            <div class="invfx-bubble">
-              <div class="invfx-line"></div>
-              <div class="invfx-line short"></div>
-              <div class="invfx-link"></div>
+            <!-- Beat 1: the real "Invite family" menu card gets tapped
+                 (matches MenuOverlay's ActionCard exactly: same icon,
+                 title, subtitle). -->
+            <div class="invfx-menucard">
+              <div class="invfx-menu-icon">
+                <svg width="18" height="18" viewBox="0 0 28 28"><path d="M7 6 h14 a2.5 2.5 0 0 1 2.5 2.5 v8 a2.5 2.5 0 0 1 -2.5 2.5 h-9.5 l-5 4.5 v-4.5 h0.5 a2.5 2.5 0 0 1 -2.5 -2.5 v-8 A2.5 2.5 0 0 1 7 6 Z" stroke="#25D366" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+              </div>
+              <div class="invfx-menu-text">
+                <span class="invfx-menu-title">Invite family</span>
+                <span class="invfx-menu-sub">Opens WhatsApp with a message ready to send</span>
+              </div>
             </div>
-            <div class="invfx-sent">Sent ✓</div>
+            <div class="invfx-tap-ripple"></div>
+            <!-- Beat 2+3: WhatsApp opens with the real autofilled message,
+                 send is tapped, read ticks answer. -->
+            <div class="invfx-wa">
+              <div class="invfx-wa-bubble">
+                <div class="invfx-wa-text">We&rsquo;re gathering photos and memories to honour Margaret. Add yours here:</div>
+                <div class="invfx-wa-link">everlit.co.za/join/Ab3xY9</div>
+                <div class="invfx-wa-ticks">&#10003;&#10003;</div>
+              </div>
+              <div class="invfx-wa-send">
+                <svg width="14" height="14" viewBox="0 0 24 24"><path d="M3 20 L21 12 L3 4 L3 10 L15 12 L3 14 Z" fill="#1A1613"/></svg>
+              </div>
+            </div>
             <div class="card-bgfx-scrim"></div>
           </div>
           <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5Z"/></svg></div>
