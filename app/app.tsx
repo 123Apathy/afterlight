@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -46,6 +47,12 @@ export default function SwipeScreen() {
   const [nameDraft, setNameDraft] = useState('');
   const [newProjectName, setNewProjectName] = useState('');
   const [creatingProject, setCreatingProject] = useState(false);
+  // Set only right after THIS session creates a new project (never on a
+  // returning visit or a join-link open) -- prompts the creator, once, to
+  // pick the photo people will see first: typically the one displayed at
+  // the service, near the casket.
+  const [pickingCover, setPickingCover] = useState<Project | null>(null);
+  const [uploadingCover, setUploadingCover] = useState(false);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -156,12 +163,34 @@ export default function SwipeScreen() {
       const created = await api.createProject(newProjectName.trim());
       setProject(created);
       setNewProjectName('');
+      setPickingCover(created);
     } catch {
       if (typeof window !== 'undefined') {
         window.alert("Couldn't create the project. Check your connection and try again.");
       }
     } finally {
       setCreatingProject(false);
+    }
+  };
+
+  const handlePickCoverPhoto = async () => {
+    if (!pickingCover) return;
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85 });
+    if (result.canceled || !result.assets.length) return;
+    setUploadingCover(true);
+    try {
+      const asset = result.assets[0];
+      const [uploaded] = await api.uploadPhotos(pickingCover.id, [
+        { uri: asset.uri, name: asset.fileName || `cover-${Date.now()}.jpg`, type: asset.mimeType || 'image/jpeg' },
+      ]);
+      await api.setCoverPhoto(pickingCover.id, uploaded.id);
+      setPickingCover(null);
+    } catch {
+      if (typeof window !== 'undefined') {
+        window.alert("That photo didn't upload — check your connection and try again.");
+      }
+    } finally {
+      setUploadingCover(false);
     }
   };
 
@@ -310,6 +339,45 @@ export default function SwipeScreen() {
               )}
             </Animated.View>
           </View>
+        </View>
+      </View>
+    );
+  }
+
+  if (pickingCover) {
+    return (
+      <View style={styles.page}>
+        <HorizonGlow />
+        <View style={styles.headerOverlay} pointerEvents="box-none">
+          <View style={styles.header}>
+            <PressableScale onPress={goHome} scaleTo={0.96} hitSlop={8} style={styles.brand}>
+              <Image source={images.logoGold} style={styles.logo} resizeMode="contain" />
+              <Text style={styles.brandText}>Everlit</Text>
+            </PressableScale>
+          </View>
+        </View>
+        <View style={styles.gate}>
+          <Animated.View style={[styles.gateSegment, enterStyleA]}>
+            <Text style={styles.gateOverline}>Everlit · Memorial Films</Text>
+          </Animated.View>
+          <Animated.View style={[styles.gateSegment, enterStyleB]}>
+            <Text style={styles.gateTitle}>Choose a photo of {pickingCover.name}</Text>
+            <StreakDivider />
+          </Animated.View>
+          <Animated.View style={[styles.gateSegment, enterStyleC]}>
+            <Text style={styles.gateSubtitle}>
+              This is the photo people see first when you share the link — often the one displayed at the
+              service, near the casket.
+            </Text>
+            <GoldButton
+              label={uploadingCover ? 'Uploading…' : 'Choose a photo'}
+              onPress={handlePickCoverPhoto}
+              style={styles.gateButton}
+            />
+            <PressableScale onPress={() => setPickingCover(null)} style={styles.switchLink} scaleTo={0.98}>
+              <Text style={styles.switchText}>Skip for now</Text>
+            </PressableScale>
+          </Animated.View>
         </View>
       </View>
     );
@@ -1427,6 +1495,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     letterSpacing: 0.3,
     color: colors.ink,
+  },
+  switchLink: {
+    marginTop: 4,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  switchText: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 14,
+    color: colors.textFainter,
+    textDecorationLine: 'underline',
   },
   knownBlock: {
     width: '100%',

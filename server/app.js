@@ -1294,26 +1294,44 @@ app.patch('/api/admin/projects/:projectId/video', requireAdmin, async (req, res,
 // The photo used as the WhatsApp/Facebook link-preview image when someone
 // shares the invite link -- e.g. a real photo of the person being honoured,
 // instead of the generic brand share image.
+async function setCoverPhoto(projectId, photoId) {
+  if (photoId) {
+    const { data: photo } = await supabase
+      .from('afterlight_photos')
+      .select('id')
+      .eq('id', photoId)
+      .eq('project_id', projectId)
+      .maybeSingle();
+    if (!photo) return { error: 'photo does not belong to this project' };
+  }
+  const { error } = await supabase.from('afterlight_projects').update({ cover_photo_id: photoId }).eq('id', projectId);
+  assertOk(error);
+  return { error: null };
+}
+
+// Family-facing: the project creator picks this right after creating the
+// memorial (the "photo displayed at the service" prompt) -- invite-code
+// auth, same as every other family write.
+app.patch('/api/projects/:projectId/cover-photo', rateLimit(10), requireInvite(projectFromParam), async (req, res, next) => {
+  try {
+    const { photoId } = req.body || {};
+    if (typeof photoId !== 'string') return res.status(400).json({ error: 'photoId is required' });
+    const result = await setCoverPhoto(req.params.projectId, photoId);
+    if (result.error) return res.status(400).json({ error: result.error });
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.patch('/api/admin/projects/:projectId/cover-photo', requireAdmin, async (req, res, next) => {
   try {
     const { photoId } = req.body || {};
     if (photoId !== null && typeof photoId !== 'string') {
       return res.status(400).json({ error: 'photoId is required (or null to clear)' });
     }
-    if (photoId) {
-      const { data: photo } = await supabase
-        .from('afterlight_photos')
-        .select('id')
-        .eq('id', photoId)
-        .eq('project_id', req.params.projectId)
-        .maybeSingle();
-      if (!photo) return res.status(400).json({ error: 'photo does not belong to this project' });
-    }
-    const { error } = await supabase
-      .from('afterlight_projects')
-      .update({ cover_photo_id: photoId })
-      .eq('id', req.params.projectId);
-    assertOk(error);
+    const result = await setCoverPhoto(req.params.projectId, photoId);
+    if (result.error) return res.status(400).json({ error: result.error });
     res.status(204).end();
   } catch (err) {
     next(err);

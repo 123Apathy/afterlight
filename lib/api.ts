@@ -253,6 +253,16 @@ export const api = {
 
   deletePhoto: (photoId: string) => request<void>(`/api/photos/${photoId}`, { method: 'DELETE' }),
 
+  // The WhatsApp/link-preview photo -- typically the one displayed at the
+  // service, near the casket. Set once by the project creator right after
+  // creation; changeable later via the admin dashboard.
+  setCoverPhoto: (projectId: string, photoId: string) =>
+    request<void>(`/api/projects/${projectId}/cover-photo`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ photoId }),
+    }),
+
   submitTribute: (projectId: string, respondent: string, answers: { question: string; answer: string }[]) =>
     request<{ ok: true }>(`/api/projects/${projectId}/tribute`, {
       method: 'POST',
