@@ -217,18 +217,54 @@
     .mock-topscrim { top: 0; height: 22%; background: linear-gradient(to bottom, rgba(0, 0, 0, 0.45), transparent); }
     .mock-bottomscrim { bottom: 0; height: 34%; background: linear-gradient(to top, rgba(16, 14, 12, 0.85), transparent); }
 
-    .mock-counter {
+    /* Real app header row (app/app.tsx): logo+wordmark left, counter center,
+       grid-view toggle + hamburger right. The phone-mock can render as small
+       as ~96px wide (see .phone-mock's vh cap), where fitting all three
+       groups at readable size is already tight -- flex + min-width:0 (not
+       CSS grid's 1fr, which refuses to shrink below content's min-content
+       width and threw the counter off-center at small sizes) plus small
+       type keeps it fitting instead of overflowing. */
+    .mock-header {
       position: absolute;
       top: 6%;
-      left: 0;
-      right: 0;
-      text-align: center;
-      font-family: 'Courier New', monospace;
-      font-size: 9px;
-      letter-spacing: 0.5px;
-      color: rgba(255, 255, 255, 0.75);
+      left: 8%;
+      right: 8%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
     }
-    .mock-counter-sep { opacity: 0.5; margin: 0 3px; }
+    .mock-brand {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      min-width: 0;
+      overflow: hidden;
+    }
+    .mock-brand img { width: 8px; height: 8px; object-fit: contain; flex-shrink: 0; }
+    .mock-brand-text {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-weight: 600;
+      font-size: 8px;
+      color: var(--primary);
+      white-space: nowrap;
+    }
+    .mock-counter {
+      font-family: 'Courier New', monospace;
+      font-size: 8px;
+      letter-spacing: 0.3px;
+      color: rgba(255, 255, 255, 0.75);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .mock-counter-sep { opacity: 0.5; margin: 0 2px; }
+    .mock-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+    .mock-header-actions svg { display: block; }
 
     .mock-burst {
       position: absolute;
@@ -268,6 +304,25 @@
       justify-content: space-between;
       padding: 0 10%;
     }
+
+    /* Prev/next nav chevrons, centered between the comment and heart
+       buttons -- matches the real app's controlsRow nav group. */
+    .mock-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .mock-nav-btn {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.16);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .mock-nav-btn svg { width: 8px; height: 8px; }
 
     .mock-comment-btn, .mock-heart-btn {
       position: relative;
@@ -1329,7 +1384,17 @@
             <img src="/mock-photo-web.jpg" class="mock-photo" alt="" />
             <div class="mock-topscrim"></div>
             <div class="mock-bottomscrim"></div>
-            <div class="mock-counter"><span>01</span><span class="mock-counter-sep">/</span><span>06</span></div>
+            <div class="mock-header">
+              <div class="mock-brand">
+                <img src="/logo-mark-gold.png" alt="" />
+                <span class="mock-brand-text">Everlit</span>
+              </div>
+              <div class="mock-counter"><span>01</span><span class="mock-counter-sep">/</span><span>06</span></div>
+              <div class="mock-header-actions">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2.4"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2.4" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+              </div>
+            </div>
             <div class="mock-burst">♥</div>
             <div class="mock-comment-bubble">
               <span class="mock-bubble-author">Mom</span>
@@ -1339,6 +1404,10 @@
               <div class="mock-comment-btn">
                 <svg viewBox="0 0 30 26" width="18" height="16"><rect x="3" y="3" width="24" height="15" rx="7.5" stroke="currentColor" stroke-width="2.2" fill="none"/><path d="M9 18 L7 24 L14 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
                 <span class="mock-comment-count">1</span>
+              </div>
+              <div class="mock-nav">
+                <div class="mock-nav-btn"><svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></svg></div>
+                <div class="mock-nav-btn"><svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
               </div>
               <div class="mock-heart-btn">
                 <span class="mock-heart-outline">♡</span>
