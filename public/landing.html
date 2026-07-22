@@ -754,8 +754,14 @@
     .mock-create-screen {
       position: absolute;
       inset: 0;
+      /* Radial glow toned down (was 0.22): concentrated right at this card's
+         bottom edge (at 50% 110%, just below the box), it made the flat
+         panel below it look lighter by contrast, while cards 2-4's plain
+         scrim has no equivalent glow at their seam -- same textzone
+         background color, different perceived tint. Card 1 was the outlier
+         (identical elsewhere), so it's the one that moved. */
       background:
-        radial-gradient(120% 90% at 50% 110%, rgba(196, 154, 108, 0.22), transparent 60%),
+        radial-gradient(120% 90% at 50% 110%, rgba(196, 154, 108, 0.09), transparent 60%),
         linear-gradient(to bottom, rgb(25, 20, 19), rgb(20, 16, 14));
       display: flex;
       align-items: center;
@@ -802,7 +808,7 @@
       position: absolute;
       left: 8%;
       right: 8%;
-      top: 30%;
+      top: 46%;
       display: flex;
       align-items: center;
       gap: 12px;
@@ -828,7 +834,7 @@
     .invfx-tap-ripple {
       position: absolute;
       left: 8%;
-      top: 30%;
+      top: 46%;
       width: 58px;
       height: 58px;
       border-radius: 14px;
@@ -840,7 +846,7 @@
       position: absolute;
       left: 8%;
       right: 8%;
-      top: 28%;
+      top: 43%;
       opacity: 0;
       transform: translateY(6px);
       animation: invWaFade 14s -4s infinite;
