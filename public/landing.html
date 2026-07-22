@@ -735,14 +735,6 @@
       object-fit: cover;
     }
 
-    .feature-card-video .card-title-overlay {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      padding: 24px;
-    }
-
     /* "Create a memorial" card: the app's create screen, alive. One 9s CSS
        loop — caret blinks, the name types in, Begin presses, a warm glow
        answers, everything softly resets. */
@@ -788,7 +780,7 @@
          of the page uses. */
       background: rgba(16, 14, 12, 0.82);
     }
-    .card-icon, .card-header, .card-body { position: relative; z-index: 1; }
+    .card-header, .card-textzone { position: relative; z-index: 1; }
 
     /* Card 2 — invite: the REAL flow, literally — tap the app's own "Invite
        family" menu card, WhatsApp opens with the real autofilled message
@@ -1124,27 +1116,46 @@
       .filmfx-progress { width: 40%; }
     }
 
-    .feature-card-content {
+    /* Every card (incl. card 1) is now two zones: an image/animation pane on
+       top, a solid-dark text pane below with the title + checklist. Was: the
+       checklist sat at the bottom of a full-bleed background (inset:0),
+       overlapping the imagery and hurting legibility. */
+    .feature-card-content,
+    .feature-card-video {
       background: var(--card-bg);
-      padding: 24px;
       display: flex;
       flex-direction: column;
       height: 100%;
     }
 
+    .card-media {
+      position: relative;
+      height: 56%;
+      /* Floor for breakpoints where the grid/card has no definite height
+         (percentage height then can't resolve and collapses to 0, since the
+         only children are position:absolute and contribute nothing to an
+         auto height) -- see the 1024px/768px media queries below. */
+      min-height: 200px;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
     .card-icon {
-      width: 48px;
-      height: 48px;
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 1;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
-      background: rgba(196, 154, 108, 0.12);
+      background: rgba(196, 154, 108, 0.16);
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 24px;
     }
     .card-icon svg {
-      width: 22px;
-      height: 22px;
+      width: 19px;
+      height: 19px;
       stroke: var(--accent);
       fill: none;
       stroke-width: 1.6;
@@ -1156,7 +1167,7 @@
       display: flex;
       align-items: baseline;
       justify-content: space-between;
-      margin-bottom: 24px;
+      margin-bottom: 14px;
     }
 
     .card-header h3 {
@@ -1170,15 +1181,17 @@
       font-size: 14px;
     }
 
-    .card-body {
+    .card-textzone {
       flex: 1;
+      background: var(--card-bg);
+      padding: 22px 24px 24px;
       display: flex;
       flex-direction: column;
-      justify-content: flex-end;
+      justify-content: flex-start;
     }
 
     .card-list {
-      margin-bottom: 32px;
+      margin-bottom: 0;
     }
 
     .card-list-item {
@@ -1489,54 +1502,75 @@
              in, Begin presses) — shows the actual step 1 instead of a stock
              loop, same live-mockup language as the hero phone. -->
         <div class="feature-card feature-card-video mock-create-card">
-          <div class="mock-create-screen" aria-hidden="true">
-            <div class="mc-inner">
-              <div class="mc-overline">Everlit · Memorial Films</div>
-              <div class="mc-title">We&rsquo;re sorry for your&nbsp;loss.</div>
-              <div class="mc-streak"></div>
-              <div class="mc-input">
-                <span class="mc-typed">Margaret</span><span class="mc-caret"></span>
+          <div class="card-media">
+            <div class="mock-create-screen" aria-hidden="true">
+              <div class="mc-inner">
+                <div class="mc-overline">Everlit · Memorial Films</div>
+                <div class="mc-title">We&rsquo;re sorry for your&nbsp;loss.</div>
+                <div class="mc-streak"></div>
+                <div class="mc-input">
+                  <span class="mc-typed">Margaret</span><span class="mc-caret"></span>
+                </div>
+                <div class="mc-btn"><span>Begin</span></div>
               </div>
-              <div class="mc-btn"><span>Begin</span></div>
             </div>
+            <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div>
           </div>
-          <div class="card-title-overlay">
-            <h3 style="font-size:20px;font-weight:500;color:var(--primary);">Create a memorial.</h3>
+          <div class="card-textzone">
+            <div class="card-header">
+              <h3>Create a memorial.</h3>
+            </div>
+            <div class="card-list">
+              <div class="card-list-item">
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                <p>Just a name to start</p>
+              </div>
+              <div class="card-list-item">
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                <p>No signup required</p>
+              </div>
+              <div class="card-list-item">
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                <p>Ready to invite family in seconds</p>
+              </div>
+            </div>
           </div>
         </div>
 
         <!-- Card 2 -->
         <div class="feature-card feature-card-content">
-          <div class="card-bgfx" aria-hidden="true">
-            <!-- Beat 1: the real "Invite family" menu card gets tapped
-                 (matches MenuOverlay's ActionCard exactly: same icon,
-                 title, subtitle). -->
-            <div class="invfx-menucard">
-              <div class="invfx-menu-icon">
-                <svg width="18" height="18" viewBox="0 0 28 28"><path d="M7 6 h14 a2.5 2.5 0 0 1 2.5 2.5 v8 a2.5 2.5 0 0 1 -2.5 2.5 h-9.5 l-5 4.5 v-4.5 h0.5 a2.5 2.5 0 0 1 -2.5 -2.5 v-8 A2.5 2.5 0 0 1 7 6 Z" stroke="#25D366" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+          <div class="card-media">
+            <div class="card-bgfx" aria-hidden="true">
+              <!-- Beat 1: the real "Invite family" menu card gets tapped
+                   (matches MenuOverlay's ActionCard exactly: same icon,
+                   title, subtitle). -->
+              <div class="invfx-menucard">
+                <div class="invfx-menu-icon">
+                  <svg width="18" height="18" viewBox="0 0 28 28"><path d="M7 6 h14 a2.5 2.5 0 0 1 2.5 2.5 v8 a2.5 2.5 0 0 1 -2.5 2.5 h-9.5 l-5 4.5 v-4.5 h0.5 a2.5 2.5 0 0 1 -2.5 -2.5 v-8 A2.5 2.5 0 0 1 7 6 Z" stroke="#25D366" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+                </div>
+                <div class="invfx-menu-text">
+                  <span class="invfx-menu-title">Invite family</span>
+                  <span class="invfx-menu-sub">Opens WhatsApp with a message ready to send</span>
+                </div>
               </div>
-              <div class="invfx-menu-text">
-                <span class="invfx-menu-title">Invite family</span>
-                <span class="invfx-menu-sub">Opens WhatsApp with a message ready to send</span>
+              <div class="invfx-tap-ripple"></div>
+              <!-- Beat 2+3: WhatsApp opens with the real autofilled message,
+                   send is tapped, read ticks answer. -->
+              <div class="invfx-wa">
+                <div class="invfx-wa-bubble">
+                  <div class="invfx-wa-text">We&rsquo;re gathering photos and memories to honour Margaret. Add yours here:</div>
+                  <div class="invfx-wa-link">everlit.co.za/join/Ab3xY9</div>
+                  <div class="invfx-wa-ticks">&#10003;&#10003;</div>
+                </div>
+                <div class="invfx-wa-send">
+                  <svg width="14" height="14" viewBox="0 0 24 24"><path d="M3 20 L21 12 L3 4 L3 10 L15 12 L3 14 Z" fill="#1A1613"/></svg>
+                </div>
               </div>
+              <div class="card-bgfx-scrim"></div>
             </div>
-            <div class="invfx-tap-ripple"></div>
-            <!-- Beat 2+3: WhatsApp opens with the real autofilled message,
-                 send is tapped, read ticks answer. -->
-            <div class="invfx-wa">
-              <div class="invfx-wa-bubble">
-                <div class="invfx-wa-text">We&rsquo;re gathering photos and memories to honour Margaret. Add yours here:</div>
-                <div class="invfx-wa-link">everlit.co.za/join/Ab3xY9</div>
-                <div class="invfx-wa-ticks">&#10003;&#10003;</div>
-              </div>
-              <div class="invfx-wa-send">
-                <svg width="14" height="14" viewBox="0 0 24 24"><path d="M3 20 L21 12 L3 4 L3 10 L15 12 L3 14 Z" fill="#1A1613"/></svg>
-              </div>
-            </div>
-            <div class="card-bgfx-scrim"></div>
+            <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5Z"/></svg></div>
           </div>
-          <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5Z"/></svg></div>
-          <div class="card-body">
+          <div class="card-textzone">
             <div class="card-header">
               <h3>Invite the family.</h3>
             </div>
@@ -1559,18 +1593,20 @@
 
         <!-- Card 3 -->
         <div class="feature-card feature-card-content">
-          <div class="card-bgfx" aria-hidden="true">
-            <div class="partfx-photo-a"></div>
-            <div class="partfx-photo-b"></div>
-            <div class="partfx-burst">♥</div>
-            <div class="partfx-bubble">
-              <span class="fx-author">Mom</span>
-              <span class="fx-text">That golden hour again 💛</span>
+          <div class="card-media">
+            <div class="card-bgfx" aria-hidden="true">
+              <div class="partfx-photo-a"></div>
+              <div class="partfx-photo-b"></div>
+              <div class="partfx-burst">♥</div>
+              <div class="partfx-bubble">
+                <span class="fx-author">Mom</span>
+                <span class="fx-text">That golden hour again 💛</span>
+              </div>
+              <div class="card-bgfx-scrim"></div>
             </div>
-            <div class="card-bgfx-scrim"></div>
+            <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 20.6s-7.4-4.6-9.7-9.1C.8 8.1 2.2 4.5 5.6 3.6a5 5 0 0 1 6.4 2.4 5 5 0 0 1 6.4-2.4c3.4.9 4.8 4.5 3.3 7.9-2.3 4.5-9.7 9.1-9.7 9.1Z"/></svg></div>
           </div>
-          <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 20.6s-7.4-4.6-9.7-9.1C.8 8.1 2.2 4.5 5.6 3.6a5 5 0 0 1 6.4 2.4 5 5 0 0 1 6.4-2.4c3.4.9 4.8 4.5 3.3 7.9-2.3 4.5-9.7 9.1-9.7 9.1Z"/></svg></div>
-          <div class="card-body">
+          <div class="card-textzone">
             <div class="card-header">
               <h3>Everyone adds their part.</h3>
             </div>
@@ -1593,16 +1629,18 @@
 
         <!-- Card 4 -->
         <div class="feature-card feature-card-content">
-          <div class="card-bgfx" aria-hidden="true">
-            <div class="filmfx-photo"></div>
-            <div class="filmfx-player">
-              <div class="filmfx-play"></div>
-              <div class="filmfx-track"><div class="filmfx-progress"></div></div>
+          <div class="card-media">
+            <div class="card-bgfx" aria-hidden="true">
+              <div class="filmfx-photo"></div>
+              <div class="filmfx-player">
+                <div class="filmfx-play"></div>
+                <div class="filmfx-track"><div class="filmfx-progress"></div></div>
+              </div>
+              <div class="card-bgfx-scrim"></div>
             </div>
-            <div class="card-bgfx-scrim"></div>
+            <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v13m0 0-4-4m4 4 4-4M5 21h14"/></svg></div>
           </div>
-          <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v13m0 0-4-4m4 4 4-4M5 21h14"/></svg></div>
-          <div class="card-body">
+          <div class="card-textzone">
             <div class="card-header">
               <h3>Receive the film.</h3>
             </div>
