@@ -1129,15 +1129,17 @@ function PhotoSlide({ photo, index, scrollX, width, height, raterName, onToggleF
     transform: [{ scale: 1.02 + bgBreath.value * 0.045 }],
   }));
 
-  // Crossfade + parallax between pages: the page slides at scroll speed, its
-  // content drifts at ~65% and fades toward the edges — memory-page turning,
-  // not a slideshow shove.
+  // Crossfade between pages. Opacity ONLY, deliberately no translateX
+  // parallax: the translate version desynced from layout on window resizes
+  // (slides rendered permanently shifted — the "ghost screen" bug) and was
+  // patched once already. Opacity has no geometry, so that whole failure
+  // class is structurally impossible now; at swipe speed the fade carries
+  // the page-turn feel on its own.
   const pageStyle = useAnimatedStyle(() => {
     if (reduceMotion) return { opacity: 1 };
     const p = (scrollX.value - index * width) / width;
     return {
-      opacity: interpolate(p, [-1, -0.4, 0, 0.4, 1], [0.2, 1, 1, 1, 0.2]),
-      transform: [{ translateX: p * width * 0.35 }],
+      opacity: interpolate(p, [-1, -0.4, 0, 0.4, 1], [0.25, 1, 1, 1, 0.25]),
     };
   });
 

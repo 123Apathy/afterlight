@@ -578,8 +578,8 @@
     }
 
     .about-body .char {
-      opacity: 0.2;
-      transition: opacity 0.1s;
+      opacity: 0.3;
+      transition: opacity 0.18s;
     }
 
     .about-body .char.lit {
@@ -701,8 +701,66 @@
       gap: 14px;
       width: 100%;
       padding: 0 12%;
-      animation: mcLoopFade 9s infinite;
+      animation: mcSceneCreate 16s infinite;
     }
+
+    /* Scene 2+3: after "Begin", the mini-screen becomes the app — a photo
+       arrives, a heart lands, then a comment. The card tells the whole
+       product story in one 16s loop, not just step one. */
+    .mc-scene-app {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      animation: mcSceneApp 16s infinite;
+    }
+    .mc-app-photo {
+      position: absolute;
+      inset: 0;
+      background: url('/mock-photo-web.jpg') center 30% / cover no-repeat;
+      animation: mcAppKenburns 16s infinite;
+    }
+    .mc-app-scrim {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      height: 45%;
+      background: linear-gradient(to top, rgba(16, 14, 12, 0.85), transparent);
+    }
+    .mc-app-burst {
+      position: absolute;
+      top: 40%;
+      left: 50%;
+      font-size: 64px;
+      color: #E8536B;
+      transform: translate(-50%, -50%) scale(0.5);
+      opacity: 0;
+      animation: mcAppBurst 16s infinite;
+      text-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    }
+    .mc-app-heartrow {
+      position: absolute;
+      right: 10%;
+      bottom: 8%;
+      font-family: 'Poppins', sans-serif;
+      font-size: 13px;
+      color: #E8536B;
+      opacity: 0;
+      animation: mcAppCount 16s infinite;
+    }
+    .mc-app-bubble {
+      position: absolute;
+      left: 8%;
+      right: 26%;
+      bottom: 8%;
+      background: rgba(26, 22, 19, 0.92);
+      border: 1px solid rgba(196, 154, 108, 0.3);
+      border-radius: 10px;
+      padding: 6px 10px;
+      opacity: 0;
+      transform: translateY(8px);
+      animation: mcAppBubble 16s infinite;
+    }
+    .mc-app-bubble .mc-b-author { display: block; font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 9px; color: #C49A6C; }
+    .mc-app-bubble .mc-b-text { display: block; font-family: 'Poppins', sans-serif; font-size: 10px; color: rgba(255, 255, 255, 0.9); margin-top: 1px; }
     .mc-overline {
       font-family: 'Poppins', sans-serif;
       font-size: 9px;
@@ -741,14 +799,14 @@
       overflow: hidden;
       white-space: nowrap;
       max-width: 0;
-      animation: mcType 9s steps(8, end) infinite;
+      animation: mcType 16s steps(8, end) infinite;
     }
     .mc-caret {
       width: 1.5px;
       height: 18px;
       margin-left: 2px;
       background: var(--accent);
-      animation: mcCaret 9s infinite;
+      animation: mcCaret 16s infinite;
     }
     .mc-btn {
       position: relative;
@@ -765,7 +823,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      animation: mcPress 9s infinite;
+      animation: mcPress 16s infinite;
     }
     .mc-btn::after {
       content: '';
@@ -774,40 +832,71 @@
       border-radius: 20px;
       background: radial-gradient(circle, rgba(212, 169, 118, 0.45), transparent 70%);
       opacity: 0;
-      animation: mcGlow 9s infinite;
+      animation: mcGlow 16s infinite;
       pointer-events: none;
     }
 
-    @keyframes mcLoopFade {
+    /* One 16s timeline, three scenes:
+       0–38%   create (type "Margaret", Begin presses, glow answers)
+       42–66%  the app: photo arrives, heart bursts, count lands
+       66–92%  the comment moment
+       92–100% everything breathes out, loop restarts */
+    @keyframes mcSceneCreate {
       0% { opacity: 0; transform: translateY(6px); }
-      4%, 92% { opacity: 1; transform: translateY(0); }
-      98%, 100% { opacity: 0; transform: translateY(-4px); }
+      3%, 36% { opacity: 1; transform: translateY(0); }
+      41%, 100% { opacity: 0; transform: translateY(-4px); }
     }
     /* 8 characters of "Margaret" — 8ch lands close enough in Poppins. */
     @keyframes mcType {
-      0%, 18% { max-width: 0; }
-      40%, 100% { max-width: 8ch; }
+      0%, 8% { max-width: 0; }
+      21%, 100% { max-width: 8ch; }
     }
     @keyframes mcCaret {
-      0%, 4%, 8%, 12%, 16%, 20%, 24%, 28%, 32%, 36%, 40%, 44%, 48% { opacity: 1; }
-      2%, 6%, 10%, 14%, 18%, 22%, 26%, 30%, 34%, 38%, 42%, 46% { opacity: 0.15; }
-      52%, 100% { opacity: 0; }
+      0%, 2%, 5%, 8%, 11%, 14%, 17%, 20%, 23% { opacity: 1; }
+      3.5%, 6.5%, 9.5%, 12.5%, 15.5%, 18.5%, 21.5% { opacity: 0.15; }
+      26%, 100% { opacity: 0; }
     }
     @keyframes mcPress {
-      0%, 50% { transform: scale(1); }
-      53% { transform: scale(0.95); }
-      57%, 100% { transform: scale(1); }
+      0%, 27% { transform: scale(1); }
+      29% { transform: scale(0.95); }
+      31%, 100% { transform: scale(1); }
     }
     @keyframes mcGlow {
-      0%, 52% { opacity: 0; }
-      58% { opacity: 1; }
-      76%, 100% { opacity: 0; }
+      0%, 28% { opacity: 0; }
+      32% { opacity: 1; }
+      40%, 100% { opacity: 0; }
+    }
+    @keyframes mcSceneApp {
+      0%, 41% { opacity: 0; }
+      46%, 90% { opacity: 1; }
+      95%, 100% { opacity: 0; }
+    }
+    @keyframes mcAppKenburns {
+      0%, 41% { transform: scale(1.08); }
+      95%, 100% { transform: scale(1); }
+    }
+    @keyframes mcAppBurst {
+      0%, 50% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+      53% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+      60%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.3); }
+    }
+    @keyframes mcAppCount {
+      0%, 53% { opacity: 0; }
+      57%, 90% { opacity: 1; }
+      94%, 100% { opacity: 0; }
+    }
+    @keyframes mcAppBubble {
+      0%, 66% { opacity: 0; transform: translateY(8px); }
+      70%, 90% { opacity: 1; transform: translateY(0); }
+      94%, 100% { opacity: 0; transform: translateY(8px); }
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .mc-inner, .mc-typed, .mc-caret, .mc-btn, .mc-btn::after { animation: none !important; }
+      .mc-inner, .mc-typed, .mc-caret, .mc-btn, .mc-btn::after,
+      .mc-scene-app, .mc-app-photo, .mc-app-burst, .mc-app-heartrow, .mc-app-bubble { animation: none !important; }
       .mc-typed { max-width: 8ch; }
       .mc-caret { opacity: 0; }
+      .mc-scene-app { opacity: 0; }
     }
 
     .feature-card-content {
@@ -1137,7 +1226,10 @@
           <span class="about-tag">Why we do this</span>
         </div>
 
-        <h2 class="about-heading" id="about-heading"><span class="word">The</span> <span class="word">best</span> <span class="word">photos</span> <span class="word">are</span> <span class="word italic-text">never</span> <span class="word italic-text">in</span> <span class="word italic-text">one</span> <span class="word italic-text">place.</span></h2>
+        <!-- The gold italic phrase wraps as ONE unit (nowrap) so the line
+             break can never split it mid-phrase ("never / in one place"
+             was landing wherever the width happened to run out). -->
+        <h2 class="about-heading" id="about-heading"><span class="word">The</span> <span class="word">best</span> <span class="word">photos</span> <span class="word">are</span> <span style="white-space:nowrap"><span class="word italic-text">never</span> <span class="word italic-text">in</span> <span class="word italic-text">one</span> <span class="word italic-text">place.</span></span></h2>
 
         <div class="about-body" id="about-body">When someone we love passes, grief scatters the family, and the memories scatter with it, spread across a hundred phones. Everlit gathers both into one gentle place, so nothing is lost.</div>
       </div>
@@ -1167,6 +1259,17 @@
                 <span class="mc-typed">Margaret</span><span class="mc-caret"></span>
               </div>
               <div class="mc-btn"><span>Begin</span></div>
+            </div>
+            <!-- Scenes 2+3: the app after "Begin" — photo, heart, comment. -->
+            <div class="mc-scene-app">
+              <div class="mc-app-photo"></div>
+              <div class="mc-app-scrim"></div>
+              <div class="mc-app-burst">♥</div>
+              <div class="mc-app-heartrow">♥ 3</div>
+              <div class="mc-app-bubble">
+                <span class="mc-b-author">Mom</span>
+                <span class="mc-b-text">That golden hour again 💛</span>
+              </div>
             </div>
           </div>
           <div class="card-title-overlay">
@@ -1297,18 +1400,21 @@
 
     // The heading and feature titles are real HTML text (pre-wrapped in .word
     // spans in the markup) so crawlers read them. The About body is real HTML
-    // text too -- here we only wrap its existing characters in spans for the
-    // scroll-reveal effect (progressive enhancement; the text is already in the
-    // served source, so it stays crawlable).
+    // text too -- here we only wrap its existing WORDS in spans for the
+    // scroll-reveal effect (progressive enhancement; the text is already in
+    // the served source, so it stays crawlable). Word-level, not character-
+    // level: per-character reveal lit half a word ("gri|ef") and read as a
+    // text-selection highlight, not an elegant reveal.
     (function () {
       var bodyEl = document.getElementById('about-body');
-      var text = bodyEl.textContent;
+      var words = bodyEl.textContent.split(/\s+/).filter(Boolean);
       bodyEl.textContent = '';
-      for (var i = 0; i < text.length; i++) {
+      for (var i = 0; i < words.length; i++) {
         var span = document.createElement('span');
         span.className = 'char';
-        span.textContent = text[i];
+        span.textContent = words[i];
         bodyEl.appendChild(span);
+        if (i < words.length - 1) bodyEl.appendChild(document.createTextNode(' '));
       }
     })();
 
