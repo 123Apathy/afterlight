@@ -195,7 +195,10 @@
       display: none;
       position: static;
       flex-shrink: 0;
-      width: 100px;
+      /* aspect-ratio is 9/19.5, so height ≈ width * 2.17 -- cap width by vh
+         too so short/wide viewports (browser window, not a tall phone) can't
+         grow the mock tall enough to collide with the navbar above it. */
+      width: clamp(120px, min(42vw, 22vh), 175px);
       filter: drop-shadow(0 16px 32px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 24px rgba(196, 154, 108, 0.16));
     }
 
@@ -540,6 +543,7 @@
       gap: 48px;
       padding-bottom: 16px;
       max-width: 420px;
+      min-width: 0;
     }
 
     .hero-tagline {
@@ -565,6 +569,7 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
+      max-width: 100%;
       background: var(--primary);
       border-radius: 9999px;
       border: none;
