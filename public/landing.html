@@ -793,11 +793,13 @@
     .card-bgfx-scrim {
       position: absolute;
       inset: 0;
-      /* Warm dark, matching the site's own overlay tone (same value as the
-         hero/mock bottom scrims) -- was a neutral grey (rgba(33,33,33,...)),
-         which read as a flat filter instead of the moody warm-black the rest
-         of the page uses. */
-      background: rgba(16, 14, 12, 0.82);
+      /* Same recipe as card 1's mock-create-screen (warm glow at the seam +
+         dark base), not just a similarly-dark flat fill -- so all 4 cards
+         genuinely share one treatment instead of 3 approximating the 4th.
+         Same 0.09 glow opacity as card 1's (tuned down together). */
+      background:
+        radial-gradient(120% 90% at 50% 110%, rgba(196, 154, 108, 0.09), transparent 60%),
+        rgba(16, 14, 12, 0.82);
     }
     .card-header, .card-textzone { position: relative; z-index: 1; }
 
