@@ -63,7 +63,9 @@
 
     /* Card titles all match "Create a memorial." (card 1's title, which was
        never in the Playfair list above — plain Poppins) instead of the other
-       three defaulting to the serif heading font. */
+       three defaulting to the serif heading font. Font-size is set on the
+       OTHER .card-header h3 rule further down (the original, more specific
+       in cascade order) — don't set it here too, it'll silently lose. */
     .card-header h3 {
       font-family: 'Poppins', sans-serif;
     }
@@ -725,7 +727,11 @@
     .card-bgfx-scrim {
       position: absolute;
       inset: 0;
-      background: rgba(33, 33, 33, 0.78);
+      /* Warm dark, matching the site's own overlay tone (same value as the
+         hero/mock bottom scrims) -- was a neutral grey (rgba(33,33,33,...)),
+         which read as a flat filter instead of the moody warm-black the rest
+         of the page uses. */
+      background: rgba(16, 14, 12, 0.82);
     }
     .card-icon, .card-header, .card-body { position: relative; z-index: 1; }
 
@@ -1099,7 +1105,7 @@
     }
 
     .card-header h3 {
-      font-size: 18px;
+      font-size: 20px;
       font-weight: 500;
       color: var(--primary);
     }
@@ -1461,10 +1467,10 @@
             <div class="card-bgfx-scrim"></div>
           </div>
           <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5Z"/></svg></div>
-          <div class="card-header">
-            <h3>Invite the family.</h3>
-          </div>
           <div class="card-body">
+            <div class="card-header">
+              <h3>Invite the family.</h3>
+            </div>
             <div class="card-list">
               <div class="card-list-item">
                 <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
@@ -1495,10 +1501,10 @@
             <div class="card-bgfx-scrim"></div>
           </div>
           <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 20.6s-7.4-4.6-9.7-9.1C.8 8.1 2.2 4.5 5.6 3.6a5 5 0 0 1 6.4 2.4 5 5 0 0 1 6.4-2.4c3.4.9 4.8 4.5 3.3 7.9-2.3 4.5-9.7 9.1-9.7 9.1Z"/></svg></div>
-          <div class="card-header">
-            <h3>Everyone adds their part.</h3>
-          </div>
           <div class="card-body">
+            <div class="card-header">
+              <h3>Everyone adds their part.</h3>
+            </div>
             <div class="card-list">
               <div class="card-list-item">
                 <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
@@ -1527,10 +1533,10 @@
             <div class="card-bgfx-scrim"></div>
           </div>
           <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v13m0 0-4-4m4 4 4-4M5 21h14"/></svg></div>
-          <div class="card-header">
-            <h3>Receive the film.</h3>
-          </div>
           <div class="card-body">
+            <div class="card-header">
+              <h3>Receive the film.</h3>
+            </div>
             <div class="card-list">
               <div class="card-list-item">
                 <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
