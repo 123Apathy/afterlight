@@ -157,9 +157,16 @@
     .phone-mock {
       position: absolute;
       z-index: 8;
-      top: 9%;
-      right: 9%;
-      width: clamp(150px, 15vw, 230px);
+      /* Fully fluid position + size (no breakpoint snaps): everything scales
+         continuously with viewport width so resizing never jumps. Size floors
+         low enough for phones and the offsets grow with vw so the mock drifts
+         toward the corner as the title grows underneath it. */
+      /* vh caps keep the (top-anchored) phone clear of the bottom-anchored
+         title/tagline block on short viewports — the phone is ~2.17× taller
+         than wide, so width ≤17vh + top ≤11vh keeps its bottom above ~48vh. */
+      top: min(clamp(64px, 6vw + 24px, 120px), 11vh);
+      right: clamp(16px, 7vw - 24px, 110px);
+      width: min(clamp(96px, 11vw + 60px, 230px), 17vh);
       aspect-ratio: 9 / 19.5;
       transform: rotate(-3deg);
       filter: drop-shadow(0 30px 60px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 40px rgba(196, 154, 108, 0.18));
@@ -320,14 +327,6 @@
       86%, 100% { opacity: 0; transform: translateY(8px); }
     }
 
-    @media (max-width: 768px) {
-      .phone-mock {
-        top: 13%;
-        right: 6%;
-        width: clamp(90px, 26vw, 140px);
-        transform: rotate(-2deg);
-      }
-    }
 
     @media (prefers-reduced-motion: reduce) {
       .phone-mock-screen,
@@ -681,6 +680,136 @@
       padding: 24px;
     }
 
+    /* "Create a memorial" card: the app's create screen, alive. One 9s CSS
+       loop — caret blinks, the name types in, Begin presses, a warm glow
+       answers, everything softly resets. */
+    .mock-create-screen {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(120% 90% at 50% 110%, rgba(196, 154, 108, 0.22), transparent 60%),
+        linear-gradient(to bottom, rgb(25, 20, 19), rgb(20, 16, 14));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .mc-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+      padding: 0 12%;
+      animation: mcLoopFade 9s infinite;
+    }
+    .mc-overline {
+      font-family: 'Poppins', sans-serif;
+      font-size: 9px;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .mc-title {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: clamp(18px, 1.6vw, 24px);
+      line-height: 1.15;
+      color: var(--primary);
+      text-align: center;
+    }
+    .mc-streak {
+      width: 110px;
+      height: 1.5px;
+      background: linear-gradient(to right, rgba(196, 154, 108, 0), rgba(212, 169, 118, 0.9), rgba(196, 154, 108, 0));
+    }
+    .mc-input {
+      width: 100%;
+      max-width: 240px;
+      height: 42px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.09);
+      border: 1px solid rgba(212, 169, 118, 0.25);
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 14px;
+      color: var(--primary);
+    }
+    .mc-typed {
+      display: inline-block;
+      overflow: hidden;
+      white-space: nowrap;
+      max-width: 0;
+      animation: mcType 9s steps(8, end) infinite;
+    }
+    .mc-caret {
+      width: 1.5px;
+      height: 18px;
+      margin-left: 2px;
+      background: var(--accent);
+      animation: mcCaret 9s infinite;
+    }
+    .mc-btn {
+      position: relative;
+      margin-top: 4px;
+      width: 100%;
+      max-width: 240px;
+      height: 42px;
+      border-radius: 12px;
+      background: var(--accent);
+      color: #1A1613;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 500;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: mcPress 9s infinite;
+    }
+    .mc-btn::after {
+      content: '';
+      position: absolute;
+      inset: -14px;
+      border-radius: 20px;
+      background: radial-gradient(circle, rgba(212, 169, 118, 0.45), transparent 70%);
+      opacity: 0;
+      animation: mcGlow 9s infinite;
+      pointer-events: none;
+    }
+
+    @keyframes mcLoopFade {
+      0% { opacity: 0; transform: translateY(6px); }
+      4%, 92% { opacity: 1; transform: translateY(0); }
+      98%, 100% { opacity: 0; transform: translateY(-4px); }
+    }
+    /* 8 characters of "Margaret" — 8ch lands close enough in Poppins. */
+    @keyframes mcType {
+      0%, 18% { max-width: 0; }
+      40%, 100% { max-width: 8ch; }
+    }
+    @keyframes mcCaret {
+      0%, 4%, 8%, 12%, 16%, 20%, 24%, 28%, 32%, 36%, 40%, 44%, 48% { opacity: 1; }
+      2%, 6%, 10%, 14%, 18%, 22%, 26%, 30%, 34%, 38%, 42%, 46% { opacity: 0.15; }
+      52%, 100% { opacity: 0; }
+    }
+    @keyframes mcPress {
+      0%, 50% { transform: scale(1); }
+      53% { transform: scale(0.95); }
+      57%, 100% { transform: scale(1); }
+    }
+    @keyframes mcGlow {
+      0%, 52% { opacity: 0; }
+      58% { opacity: 1; }
+      76%, 100% { opacity: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .mc-inner, .mc-typed, .mc-caret, .mc-btn, .mc-btn::after { animation: none !important; }
+      .mc-typed { max-width: 8ch; }
+      .mc-caret { opacity: 0; }
+    }
+
     .feature-card-content {
       background: var(--card-bg);
       padding: 24px;
@@ -1025,11 +1154,21 @@
       </div>
 
       <div class="features-grid" id="features-grid">
-        <!-- Card 1 - Video -->
-        <div class="feature-card feature-card-video">
-          <video autoplay loop muted playsinline poster="/hero-poster.jpg">
-            <source src="/landing-loop.mp4" type="video/mp4" />
-          </video>
+        <!-- Card 1 - Live recreation of the app's create screen (a name types
+             in, Begin presses) — shows the actual step 1 instead of a stock
+             loop, same live-mockup language as the hero phone. -->
+        <div class="feature-card feature-card-video mock-create-card">
+          <div class="mock-create-screen" aria-hidden="true">
+            <div class="mc-inner">
+              <div class="mc-overline">Everlit · Memorial Films</div>
+              <div class="mc-title">We&rsquo;re sorry for your&nbsp;loss.</div>
+              <div class="mc-streak"></div>
+              <div class="mc-input">
+                <span class="mc-typed">Margaret</span><span class="mc-caret"></span>
+              </div>
+              <div class="mc-btn"><span>Begin</span></div>
+            </div>
+          </div>
           <div class="card-title-overlay">
             <h3 style="font-size:20px;font-weight:500;color:var(--primary);">Create a memorial.</h3>
           </div>
