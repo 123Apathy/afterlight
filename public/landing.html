@@ -839,12 +839,22 @@
       94%, 100% { opacity: 0; }
     }
 
-    /* Card 3 — everyone adds their part: the photo, a heart, a memory. */
-    .partfx-photo {
+    /* Card 3 — everyone adds their part: swipe from one photo to the next,
+       then favourite it, then leave a comment. Same licensed photo, two
+       different crops (wide two-shot, then in tight on her) stand in for
+       "two photos" so the swipe has somewhere to go. */
+    .partfx-photo-a, .partfx-photo-b {
       position: absolute;
       inset: 0;
+      background-repeat: no-repeat;
+    }
+    .partfx-photo-a {
       background: url('/mock-photo-web.jpg') center 30% / cover no-repeat;
-      animation: partKenburns 16s -6s infinite;
+      animation: partPhotoA 16s -6s infinite;
+    }
+    .partfx-photo-b {
+      background: url('/mock-photo-web.jpg') 78% 12% / 240% no-repeat;
+      animation: partPhotoB 16s -6s infinite;
     }
     .partfx-burst {
       position: absolute;
@@ -871,19 +881,30 @@
     }
     .partfx-bubble .fx-author { display: block; font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 9px; color: #C49A6C; }
     .partfx-bubble .fx-text { display: block; font-family: 'Poppins', sans-serif; font-size: 10px; color: rgba(255, 255, 255, 0.9); margin-top: 1px; }
-    @keyframes partKenburns {
-      0% { transform: scale(1.1); }
-      100% { transform: scale(1); }
+    /* Photo A: in, holds, swipes out left. Photo B: waits off-right, swipes
+       in, holds (with a slow settle), fades out. Both sit at opacity 0 at
+       0%/100% so the loop wraps with nothing visible mid-transition. */
+    @keyframes partPhotoA {
+      0%, 2% { opacity: 0; transform: translateX(0) scale(1.1); }
+      6%, 24% { opacity: 1; transform: translateX(0) scale(1.1); }
+      30% { opacity: 0; transform: translateX(-16%) scale(1.1); }
+      100% { opacity: 0; transform: translateX(-16%) scale(1.1); }
+    }
+    @keyframes partPhotoB {
+      0%, 27% { opacity: 0; transform: translateX(16%) scale(1.05); }
+      33% { opacity: 1; transform: translateX(0) scale(1.05); }
+      88% { opacity: 1; transform: translateX(0) scale(1.15); }
+      94%, 100% { opacity: 0; transform: translateX(0) scale(1.15); }
     }
     @keyframes partBurst {
-      0%, 22% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
-      26% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
-      34%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.3); }
+      0%, 42% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+      46% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+      54%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.3); }
     }
     @keyframes partBubble {
-      0%, 48% { opacity: 0; transform: translateY(8px); }
-      56%, 86% { opacity: 1; transform: translateY(0); }
-      95%, 100% { opacity: 0; transform: translateY(8px); }
+      0%, 56% { opacity: 0; transform: translateY(8px); }
+      62%, 86% { opacity: 1; transform: translateY(0); }
+      92%, 100% { opacity: 0; transform: translateY(8px); }
     }
 
     /* Card 4 — receive the film: candle footage behind a slim player whose
@@ -1029,13 +1050,15 @@
     @media (prefers-reduced-motion: reduce) {
       .mc-inner, .mc-typed, .mc-caret, .mc-btn, .mc-btn::after,
       .invfx-menucard, .invfx-tap-ripple, .invfx-wa, .invfx-wa-ticks, .invfx-wa-send,
-      .partfx-photo, .partfx-burst, .partfx-bubble, .filmfx-progress { animation: none !important; }
+      .partfx-photo-a, .partfx-photo-b, .partfx-burst, .partfx-bubble, .filmfx-progress { animation: none !important; }
       .mc-typed { max-width: 8ch; }
       .mc-caret { opacity: 0; }
       .invfx-menucard { opacity: 0; }
       .invfx-tap-ripple { opacity: 0; }
       .invfx-wa { opacity: 1; transform: none; }
       .invfx-wa-ticks { opacity: 1; }
+      .partfx-photo-a { opacity: 0; }
+      .partfx-photo-b { opacity: 1; transform: none; }
       .partfx-bubble { opacity: 1; transform: none; }
       .filmfx-progress { width: 40%; }
     }
@@ -1462,7 +1485,8 @@
         <!-- Card 3 -->
         <div class="feature-card feature-card-content">
           <div class="card-bgfx" aria-hidden="true">
-            <div class="partfx-photo"></div>
+            <div class="partfx-photo-a"></div>
+            <div class="partfx-photo-b"></div>
             <div class="partfx-burst">♥</div>
             <div class="partfx-bubble">
               <span class="fx-author">Mom</span>
