@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Liquid light cursor — prototype</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0908; overflow: hidden; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  .note {
+    position: fixed; top: 24px; left: 24px; z-index: 2;
+    font-family: 'Poppins', sans-serif; color: rgba(245,240,235,0.55);
+    font-size: 13px; max-width: 380px; line-height: 1.5;
+  }
+  .note b { color: rgba(245,240,235,0.85); }
+</style>
+</head>
+<body>
+  <div class="note">
+    Prototype only — not wired into the real page.<br/>
+    Move your mouse around. Real-time WebGL fluid simulation
+    (<b>PavelDoGreat/WebGL-Fluid-Simulation</b>, MIT), retuned to a warm
+    gold/amber palette and fast dissipation instead of the stock demo's
+    rainbow paint.<br/>
+    Auto-disables under reduced-motion or on touch devices.
+  </div>
+  <canvas id="fluid-canvas"></canvas>
+  <script>
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const touch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (!reduced && !touch) {
+      const s = document.createElement('script');
+      s.src = '/vendor/fluid-sim.js';
+      document.body.appendChild(s);
+    } else {
+      document.getElementById('fluid-canvas').style.display = 'none';
+    }
+  </script>
+</body>
+</html>

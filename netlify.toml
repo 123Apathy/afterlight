@@ -31,6 +31,13 @@
   to = "/.netlify/functions/api/admin/:splat"
   status = 200
 
+# The root `/` is the static marketing/home page; the SPA app lives at /app.
+# Must come before the SPA fallback below so `/` doesn't resolve to the app.
+[[redirects]]
+  from = "/"
+  to = "/landing.html"
+  status = 200
+
 # SPA fallback: anything else that isn't a static asset resolves client-side.
 [[redirects]]
   from = "/*"

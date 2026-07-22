@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Everlit — Keep their light lit</title>
+  <meta name="description" content="Everlit gathers the photos and memories scattered across your family's phones into one gentle place, and turns them into a tribute film you'll keep forever." />
+  <link rel="canonical" href="https://everlit.co.za/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Everlit" />
+  <meta property="og:title" content="Everlit — Keep their light lit" />
+  <meta property="og:description" content="Gather the photos and memories scattered across your family's phones into one gentle place, and turn them into a tribute film you'll keep forever." />
+  <meta property="og:url" content="https://everlit.co.za/" />
+  <meta property="og:image" content="https://everlit.co.za/hero-poster.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Everlit — Keep their light lit" />
+  <meta name="twitter:description" content="Gather the photos and memories scattered across your family's phones into one gentle place, and turn them into a tribute film you'll keep forever." />
+  <meta name="twitter:image" content="https://everlit.co.za/hero-poster.jpg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    :root {
+      /* Everlit palette. Backgrounds/videos/images are intentionally left as
+         the template's originals -- only fonts and text colour are ours. */
+      --primary: #F5F0EB;
+      --primary-70: rgba(245, 240, 235, 0.7);
+      --primary-80: rgba(245, 240, 235, 0.8);
+      --accent: #C49A6C;
+      --bg: #000000;
+      --card-bg: #212121;
+      --about-bg: #101010;
+      --gray-400: rgba(255, 255, 255, 0.6);
+      --gray-500: rgba(255, 255, 255, 0.45);
+    }
+
+    body {
+      font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      background: var(--bg);
+      color: var(--primary);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Everlit display type: Playfair Display for the big/title moments,
+       Poppins stays the body/UI font everywhere else. */
+    .hero-title,
+    .about-heading,
+    .features-title,
+    .features-subtitle,
+    .card-header h3 {
+      font-family: 'Playfair Display', Georgia, serif;
+    }
+
+    /* "Back to your memorial" -- migrated into the nav pill; shown (via JS)
+       only when this device has an active memorial. Gold, so it reads as the
+       action next to the plain links. */
+    .navbar-links .nav-back a {
+      color: var(--accent);
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .navbar-links .nav-back a:hover { color: #D4A976; }
+    .navbar-links .nav-back svg {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* Noise texture */
+    .noise-overlay {
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    }
+
+    .bg-noise {
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    }
+
+    /* Hero Section */
+    .hero {
+      position: relative;
+      height: 100vh;
+      width: 100%;
+      overflow: hidden;
+      padding: 24px;
+    }
+
+    .hero-card {
+      position: relative;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      border-radius: 2rem;
+    }
+
+    .hero-video-container {
+      position: absolute;
+      inset: 0;
+    }
+
+    .hero-video-container video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .hero-noise {
+      position: absolute;
+      inset: 0;
+      opacity: 0.7;
+      mix-blend-mode: overlay;
+      pointer-events: none;
+    }
+
+    .hero-gradient {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.3), transparent, rgba(0,0,0,0.6));
+    }
+
+    .hero-fluid-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    /* Device mockup: a live CSS/JS recreation of the real swipe/heart/comment
+       interaction from app/app.tsx (blurred-photo card, heart burst on
+       favourite, comment bubble reveal) -- not a screen recording or
+       generated video. Colors match constants/theme.ts exactly: goldWarm
+       #C49A6C, heart #E8536B, comment #4FCE7E, ink #1A1613. Fully CSS-keyframe
+       driven on a single 7s loop so it never needs a video file and always
+       loops perfectly. Sits above the atmosphere/fluid-cursor layer (z-index
+       8) but below the hero text (z-index 10), so the headline always wins
+       if they ever overlap. */
+    .phone-mock {
+      position: absolute;
+      z-index: 8;
+      top: 9%;
+      right: 9%;
+      width: clamp(150px, 15vw, 230px);
+      aspect-ratio: 9 / 19.5;
+      transform: rotate(-3deg);
+      filter: drop-shadow(0 30px 60px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 40px rgba(196, 154, 108, 0.18));
+      pointer-events: none;
+    }
+
+    .phone-mock-frame {
+      width: 100%;
+      height: 100%;
+      border-radius: 13% / 6%;
+      background: #1A1613;
+      border: 3px solid rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .phone-mock-screen {
+      position: absolute;
+      inset: 3px;
+      border-radius: inherit;
+      overflow: hidden;
+      animation: mockMasterFade 7s infinite;
+    }
+
+    .mock-photo {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      animation: mockKenburns 7s infinite;
+    }
+
+    .mock-topscrim, .mock-bottomscrim {
+      position: absolute;
+      left: 0;
+      right: 0;
+      pointer-events: none;
+    }
+    .mock-topscrim { top: 0; height: 22%; background: linear-gradient(to bottom, rgba(0, 0, 0, 0.45), transparent); }
+    .mock-bottomscrim { bottom: 0; height: 34%; background: linear-gradient(to top, rgba(16, 14, 12, 0.85), transparent); }
+
+    .mock-counter {
+      position: absolute;
+      top: 6%;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-family: 'Courier New', monospace;
+      font-size: 9px;
+      letter-spacing: 0.5px;
+      color: rgba(255, 255, 255, 0.75);
+    }
+    .mock-counter-sep { opacity: 0.5; margin: 0 3px; }
+
+    .mock-burst {
+      position: absolute;
+      top: 38%;
+      left: 50%;
+      font-size: 15vw;
+      color: #E8536B;
+      transform: translate(-50%, -50%) scale(0.5);
+      opacity: 0;
+      animation: mockBurst 7s infinite;
+      text-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    }
+
+    .mock-comment-bubble {
+      position: absolute;
+      left: 8%;
+      right: 8%;
+      bottom: 20%;
+      background: rgba(26, 22, 19, 0.92);
+      border: 1px solid rgba(196, 154, 108, 0.3);
+      border-radius: 10px;
+      padding: 5px 8px;
+      opacity: 0;
+      transform: translateY(8px);
+      animation: mockBubble 7s infinite;
+    }
+    .mock-bubble-author { display: block; font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 7px; color: #C49A6C; }
+    .mock-bubble-text { display: block; font-family: 'Poppins', sans-serif; font-size: 7.5px; color: rgba(255, 255, 255, 0.9); margin-top: 1px; }
+
+    .mock-controls {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 6%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10%;
+    }
+
+    .mock-comment-btn, .mock-heart-btn {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: rgba(255, 255, 255, 0.85);
+    }
+    .mock-comment-btn svg { animation: mockCommentActive 7s infinite; }
+    .mock-comment-count { font-family: 'Poppins', sans-serif; font-size: 7px; margin-top: 2px; opacity: 0; animation: mockCommentCountShow 7s infinite; }
+
+    .mock-heart-btn { width: 16px; height: 16px; }
+    .mock-heart-outline, .mock-heart-filled {
+      font-size: 16px;
+      line-height: 1;
+      position: absolute;
+      top: 0;
+    }
+    .mock-heart-outline { animation: mockHeartOutline 7s infinite; }
+    .mock-heart-filled { color: #E8536B; animation: mockHeartFilled 7s infinite; }
+    .mock-heart-count { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); font-family: 'Poppins', sans-serif; font-size: 7px; opacity: 0; animation: mockHeartCountShow 7s infinite; white-space: nowrap; }
+
+    @keyframes mockMasterFade {
+      0%, 75% { opacity: 1; }
+      84% { opacity: 0.15; }
+      92%, 100% { opacity: 1; }
+    }
+    @keyframes mockKenburns {
+      0% { transform: scale(1); }
+      79% { transform: scale(1.05); }
+      92%, 100% { transform: scale(1); }
+    }
+    @keyframes mockBurst {
+      0%, 20% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+      23% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+      32%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.3); }
+    }
+    @keyframes mockHeartOutline {
+      0%, 20% { opacity: 1; }
+      24%, 100% { opacity: 0; }
+    }
+    @keyframes mockHeartFilled {
+      0%, 20% { opacity: 0; }
+      24%, 78% { opacity: 1; }
+      86%, 100% { opacity: 0; }
+    }
+    @keyframes mockHeartCountShow {
+      0%, 25% { opacity: 0; }
+      29%, 78% { opacity: 1; }
+      86%, 100% { opacity: 0; }
+    }
+    @keyframes mockCommentActive {
+      0%, 38% { color: rgba(255, 255, 255, 0.85); }
+      42%, 78% { color: #4FCE7E; }
+      86%, 100% { color: rgba(255, 255, 255, 0.85); }
+    }
+    @keyframes mockCommentCountShow {
+      0%, 39% { opacity: 0; }
+      42%, 78% { opacity: 1; }
+      86%, 100% { opacity: 0; }
+    }
+    @keyframes mockBubble {
+      0%, 38% { opacity: 0; transform: translateY(8px); }
+      42%, 78% { opacity: 1; transform: translateY(0); }
+      86%, 100% { opacity: 0; transform: translateY(8px); }
+    }
+
+    @media (max-width: 768px) {
+      .phone-mock {
+        top: 13%;
+        right: 6%;
+        width: clamp(90px, 26vw, 140px);
+        transform: rotate(-2deg);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .phone-mock-screen,
+      .mock-photo,
+      .mock-comment-btn svg,
+      .mock-comment-count,
+      .mock-heart-outline,
+      .mock-heart-filled,
+      .mock-heart-count,
+      .mock-comment-bubble {
+        animation: none !important;
+      }
+      .mock-heart-outline { opacity: 0 !important; }
+      .mock-heart-filled,
+      .mock-heart-count,
+      .mock-comment-count,
+      .mock-comment-bubble {
+        opacity: 1 !important;
+        transform: none !important;
+      }
+      .mock-comment-btn svg { color: #4FCE7E !important; }
+    }
+
+    /* Navbar */
+    .navbar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 20;
+      display: flex;
+      justify-content: center;
+      padding-top: 0;
+    }
+
+    .navbar-inner {
+      position: relative;
+      background: #000;
+      border-radius: 0 0 1.5rem 1.5rem;
+      padding: 8px 32px;
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .navbar-mark {
+      width: 60px;
+      height: 60px;
+      object-fit: contain;
+    }
+
+    .navbar-links {
+      display: flex;
+      align-items: center;
+      gap: 56px;
+      list-style: none;
+    }
+
+    .navbar-links a {
+      font-size: 14px;
+      color: var(--primary-80);
+      text-decoration: none;
+      transition: color 0.2s;
+      white-space: nowrap;
+    }
+
+    .navbar-links a:hover {
+      color: var(--primary);
+    }
+
+    /* Hero Content */
+    .hero-content {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      padding: 64px 32px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 24px;
+      align-items: end;
+    }
+
+    .hero-title {
+      font-size: 20vw;
+      font-weight: 500;
+      line-height: 0.85;
+      letter-spacing: -0.07em;
+      color: var(--primary);
+      display: inline-flex;
+      flex-wrap: wrap;
+    }
+
+    .hero-title .word {
+      opacity: 0;
+      transform: translateY(20px);
+      animation: pullUp 0.6s forwards;
+    }
+
+    .hero-title .asterisk {
+      position: absolute;
+      top: 0.65em;
+      right: -0.3em;
+      font-size: 0.31em;
+      color: var(--accent);
+    }
+
+    .hero-right {
+      display: flex;
+      flex-direction: column;
+      gap: 48px;
+      padding-bottom: 16px;
+    }
+
+    .hero-tagline {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 28px;
+      line-height: 1.1;
+      color: var(--primary);
+      opacity: 0;
+      transform: translateY(20px);
+      animation: pullUp 0.8s 0.4s forwards;
+    }
+
+    .hero-description {
+      color: var(--primary-70);
+      font-size: 14px;
+      line-height: 1.4;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: pullUp 0.8s 0.5s forwards;
+    }
+
+    .hero-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--primary);
+      border-radius: 9999px;
+      border: none;
+      cursor: pointer;
+      padding: 4px 4px 4px 0;
+      text-decoration: none;
+      width: fit-content;
+      transition: gap 0.3s;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: pullUp 0.8s 0.7s forwards;
+    }
+
+    .hero-btn:hover {
+      gap: 12px;
+    }
+
+    .hero-btn-text {
+      padding-left: 32px;
+      padding-right: 8px;
+      font-size: 16px;
+      color: #1A1613;
+      font-weight: 500;
+    }
+
+    .hero-btn-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      background: #000;
+      border-radius: 50%;
+      transition: transform 0.3s;
+    }
+
+    .hero-btn:hover .hero-btn-icon {
+      transform: scale(1.1);
+    }
+
+    .hero-btn-icon svg {
+      width: 20px;
+      height: 20px;
+      stroke: var(--primary);
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* About Section */
+    .about {
+      width: 100%;
+      padding: 96px 32px;
+    }
+
+    .about-inner {
+      max-width: 72rem;
+      margin: 0 auto;
+    }
+
+    .about-card {
+      background: var(--about-bg);
+      padding: 80px 64px;
+      text-align: center;
+    }
+
+    .about-tag {
+      display: inline-block;
+      padding: 6px 16px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--accent);
+      border-radius: 9999px;
+    }
+
+    .about-heading {
+      color: var(--primary);
+      font-size: clamp(2rem, 5vw, 4.5rem);
+      max-width: 48rem;
+      margin: 0 auto;
+      line-height: 0.95;
+      margin-top: 16px;
+    }
+
+    .about-heading .word {
+      display: inline-block;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    .about-heading .word.visible {
+      animation: pullUp 0.5s forwards;
+    }
+
+    .about-heading .italic-text {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-style: italic;
+      color: var(--accent);
+    }
+
+    .about-body {
+      max-width: 36rem;
+      margin: 48px auto 0;
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--primary);
+    }
+
+    .about-body .char {
+      opacity: 0.2;
+      transition: opacity 0.1s;
+    }
+
+    .about-body .char.lit {
+      opacity: 1;
+    }
+
+    /* Features Section */
+    .features {
+      min-height: 100vh;
+      padding: 96px 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .features-noise {
+      position: absolute;
+      inset: 0;
+      opacity: 0.15;
+      pointer-events: none;
+    }
+
+    .features-inner {
+      max-width: 80rem;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    .features-header {
+      margin-bottom: 64px;
+    }
+
+    .features-title {
+      font-size: clamp(1.25rem, 3vw, 2.25rem);
+      font-weight: 400;
+      line-height: 1.2;
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+
+    .features-subtitle {
+      font-size: clamp(1.25rem, 3vw, 2.25rem);
+      font-weight: 400;
+      line-height: 1.2;
+      color: var(--gray-500);
+    }
+
+    .features-title .word,
+    .features-subtitle .word {
+      display: inline-block;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    .features-title .word.visible,
+    .features-subtitle .word.visible {
+      animation: pullUp 0.4s forwards;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      height: 480px;
+    }
+
+    .feature-card {
+      overflow: hidden;
+      opacity: 0;
+      transform: scale(0.95);
+      transition: opacity 0.5s, transform 0.5s;
+      transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .feature-card.visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .feature-card-video {
+      position: relative;
+      height: 100%;
+    }
+
+    .feature-card-video video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .feature-card-video .card-title-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 24px;
+    }
+
+    .feature-card-content {
+      background: var(--card-bg);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .card-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(196, 154, 108, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+    .card-icon svg {
+      width: 22px;
+      height: 22px;
+      stroke: var(--accent);
+      fill: none;
+      stroke-width: 1.6;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .card-header h3 {
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--primary);
+    }
+
+    .card-header span {
+      color: var(--gray-500);
+      font-size: 14px;
+    }
+
+    .card-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+
+    .card-list {
+      margin-bottom: 32px;
+    }
+
+    .card-list-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .card-list-item svg {
+      width: 16px;
+      height: 16px;
+      stroke: var(--primary);
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .card-list-item p {
+      color: var(--gray-400);
+      font-size: 13px;
+    }
+
+    .card-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--primary);
+      font-size: 14px;
+      text-decoration: none;
+      border: none;
+      background: none;
+      cursor: pointer;
+      padding: 0;
+      font-family: inherit;
+      transition: gap 0.3s;
+    }
+
+    .card-link:hover {
+      gap: 12px;
+    }
+
+    .card-link svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transform: rotate(-45deg);
+    }
+
+    /* Contact section */
+    .contact-section { background: var(--about-bg); padding: 96px 32px; text-align: center; }
+    .contact-wrap { max-width: 720px; margin: 0 auto; }
+    .contact-title { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2rem, 5vw, 3.4rem); color: var(--primary); margin-top: 12px; line-height: 1; }
+    .contact-lead { margin-top: 20px; font-size: 15px; color: var(--primary-70); line-height: 1.6; }
+    .contact-row { margin-top: 44px; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: clamp(28px, 5vw, 56px); }
+    .qr-card { background: var(--primary); padding: 14px; border-radius: 16px; box-shadow: 0 16px 40px rgba(0,0,0,0.4); }
+    .qr-card img { display: block; width: 180px; height: 180px; }
+    .contact-actions { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+    .contact-wa-btn { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: #1A1613; font-weight: 500; font-size: 15px; padding: 14px 26px; border-radius: 9999px; text-decoration: none; transition: transform 0.2s; }
+    .contact-wa-btn:hover { transform: translateY(-1px); }
+    .contact-wa-btn svg { width: 18px; height: 18px; stroke: #1A1613; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .contact-number { font-size: 15px; color: var(--primary-70); letter-spacing: 0.5px; }
+    @media (max-width: 640px) { .contact-row { flex-direction: column-reverse; } .qr-card img { width: 150px; height: 150px; } }
+
+    /* Animations */
+    @keyframes pullUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+        height: auto;
+      }
+
+      .feature-card-video,
+      .feature-card-content {
+        min-height: 400px;
+      }
+
+      .hero-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-title {
+        font-size: 24vw;
+      }
+
+      .navbar-links {
+        gap: 24px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .hero {
+        padding: 16px;
+      }
+
+      .hero-card {
+        border-radius: 1rem;
+      }
+
+      .hero-content {
+        padding: 24px 16px;
+      }
+
+      .hero-title {
+        font-size: 26vw;
+      }
+
+      .hero-right {
+        gap: 32px;
+      }
+
+      .navbar-links {
+        gap: 12px;
+      }
+
+      .navbar-links a {
+        font-size: 10px;
+      }
+
+      .navbar-inner {
+        padding: 8px 16px;
+        border-radius: 0 0 1rem 1rem;
+        gap: 12px;
+      }
+
+      .navbar-mark {
+        width: 28px;
+        height: 28px;
+      }
+
+      .about-card {
+        padding: 40px 24px;
+      }
+
+      .about-heading {
+        font-size: 1.875rem;
+      }
+
+      .features {
+        padding: 64px 16px;
+      }
+
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .feature-card-video {
+        min-height: 256px;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .feature-card-content {
+        min-height: 400px;
+        border-radius: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-card">
+      <!-- Video Background -->
+      <div class="hero-video-container">
+        <video autoplay loop muted playsinline poster="/hero-poster.jpg">
+          <source src="/landing-loop.mp4" type="video/mp4" />
+        </video>
+        <div class="hero-noise noise-overlay"></div>
+      </div>
+
+      <!-- Gradient Overlay -->
+      <div class="hero-gradient"></div>
+
+      <!-- Liquid-light cursor reaction. Real-time WebGL fluid simulation
+           (PavelDoGreat/WebGL-Fluid-Simulation, MIT), retuned to a warm
+           gold palette -- see public/vendor/fluid-sim.js for the full
+           adaptation notes. Click-through (pointer-events:none) so it never
+           blocks the nav or CTA; auto-skipped on touch devices and under
+           prefers-reduced-motion. -->
+      <canvas id="fluid-canvas" class="hero-fluid-canvas"></canvas>
+
+      <!-- Device mockup: live recreation of the real app.tsx swipe/heart/
+           comment interaction (see styles above for full rationale). -->
+      <div class="phone-mock" aria-hidden="true">
+        <div class="phone-mock-frame">
+          <div class="phone-mock-screen">
+            <img src="/mock-photo-web.jpg" class="mock-photo" alt="" />
+            <div class="mock-topscrim"></div>
+            <div class="mock-bottomscrim"></div>
+            <div class="mock-counter"><span>01</span><span class="mock-counter-sep">/</span><span>06</span></div>
+            <div class="mock-burst">♥</div>
+            <div class="mock-comment-bubble">
+              <span class="mock-bubble-author">Mom</span>
+              <span class="mock-bubble-text">That golden hour again 💛</span>
+            </div>
+            <div class="mock-controls">
+              <div class="mock-comment-btn">
+                <svg viewBox="0 0 30 26" width="18" height="16"><rect x="3" y="3" width="24" height="15" rx="7.5" stroke="currentColor" stroke-width="2.2" fill="none"/><path d="M9 18 L7 24 L14 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+                <span class="mock-comment-count">1</span>
+              </div>
+              <div class="mock-heart-btn">
+                <span class="mock-heart-outline">♡</span>
+                <span class="mock-heart-filled">♥</span>
+                <span class="mock-heart-count">3</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navbar -->
+      <nav class="navbar">
+        <div class="navbar-inner">
+          <img src="/logo-mark-gold.png" alt="Everlit" class="navbar-mark" />
+          <ul class="navbar-links">
+            <li><a href="#why">Why Everlit</a></li>
+            <li><a href="#how">How it works</a></li>
+            <li><a href="#contact">Contact</a></li>
+            <li class="nav-back" id="nav-back" style="display:none"><a href="/app">Back to your memorial <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a></li>
+          </ul>
+        </div>
+      </nav>
+
+      <!-- Hero Content -->
+      <div class="hero-content">
+        <div class="hero-grid">
+          <div>
+            <h1 class="hero-title">
+              <span class="word" style="animation-delay: 0s;">Everlit<span class="asterisk">*</span></span>
+            </h1>
+          </div>
+          <div class="hero-right">
+            <p class="hero-tagline">Keep their light lit.</p>
+            <p class="hero-description">
+              We bring your family together to collect the photos and memories that matter, and turn them into a film you'll keep forever.
+            </p>
+            <a href="/app" class="hero-btn">
+              <span class="hero-btn-text">Create a memorial</span>
+              <div class="hero-btn-icon">
+                <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- About Section -->
+  <section class="about" id="why">
+    <div class="about-inner">
+      <div class="about-card">
+        <div>
+          <span class="about-tag">Why we do this</span>
+        </div>
+
+        <h2 class="about-heading" id="about-heading"><span class="word">The</span> <span class="word">best</span> <span class="word">photos</span> <span class="word">are</span> <span class="word italic-text">never</span> <span class="word italic-text">in</span> <span class="word italic-text">one</span> <span class="word italic-text">place.</span></h2>
+
+        <div class="about-body" id="about-body">When someone we love passes, grief scatters the family, and the memories scatter with it, spread across a hundred phones. Everlit gathers both into one gentle place, so nothing is lost.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features" id="how">
+    <div class="features-noise bg-noise"></div>
+    <div class="features-inner">
+      <div class="features-header">
+        <h2 class="features-title" id="features-title"><span class="word">How</span> <span class="word">Everlit</span> <span class="word">works.</span></h2>
+        <p class="features-subtitle" id="features-subtitle"><span class="word">Four</span> <span class="word">gentle</span> <span class="word">steps,</span> <span class="word">one</span> <span class="word">WhatsApp</span> <span class="word">link.</span></p>
+      </div>
+
+      <div class="features-grid" id="features-grid">
+        <!-- Card 1 - Video -->
+        <div class="feature-card feature-card-video">
+          <video autoplay loop muted playsinline poster="/hero-poster.jpg">
+            <source src="/landing-loop.mp4" type="video/mp4" />
+          </video>
+          <div class="card-title-overlay">
+            <h3 style="font-size:20px;font-weight:500;color:var(--primary);">Create a memorial.</h3>
+          </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="feature-card feature-card-content">
+          <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5Z"/></svg></div>
+          <div class="card-header">
+            <h3>Invite the family.</h3>
+          </div>
+          <div class="card-body">
+            <div class="card-list">
+              <div class="card-list-item">
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                <p>Share one WhatsApp link</p>
+              </div>
+              <div class="card-list-item">
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                <p>No app to install</p>
+              </div>
+              <div class="card-list-item">
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                <p>No account to make</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="feature-card feature-card-content">
+          <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 20.6s-7.4-4.6-9.7-9.1C.8 8.1 2.2 4.5 5.6 3.6a5 5 0 0 1 6.4 2.4 5 5 0 0 1 6.4-2.4c3.4.9 4.8 4.5 3.3 7.9-2.3 4.5-9.7 9.1-9.7 9.1Z"/></svg></div>
+          <div class="card-header">
+            <h3>Everyone adds their part.</h3>
+          </div>
+          <div class="card-body">
+            <div class="card-list">
+              <div class="card-list-item">
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                <p>Swipe through the photos</p>
+              </div>
+              <div class="card-list-item">
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                <p>Favourite the ones that matter</p>
+              </div>
+              <div class="card-list-item">
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                <p>Write a memory</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="feature-card feature-card-content">
+          <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v13m0 0-4-4m4 4 4-4M5 21h14"/></svg></div>
+          <div class="card-header">
+            <h3>Receive the film.</h3>
+          </div>
+          <div class="card-body">
+            <div class="card-list">
+              <div class="card-list-item">
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                <p>An HD tribute film for the service</p>
+              </div>
+              <div class="card-list-item">
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                <p>A private keepsake gallery</p>
+              </div>
+              <div class="card-list-item">
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                <p>Yours to keep and return to</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact + WhatsApp -->
+  <section class="contact-section" id="contact">
+    <div class="contact-wrap">
+      <span class="about-tag">Get in touch</span>
+      <h2 class="contact-title">Talk to Deon.</h2>
+      <p class="contact-lead">Have a question, or ready to begin? Message Deon directly on WhatsApp.</p>
+      <div class="contact-row">
+        <div class="qr-card">
+          <img src="/qr-whatsapp.svg" alt="QR code that opens a WhatsApp message to Everlit" width="180" height="180" />
+        </div>
+        <div class="contact-actions">
+          <a class="contact-wa-btn" href="https://wa.me/27626607269?text=Hi%20Deon%2C%20I%27d%20like%20to%20create%20a%20memorial%20with%20Everlit.%20Could%20you%20help%20me%20get%20started%3F" target="_blank" rel="noopener">
+            Message Deon on WhatsApp
+            <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </a>
+          <span class="contact-number">062 660 7269</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // Liquid-light cursor: skip entirely on touch (no cursor to react to) and
+    // under prefers-reduced-motion. The script is never even downloaded in
+    // those cases, not just hidden.
+    (function () {
+      var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var touch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      var canvas = document.getElementById('fluid-canvas');
+      if (reduced || touch) {
+        canvas.remove();
+        return;
+      }
+      var s = document.createElement('script');
+      s.src = '/vendor/fluid-sim.js';
+      document.body.appendChild(s);
+    })();
+
+    // Reveal the "back to your memorial" nav item only when this device already
+    // has an active project (same localStorage key the app uses).
+    try {
+      if (localStorage.getItem('everlit.activeProjectId')) {
+        document.getElementById('nav-back').style.display = '';
+      }
+    } catch (e) { /* private mode / storage blocked -- leave hidden */ }
+
+    // The heading and feature titles are real HTML text (pre-wrapped in .word
+    // spans in the markup) so crawlers read them. The About body is real HTML
+    // text too -- here we only wrap its existing characters in spans for the
+    // scroll-reveal effect (progressive enhancement; the text is already in the
+    // served source, so it stays crawlable).
+    (function () {
+      var bodyEl = document.getElementById('about-body');
+      var text = bodyEl.textContent;
+      bodyEl.textContent = '';
+      for (var i = 0; i < text.length; i++) {
+        var span = document.createElement('span');
+        span.className = 'char';
+        span.textContent = text[i];
+        bodyEl.appendChild(span);
+      }
+    })();
+
+    // Intersection Observer for word pull-up animations
+    function observeWords(container) {
+      const words = container.querySelectorAll('.word');
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            words.forEach((word, i) => {
+              setTimeout(() => {
+                word.classList.add('visible');
+                word.style.animationDelay = (i * 0.06) + 's';
+              }, i * 60);
+            });
+            observer.disconnect();
+          }
+        });
+      }, { threshold: 0.3 });
+
+      observer.observe(container);
+    }
+
+    observeWords(document.getElementById('about-heading'));
+    observeWords(document.getElementById('features-title'));
+    observeWords(document.getElementById('features-subtitle'));
+
+    // Scroll-based character reveal for About body
+    function updateCharReveal() {
+      const bodyEl = document.getElementById('about-body');
+      const rect = bodyEl.getBoundingClientRect();
+      const windowH = window.innerHeight;
+
+      const start = windowH * 0.8;
+      const end = windowH * 0.2;
+      const progress = Math.max(0, Math.min(1, (start - rect.top) / (start - end)));
+
+      const chars = bodyEl.querySelectorAll('.char');
+      const total = chars.length;
+
+      chars.forEach((char, i) => {
+        const charThreshold = i / total;
+        if (progress >= charThreshold) {
+          char.classList.add('lit');
+        } else {
+          char.classList.remove('lit');
+        }
+      });
+    }
+
+    // Feature cards scroll reveal
+    function updateFeatureCards() {
+      const grid = document.getElementById('features-grid');
+      const rect = grid.getBoundingClientRect();
+      const windowH = window.innerHeight;
+
+      if (rect.top < windowH - 100) {
+        const cards = grid.querySelectorAll('.feature-card');
+        cards.forEach((card, i) => {
+          setTimeout(() => {
+            card.classList.add('visible');
+          }, i * 150);
+        });
+      }
+    }
+
+    window.addEventListener('scroll', () => {
+      updateCharReveal();
+      updateFeatureCards();
+    }, { passive: true });
+
+    // Initial check
+    updateCharReveal();
+    updateFeatureCards();
+  </script>
+</body>
+</html>

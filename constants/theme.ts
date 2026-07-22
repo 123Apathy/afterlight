@@ -1,6 +1,20 @@
-// Mobile-first: on wide screens the app renders inside a centered frame of this
-// width instead of stretching across the whole window.
+// Mobile-first: the app is a portrait "device" card. APP_MAX_WIDTH is the
+// comfortable phone width it floors to on desktop; APP_STAGE_MAX caps how wide
+// it may grow so photos never get oversized.
 export const APP_MAX_WIDTH = 460;
+export const APP_STAGE_MAX = 560;
+
+// The width of the app card for a given viewport. On a phone it equals the
+// viewport width (fills the screen edge-to-edge). On a larger window it grows
+// with the viewport HEIGHT -- so it scales up as a device instead of sitting as
+// a tiny fixed column -- but never exceeds the viewport width, never grows past
+// APP_STAGE_MAX, and never shrinks below APP_MAX_WIDTH on desktop. Used by both
+// the root frame (app/_layout) and the app's internal layout (app/app) so they
+// stay in lockstep.
+export function stageWidth(viewportWidth: number, viewportHeight: number): number {
+  const grown = Math.max(APP_MAX_WIDTH, viewportHeight * 0.55);
+  return Math.min(viewportWidth, grown, APP_STAGE_MAX);
+}
 
 export const colors = {
   dark: 'rgb(25, 20, 19)',

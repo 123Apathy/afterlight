@@ -17,7 +17,7 @@ export default function JoinScreen() {
       .getProjectByInvite(code)
       .then((project) => {
         setProject(project);
-        router.replace('/');
+        router.replace('/app');
       })
       .catch(() => setError('This invite link is invalid or has expired.'));
   }, [code]);

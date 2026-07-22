@@ -933,6 +933,17 @@ function resolveDistDir() {
   return candidates.find((c) => fs.existsSync(path.join(c, 'index.html'))) || candidates[0];
 }
 const distDir = resolveDistDir();
+
+// The static marketing/home page is the front door at `/` (the SPA app lives
+// at /app). Served before express.static so its default index.html doesn't
+// win `/`. In prod, netlify.toml rewrites `/` -> `/landing.html` as a static
+// file, so this handler is the local-dev equivalent.
+app.get('/', (req, res, next) => {
+  res.sendFile(path.join(distDir, 'landing.html'), (err) => {
+    if (err) next();
+  });
+});
+
 app.use(express.static(distDir));
 
 // Invite links: inject project-specific preview meta so a shared /join/<code>
