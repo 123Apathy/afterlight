@@ -33,10 +33,18 @@
 
 # The root `/` is the static marketing/home page; the SPA app lives at /app.
 # Must come before the SPA fallback below so `/` doesn't resolve to the app.
+# force=true is required: dist/index.html (the Expo app shell) exists at this
+# exact path, and Netlify's default is "existing files win over redirects" --
+# without force, this rule silently never fires and `/` serves the bare app
+# shell instead of the landing page. Confirmed live: production's current
+# deploy (commit a4b7522, today) built and published cleanly, but everlit.co.za
+# was still serving a 1.2KB generic-titled page with none of the landing
+# content, for exactly this reason.
 [[redirects]]
   from = "/"
   to = "/landing.html"
   status = 200
+  force = true
 
 # SPA fallback: anything else that isn't a static asset resolves client-side.
 [[redirects]]
