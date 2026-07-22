@@ -675,11 +675,18 @@ function PhotoDeck({
     setIndex(clamped);
   };
 
-  // Snap to the requested photo once on mount (e.g. opened from the grid),
-  // without animating from photo 1.
+  // Snap to the current photo on mount (e.g. opened from the grid) AND on any
+  // width change. The resize case is load-bearing for the parallax styles: a
+  // resized viewport changes every slide's page offset while the ScrollView
+  // keeps its old pixel position, so scrollX - index*width goes nonzero at
+  // rest and every slide renders permanently shifted + faded ("ghost screen
+  // behind the real one"). Re-snapping both the scroll position and the
+  // tracked offset zeroes the parallax again.
   useEffect(() => {
-    scrollRef.current?.scrollTo({ x: initialIndex * width, animated: false });
-  }, []);
+    const x = indexRef.current * width;
+    scrollRef.current?.scrollTo({ x, animated: false });
+    scrollX.value = x;
+  }, [width]);
 
   // Desktop/laptop input has no native paging for a horizontal deck — a
   // vertical wheel/trackpad scroll otherwise does nothing. Translate it into
