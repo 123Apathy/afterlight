@@ -1101,32 +1101,6 @@ function PhotoSlide({ photo, index, scrollX, width, height, raterName, onToggleF
   const vignette = useSharedValue(0);
   const bgBreath = useSharedValue(0);
   const lastTap = useRef(0);
-  // Natural photo size, for the print-style frame. Until known (or if lookup
-  // fails) the slide falls back to the old full-bleed contain treatment.
-  const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    try {
-      if (photo.localSource) {
-        const src = (Image as any).resolveAssetSource?.(photo.localSource);
-        if (src && src.width && src.height) setDims({ w: src.width, h: src.height });
-      } else {
-        Image.getSize(
-          photoUrl(photo),
-          (w, h) => {
-            if (alive && w && h) setDims({ w, h });
-          },
-          () => {}
-        );
-      }
-    } catch {
-      /* fall back to contain */
-    }
-    return () => {
-      alive = false;
-    };
-  }, [photo.id]);
 
   // The blurred backdrop slowly breathes (the photo itself stays still and
   // reverent) — scene feels alive without the memory moving.
@@ -1185,17 +1159,6 @@ function PhotoSlide({ photo, index, scrollX, width, height, raterName, onToggleF
     }
   };
 
-  // Fitted print box: photo at its own ratio inside the safe area between the
-  // header and the controls row, framed like a physical print.
-  const frame = dims
-    ? (() => {
-        const availW = width - 48;
-        const availH = height - 96 - 132;
-        const scale = Math.min(availW / dims.w, availH / dims.h);
-        return { w: Math.round(dims.w * scale), h: Math.round(dims.h * scale) };
-      })()
-    : null;
-
   const source = photo.localSource ?? { uri: photoUrl(photo) };
 
   return (
@@ -1207,15 +1170,10 @@ function PhotoSlide({ photo, index, scrollX, width, height, raterName, onToggleF
         </Animated.View>
         <View style={styles.fillDim} pointerEvents="none" />
 
-        {frame ? (
-          <View style={styles.printArea} pointerEvents="none">
-            <View style={[styles.printFrame, { width: frame.w, height: frame.h }]}>
-              <Image source={source} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-            </View>
-          </View>
-        ) : (
-          <Image source={source} style={StyleSheet.absoluteFill} resizeMode="contain" />
-        )}
+        {/* The whole photo, fit to screen (no cropping / bleed) — the framed
+            "print" treatment was tried and reverted: against this near-black
+            backdrop the border read as a floating rectangle, not a print. */}
+        <Image source={source} style={StyleSheet.absoluteFill} resizeMode="contain" />
 
         <LinearGradient colors={['rgba(0,0,0,0.4)', 'transparent']} style={styles.topScrim} pointerEvents="none" />
         <LinearGradient
@@ -1343,26 +1301,6 @@ const styles = StyleSheet.create({
   loadingGlow: {
     width: 96,
     height: 96,
-  },
-  printArea: {
-    position: 'absolute',
-    top: 96,
-    bottom: 132,
-    left: 24,
-    right: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  printFrame: {
-    borderWidth: 3,
-    borderColor: 'rgba(245, 240, 235, 0.92)',
-    borderRadius: 6,
-    overflow: 'hidden',
-    backgroundColor: colors.ink,
-    shadowColor: '#000',
-    shadowOpacity: 0.55,
-    shadowRadius: 30,
-    shadowOffset: { width: 0, height: 18 },
   },
   vignettePulse: {
     position: 'absolute',
