@@ -171,10 +171,11 @@
          toward the corner as the title grows underneath it. */
       /* vh caps keep the (top-anchored) phone clear of the bottom-anchored
          title/tagline block on short viewports — the phone is ~2.17× taller
-         than wide, so width ≤17vh + top ≤11vh keeps its bottom above ~48vh. */
-      top: min(clamp(64px, 6vw + 24px, 120px), 11vh);
+         than wide, so width ≤19vh + top ≤12vh keeps its bottom clear. Stays
+         top-right on desktop (confirmed), just bigger than before. */
+      top: min(clamp(64px, 6vw + 24px, 130px), 12vh);
       right: clamp(16px, 7vw - 24px, 110px);
-      width: min(clamp(96px, 11vw + 60px, 230px), 17vh);
+      width: min(clamp(96px, 14vw + 70px, 300px), 19vh);
       aspect-ratio: 9 / 19.5;
       /* Upright, not tilted -- a rotated frame around a perfectly rectilinear
          UI (straight header row, grid-square icons, right-angle chevrons)
@@ -183,6 +184,19 @@
          device depth cue stays entirely in the drop-shadow. */
       filter: drop-shadow(0 30px 60px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 40px rgba(196, 154, 108, 0.18));
       pointer-events: none;
+    }
+
+    /* Mobile-only inline instance: sits statically next to the tagline block
+       inside .hero-top instead of floating in the corner. Hidden on desktop;
+       the corner .phone-mock--corner instance is hidden on mobile instead
+       (see the ≤768px breakpoint below). Combined-class selector so it wins
+       regardless of source order vs. the base .phone-mock rule. */
+    .phone-mock.phone-mock--inline {
+      display: none;
+      position: static;
+      flex-shrink: 0;
+      width: 100px;
+      filter: drop-shadow(0 16px 32px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 24px rgba(196, 154, 108, 0.16));
     }
 
     .phone-mock-frame {
@@ -474,6 +488,10 @@
     }
 
     /* Hero Content */
+    /* Was a 2-col grid (title | tagline), both bottom-aligned side by side.
+       Now stacked: the tagline/CTA block sits ABOVE the wordmark, which owns
+       the bottom on its own -- frees the tagline block to pair with the
+       phone mockup on mobile (see .hero-top / .phone-mock--inline). */
     .hero-content {
       position: absolute;
       bottom: 0;
@@ -481,13 +499,15 @@
       right: 0;
       z-index: 10;
       padding: 64px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
     }
 
-    .hero-grid {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
+    .hero-top {
+      display: flex;
+      align-items: center;
       gap: 24px;
-      align-items: end;
     }
 
     .hero-title {
@@ -1295,10 +1315,6 @@
         min-height: 400px;
       }
 
-      .hero-grid {
-        grid-template-columns: 1fr;
-      }
-
       .hero-title {
         font-size: 24vw;
       }
@@ -1326,7 +1342,24 @@
       }
 
       .hero-right {
-        gap: 32px;
+        gap: 20px;
+        flex: 1;
+        min-width: 0;
+      }
+
+      /* Mobile: the corner phone sits next to the tagline block instead of
+         floating alone in the top-right. Swap which instance is visible. */
+      .hero-top {
+        align-items: flex-start;
+        gap: 16px;
+      }
+
+      .phone-mock.phone-mock--corner {
+        display: none;
+      }
+
+      .phone-mock.phone-mock--inline {
+        display: block;
       }
 
       .navbar-links {
@@ -1403,7 +1436,7 @@
 
       <!-- Device mockup: live recreation of the real app.tsx swipe/heart/
            comment interaction (see styles above for full rationale). -->
-      <div class="phone-mock" aria-hidden="true">
+      <div class="phone-mock phone-mock--corner" aria-hidden="true">
         <div class="phone-mock-frame">
           <div class="phone-mock-screen">
             <img src="/mock-photo-web.jpg" class="mock-photo" alt="" />
@@ -1457,14 +1490,12 @@
         </div>
       </nav>
 
-      <!-- Hero Content -->
+      <!-- Hero Content: tagline/CTA block above the wordmark. On mobile the
+           corner phone-mock (above) hides and this inline duplicate shows
+           next to the tagline instead -- see .phone-mock--inline / the
+           ≤768px breakpoint. -->
       <div class="hero-content">
-        <div class="hero-grid">
-          <div>
-            <h1 class="hero-title">
-              <span class="word" style="animation-delay: 0s;">Everlit<span class="asterisk">*</span></span>
-            </h1>
-          </div>
+        <div class="hero-top">
           <div class="hero-right">
             <p class="hero-tagline">Keep their light lit.</p>
             <p class="hero-description">
@@ -1477,7 +1508,50 @@
               </div>
             </a>
           </div>
+          <div class="phone-mock phone-mock--inline" aria-hidden="true">
+            <div class="phone-mock-frame">
+              <div class="phone-mock-screen">
+                <img src="/mock-photo-web.jpg" class="mock-photo" alt="" />
+                <div class="mock-topscrim"></div>
+                <div class="mock-bottomscrim"></div>
+                <div class="mock-header">
+                  <div class="mock-brand">
+                    <img src="/logo-mark-gold.png" alt="" />
+                    <span class="mock-brand-text">Everlit</span>
+                  </div>
+                  <div class="mock-counter"><span>01</span><span class="mock-counter-sep">/</span><span>06</span></div>
+                  <div class="mock-header-actions">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2.4"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2.4" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+                  </div>
+                </div>
+                <div class="mock-burst">♥</div>
+                <div class="mock-comment-bubble">
+                  <span class="mock-bubble-author">Mom</span>
+                  <span class="mock-bubble-text">That golden hour again 💛</span>
+                </div>
+                <div class="mock-controls">
+                  <div class="mock-comment-btn">
+                    <svg viewBox="0 0 30 26" width="18" height="16"><rect x="3" y="3" width="24" height="15" rx="7.5" stroke="currentColor" stroke-width="2.2" fill="none"/><path d="M9 18 L7 24 L14 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+                    <span class="mock-comment-count">1</span>
+                  </div>
+                  <div class="mock-nav">
+                    <div class="mock-nav-btn"><svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></svg></div>
+                    <div class="mock-nav-btn"><svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+                  </div>
+                  <div class="mock-heart-btn">
+                    <span class="mock-heart-outline">♡</span>
+                    <span class="mock-heart-filled">♥</span>
+                    <span class="mock-heart-count">3</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
+        <h1 class="hero-title">
+          <span class="word" style="animation-delay: 0s;">Everlit<span class="asterisk">*</span></span>
+        </h1>
       </div>
     </div>
   </section>
