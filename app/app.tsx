@@ -1570,12 +1570,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 6,
+    // paddingTop removed: the flush-left brand and centred counter are
+    // absolutely positioned (they centre on the header's full box), while the
+    // right-side icons are flex children -- a top padding centred only the
+    // flex ones lower, so the three sat ~3px out of line. With no padding all
+    // three centre on the same axis; the removed 6px is folded into translateY
+    // below so the row's overall height is unchanged.
     paddingHorizontal: 19,
-    // Nudges the row up so its distance from the bar's top edge matches its
-    // distance from the bar's right edge -- purely a paint-time shift, the
-    // fade (a sibling layer) keeps its own height untouched.
-    transform: [{ translateY: -15 }],
+    transform: [{ translateY: -9 }],
   },
   headerCounter: {
     flexDirection: 'row',
@@ -1926,16 +1928,15 @@ const styles = StyleSheet.create({
   },
   counterText: {
     fontFamily: 'Courier New',
-    // Scaled up so the counter matches the ~32px header brand lockup height,
-    // per "make these elements equal height to the tallest".
-    fontSize: 22,
+    // Bumped up from 12 for older eyes, but not so large it dominates.
+    fontSize: 17,
     letterSpacing: 1,
     fontWeight: '600',
     color: 'rgba(255, 255, 255, 0.75)',
   },
   counterSeparator: {
     fontFamily: 'Courier New',
-    fontSize: 17,
+    fontSize: 13,
     letterSpacing: 1,
     color: 'rgba(255, 255, 255, 0.5)',
   },
