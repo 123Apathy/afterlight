@@ -229,6 +229,8 @@ const styles = StyleSheet.create({
     fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 20,
     color: colors.white,
+    textDecorationLine: 'underline',
+    textDecorationColor: colors.goldWarm,
   },
   close: {
     flexDirection: 'row',

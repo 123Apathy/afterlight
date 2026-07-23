@@ -458,6 +458,8 @@ const styles = StyleSheet.create({
     fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 26,
     color: colors.white,
+    textDecorationLine: 'underline',
+    textDecorationColor: colors.goldWarm,
   },
   closeButton: {
     flexDirection: 'row',
