@@ -25,6 +25,13 @@ type CoachMarkProps = {
   // points at (e.g. the grid button), not a Next button. Everything becomes
   // non-blocking so those taps reach the app, and no button is shown.
   interactive?: boolean;
+  // Rectangular highlight (rims a photo, say) instead of the round ring. Still
+  // pulses. Given in screen coordinates.
+  box?: { left: number; top: number; width: number; height: number };
+  // A copy of the target's own glyph rendered at the anchor and swelling with
+  // the pulse, so the element itself appears to breathe (e.g. the pink heart)
+  // rather than a separate ring around it.
+  pulseNode?: React.ReactNode;
   // Viewport size, for clamping the bubble on-screen.
   screenWidth: number;
   screenHeight: number;
@@ -48,6 +55,8 @@ export default function CoachMark({
   buttonLabel,
   onNext,
   interactive = false,
+  box,
+  pulseNode,
   screenWidth,
   screenHeight,
   ringSize = 66,
@@ -70,6 +79,11 @@ export default function CoachMark({
   const ringStyle = useAnimatedStyle(() => ({
     transform: [{ scale: 1 + pulse.value * 0.12 }],
     opacity: 0.5 + pulse.value * 0.5,
+  }));
+  // For a glyph copy: swell only, no opacity fade (an icon flickering in and
+  // out reads as a glitch, a gentle swell reads as "tap me").
+  const nodeStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + pulse.value * 0.18 }],
   }));
 
   if (!visible) return null;
@@ -100,27 +114,53 @@ export default function CoachMark({
         <Pressable style={styles.scrim} onPress={() => {}} />
       )}
 
-      {/* Highlight ring on the target. */}
-      <Animated.View
-        style={[
-          styles.ring,
-          {
-            width: ringSize,
-            height: ringSize,
-            borderRadius: ringSize / 2,
-            left: anchor.x - ringSize / 2,
-            top: anchor.y - ringSize / 2,
-          },
-          ringStyle,
-        ]}
-        pointerEvents="none"
-      />
+      {/* Highlight on the target, pulsing: a copy of the target's glyph
+          (pulseNode) that swells in place, else a rectangular box that rims a
+          photo, else the default round ring. */}
+      {pulseNode ? (
+        <Animated.View
+          style={[
+            styles.pulseNode,
+            { left: anchor.x - 40, top: anchor.y - 40 },
+            nodeStyle,
+          ]}
+          pointerEvents="none"
+        >
+          {pulseNode}
+        </Animated.View>
+      ) : box ? (
+        <Animated.View
+          style={[
+            styles.ring,
+            styles.ringBox,
+            { left: box.left, top: box.top, width: box.width, height: box.height },
+            ringStyle,
+          ]}
+          pointerEvents="none"
+        />
+      ) : (
+        <Animated.View
+          style={[
+            styles.ring,
+            {
+              width: ringSize,
+              height: ringSize,
+              borderRadius: ringSize / 2,
+              left: anchor.x - ringSize / 2,
+              top: anchor.y - ringSize / 2,
+            },
+            ringStyle,
+          ]}
+          pointerEvents="none"
+        />
+      )}
 
-      {/* Message bubble. */}
+      {/* Message bubble. Solid BUBBLE_BG (no glassSurface tint/border) so the
+          little pointer arrow, which is the same BUBBLE_BG, blends into the
+          edge seamlessly instead of reading as a chipped-out notch. */}
       <View
         style={[
           styles.bubble,
-          glassSurface,
           glassBlur,
           { left: bubbleLeft, width: BUBBLE_WIDTH },
           bubblePos,
@@ -163,6 +203,18 @@ const styles = StyleSheet.create({
     borderWidth: 2.5,
     borderColor: colors.goldWarm,
     backgroundColor: 'rgba(212, 169, 118, 0.12)',
+  },
+  // Rectangular variant that rims a photo (soft-cornered, not a circle).
+  ringBox: {
+    borderRadius: 10,
+  },
+  // Wrapper for a pulsing copy of the target's glyph, centred on the anchor.
+  pulseNode: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   bubble: {
     position: 'absolute',

@@ -83,7 +83,8 @@ export default function SwipeScreen() {
     | 'favourites'
     | 'comments'
     | 'details'
-    | 'arrows';
+    | 'arrows'
+    | 'arrowsPrev';
   const [tourStep, setTourStep] = useState<TourStep>(null);
   const [tourDone, setTourDone] = useLocalStorage('everlit.tour.done', false);
   // The photo index when the final 'arrows' step began, so we can tell when the
@@ -323,19 +324,28 @@ export default function SwipeScreen() {
     if (tourStep === 'gridInfo' && viewMode === 'deck') setTourStep('favourites');
   }, [tourStep, viewMode]);
   useEffect(() => {
-    if (tourStep !== 'arrows') {
-      arrowsStartIndex.current = null;
+    // 'arrows' asks them to go forward (tap next); once the index moves we go
+    // to 'arrowsPrev' which asks them to go back; the second move ends the tour.
+    if (tourStep === 'arrows') {
+      if (arrowsStartIndex.current === null) {
+        arrowsStartIndex.current = liveIndex;
+      } else if (liveIndex !== arrowsStartIndex.current) {
+        arrowsStartIndex.current = liveIndex;
+        setTourStep('arrowsPrev');
+      }
       return;
     }
-    if (arrowsStartIndex.current === null) {
-      arrowsStartIndex.current = liveIndex;
+    if (tourStep === 'arrowsPrev') {
+      if (arrowsStartIndex.current === null) {
+        arrowsStartIndex.current = liveIndex;
+      } else if (liveIndex !== arrowsStartIndex.current) {
+        arrowsStartIndex.current = null;
+        setTourDone(true);
+        setTourStep(null);
+      }
       return;
     }
-    if (liveIndex !== arrowsStartIndex.current) {
-      arrowsStartIndex.current = null;
-      setTourDone(true);
-      setTourStep(null);
-    }
+    arrowsStartIndex.current = null;
   }, [tourStep, liveIndex]);
 
   // The "read + tap Next" slides. Debounced so a stray double-tap (older users
@@ -632,9 +642,9 @@ export default function SwipeScreen() {
       <CoachMark
         visible={tourStep === 'counter'}
         text="This shows how many photos there are and which one you're on. Swipe left or right to move through them."
-        anchor={{ x: width / 2, y: 33 }}
+        anchor={{ x: width / 2, y: 31 }}
         placement="below"
-        ringSize={52}
+        ringSize={44}
         buttonLabel="Next"
         onNext={advanceTour}
         screenWidth={width}
@@ -664,9 +674,9 @@ export default function SwipeScreen() {
       <CoachMark
         visible={tourStep === 'gridInfo'}
         text="Here they all are together. Tap any photo to open it and start swiping."
-        anchor={{ x: width / 4, y: 150 }}
+        anchor={{ x: (width - 4) / 6, y: 84 + (width - 4) / 6 }}
         placement="below"
-        ringSize={96}
+        box={{ left: 0, top: 84, width: (width - 4) / 3, height: (width - 4) / 3 }}
         interactive
         screenWidth={width}
         screenHeight={height}
@@ -676,6 +686,7 @@ export default function SwipeScreen() {
         text="Tap the heart to favourite a photo you love. Your favourites help the family choose what goes into the film."
         anchor={{ x: bandLeftApp + bandApp / 2, y: height - 54 }}
         placement="above"
+        pulseNode={<Text style={styles.tourPulseHeart}>♥</Text>}
         buttonLabel="Next"
         onNext={advanceTour}
         screenWidth={width}
@@ -686,6 +697,7 @@ export default function SwipeScreen() {
         text="Leave a memory here. Comments stay with the photo for the whole family to read."
         anchor={{ x: bandLeftApp + bandApp / 6, y: height - 54 }}
         placement="above"
+        pulseNode={<CommentIcon active />}
         buttonLabel="Next"
         onNext={advanceTour}
         screenWidth={width}
@@ -696,6 +708,7 @@ export default function SwipeScreen() {
         text="Know when or where a photo was taken? Add it here. Even just the year helps us put them in order."
         anchor={{ x: bandLeftApp + (bandApp * 5) / 6, y: height - 54 }}
         placement="above"
+        pulseNode={<DetailsIcon />}
         buttonLabel="Next"
         onNext={advanceTour}
         screenWidth={width}
@@ -703,8 +716,18 @@ export default function SwipeScreen() {
       />
       <CoachMark
         visible={tourStep === 'arrows'}
-        text="Last thing: tap here to move to the next photo."
+        text="Tap here to move to the next photo."
         anchor={{ x: bandLeftApp + (bandApp * 2) / 3, y: height - 132 }}
+        placement="above"
+        ringSize={88}
+        interactive
+        screenWidth={width}
+        screenHeight={height}
+      />
+      <CoachMark
+        visible={tourStep === 'arrowsPrev'}
+        text="And tap here to go back. That's everything, enjoy remembering them together."
+        anchor={{ x: bandLeftApp + bandApp / 3, y: height - 132 }}
         placement="above"
         ringSize={88}
         interactive
@@ -2103,6 +2126,12 @@ const styles = StyleSheet.create({
   },
   // Non-blocking tour banner shown over the comment sheet (so it never blocks
   // the input) during the first-favourite comment prompt.
+  // Pink heart glyph that swells during the favourites tour step.
+  tourPulseHeart: {
+    fontSize: 42,
+    lineHeight: 46,
+    color: colors.heart,
+  },
   tourBanner: {
     position: 'absolute',
     top: 92,
