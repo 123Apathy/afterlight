@@ -23,6 +23,19 @@ $SiteId = 'ec87ba90-c5f3-44b1-9f94-e78adbc253da'  # afterlight-memorial / everli
 Write-Host ''
 Write-Host '=== Deploy Everlit (everlit.co.za) ===' -ForegroundColor Cyan
 
+# Snapshot the latest local progress FIRST. We only commit here (never git
+# push) -- the deploy below uploads via the Netlify CLI, so production goes
+# live from this commit without any branch push burning build credits.
+$pending = git status --porcelain
+if ($pending) {
+    Write-Host 'Committing latest local progress before deploy...' -ForegroundColor Gray
+    git add -A
+    git commit -q -m "Deploy snapshot $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
+    if ($LASTEXITCODE -ne 0) { Write-Host 'Commit failed. Nothing deployed.' -ForegroundColor Red; exit 1 }
+} else {
+    Write-Host 'No new local changes to commit.' -ForegroundColor Gray
+}
+
 # One-time login if needed (opens browser, waits for you to approve).
 npx netlify api getCurrentUser *> $null
 if ($LASTEXITCODE -ne 0) {
