@@ -370,6 +370,30 @@ export default function SwipeScreen() {
     setCommentPhotoId(null);
   };
 
+  // The header wordmark + flame grow and drift to centre as the deck lands on
+  // the final "thank you" slide (index === photos.length), filling the space
+  // between the header bar and the thank-you text, then shrink back into the
+  // top-left corner when you swipe back to a photo. A timing move so it reads
+  // as one smooth glide, not a snap.
+  const onEndSlide = photos.length > 0 && viewMode === 'deck' && liveIndex >= photos.length;
+  const brandGrow = useSharedValue(0);
+  useEffect(() => {
+    brandGrow.value = withTiming(onEndSlide ? 1 : 0, {
+      duration: reduceMotion ? 0 : 520,
+      easing: Easing.inOut(Easing.cubic),
+    });
+  }, [onEndSlide, reduceMotion]);
+  const brandGrowStyle = useAnimatedStyle(() => {
+    const p = brandGrow.value;
+    return {
+      transform: [
+        { translateX: p * (width / 2 - 62) },
+        { translateY: p * 150 },
+        { scale: 1 + p * 1.7 },
+      ],
+    };
+  });
+
   // Tap-to-toggle, matching how favoriting works: add the reaction
   // optimistically, or drop it if the rater already reacted with this
   // emoji. Scoped to whichever photo the comment belongs to so we don't
@@ -775,12 +799,14 @@ export default function SwipeScreen() {
               itself -- PressableScale supplies its own press-scale
               `transform`, which silently overwrites (not merges with) a
               translateX passed straight into its style prop. */}
-          <View style={[styles.centerContent, { position: 'absolute', left: 19, top: 0, bottom: 0 }]}>
+          <Animated.View
+            style={[styles.centerContent, { position: 'absolute', left: 19, top: 0, bottom: 0 }, brandGrowStyle]}
+          >
             <PressableScale onPress={goHome} scaleTo={0.96} hitSlop={8} style={styles.brand}>
               <Image source={images.logoGold} style={styles.logo} resizeMode="contain" />
               <Text style={styles.brandText}>Everlit</Text>
             </PressableScale>
-          </View>
+          </Animated.View>
           {viewMode === 'deck' && photos.length > 0 && liveIndex < photos.length && (
             <View style={[styles.headerCounter, quarterCenterStyle(width / 2)]}>
               <Text style={styles.counterText}>{String(liveIndex + 1).padStart(2, '0')}</Text>
