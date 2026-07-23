@@ -390,14 +390,27 @@ export default function SwipeScreen() {
       easing: Easing.inOut(Easing.cubic),
     });
   }, [onEndSlide, reduceMotion]);
-  const brandGrowStyle = useAnimatedStyle(() => {
+  // On the closing slide the lockup splits: the flame glides to the middle of
+  // the slide, grows a touch, and gains its double compass ring (crossfade to
+  // logoRing); the "Everlit" wordmark stays up top but slides left into the
+  // space the flame vacated and enlarges just enough to fill it. Reverses on
+  // the way back.
+  const flameFlyStyle = useAnimatedStyle(() => {
     const p = brandGrow.value;
     return {
       transform: [
-        { translateX: p * (width / 2 - 62) },
-        { translateY: p * 150 },
-        { scale: 1 + p * 1.7 },
+        { translateX: p * (width / 2 - 35) },
+        { translateY: p * (height * 0.26 - 34) },
+        { scale: 1 + p * 0.5 },
       ],
+    };
+  });
+  const flamePlainStyle = useAnimatedStyle(() => ({ opacity: 1 - brandGrow.value }));
+  const flameRingStyle = useAnimatedStyle(() => ({ opacity: brandGrow.value }));
+  const wordmarkStyle = useAnimatedStyle(() => {
+    const p = brandGrow.value;
+    return {
+      transform: [{ translateX: -p * 40 }, { scale: 1 + p * 0.12 }],
     };
   });
 
@@ -806,12 +819,26 @@ export default function SwipeScreen() {
               itself -- PressableScale supplies its own press-scale
               `transform`, which silently overwrites (not merges with) a
               translateX passed straight into its style prop. */}
+          {/* Wordmark: its own wrapper so it can slide left + grow slightly,
+              independent of the flame. Starts at x=59 (flame 32 + gap 8 + the
+              19 inset) so the resting lockup looks unchanged. */}
           <Animated.View
-            style={[styles.centerContent, { position: 'absolute', left: 19, top: 0, bottom: 0 }, brandGrowStyle]}
+            style={[styles.centerContent, { position: 'absolute', left: 59, top: 0, bottom: 0 }, wordmarkStyle]}
           >
-            <PressableScale onPress={goHome} scaleTo={0.96} hitSlop={8} style={styles.brand}>
-              <Image source={images.logoGold} style={styles.logo} resizeMode="contain" />
+            <PressableScale onPress={goHome} scaleTo={0.96} hitSlop={8}>
               <Text style={styles.brandText}>Everlit</Text>
+            </PressableScale>
+          </Animated.View>
+          {/* Flame: separate wrapper that flies to the middle of the slide and
+              crossfades to the ringed icon. Sits above the wordmark's z so the
+              ring never clips behind the text as it grows. */}
+          <Animated.View
+            style={[styles.centerContent, { position: 'absolute', left: 19, top: 0, bottom: 0, zIndex: 1 }, flameFlyStyle]}
+            pointerEvents="box-none"
+          >
+            <PressableScale onPress={goHome} scaleTo={0.96} hitSlop={8} style={styles.flameBox}>
+              <Animated.Image source={images.logoGold} style={[styles.logo, flamePlainStyle]} resizeMode="contain" />
+              <Animated.Image source={images.logoRing} style={[styles.flameRing, flameRingStyle]} resizeMode="contain" />
             </PressableScale>
           </Animated.View>
           {viewMode === 'deck' && photos.length > 0 && liveIndex < photos.length && (
@@ -1772,6 +1799,23 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 7,
+  },
+  // Holds the plain flame and the (larger) ringed icon on a shared centre so
+  // the crossfade lands the inner flame in the same spot.
+  flameBox: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // The ring icon's flame sits at ~40% of its height, so at 74px its inner
+  // flame reads about the same size as the 32px plain flame it fades over.
+  flameRing: {
+    position: 'absolute',
+    width: 74,
+    height: 74,
+    left: (32 - 74) / 2,
+    top: (32 - 74) / 2,
   },
   brandText: {
     fontFamily: 'PlayfairDisplay_600SemiBold',

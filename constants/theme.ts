@@ -39,6 +39,9 @@ export const images = {
   // -- used where the mark sits on its own rather than beside white wordmark
   // text, so it doesn't fight for attention with the gold nav arrows.
   logoGold: require('../assets/images/logo-mark-gold.png'),
+  // The flame framed by its double compass ring -- fades in over the plain
+  // flame as it settles into the middle of the closing slide.
+  logoRing: require('../assets/images/logo-ring-gold.png'),
   // Landing backdrop: golden-hour glow through cloud (Pexels #29150580,
   // free/commercial, no attribution required). The "afterglow" the name means.
   landingSky: require('../assets/images/landing-sky.jpg'),
