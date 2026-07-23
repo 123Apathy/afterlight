@@ -513,7 +513,7 @@ export default function SwipeScreen() {
               We&rsquo;re so sorry for your loss.
             </Text>
             <Text style={styles.gateSubtitle}>
-              Thank you for being here to help remember them. Add your name — it appears with the
+              Thank you for being here to help remember them. Add your name and it appears with the
               photos you favourite, so the family can see whose moments resonated most.
             </Text>
             <TextInput
