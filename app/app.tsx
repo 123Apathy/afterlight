@@ -4,6 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
+  Extrapolation,
   interpolate,
   useAnimatedStyle,
   useSharedValue,
@@ -399,10 +400,10 @@ export default function SwipeScreen() {
     const p = brandGrow.value;
     return {
       transform: [
-        { translateX: p * (width / 2 - 29) },
+        { translateX: p * (width / 2 - 40) },
         // Lands the ring centred in the gap between the header and the title.
         { translateY: p * (height * 0.214 - 33) },
-        { scale: 1 + p * 1.0 },
+        { scale: 1 + p * 0.13 },
       ],
     };
   });
@@ -412,9 +413,40 @@ export default function SwipeScreen() {
   // bitmap-scales, softening it), we crossfade. The small 24px header wordmark
   // fades out while a second copy, rendered crisply at its final size and
   // centred in the left half of the page, fades in. Both ends stay sharp.
-  const endWordSize = 30; // crisp full-size wordmark on the closing slide
-  const headerWordFade = useAnimatedStyle(() => ({ opacity: 1 - brandGrow.value }));
-  const endWordFade = useAnimatedStyle(() => ({ opacity: brandGrow.value }));
+  // One wordmark that physically slides + scales from the small top-left
+  // lockup to the big centred size (no cross-dissolve, so it reads as movement).
+  // Its base font is the big size and it is only ever scaled DOWN, so it never
+  // bitmap-softens. transformOrigin 'left center' (set in the style) pins its
+  // left edge and vertical centre while it grows.
+  const endWordSize = 36; // crisp base size
+  const WORD_SMALL = 21; // resting header size
+  const WORD_LEFT0 = 80; // resting left edge (flame 42 + gap 8 + inset 19... +11 spacing)
+  const wordScale0 = WORD_SMALL / endWordSize;
+  const wordBigWidth = (74 * endWordSize) / 24; // "Everlit" width at 36px
+  const movingWordStyle = useAnimatedStyle(() => {
+    const p = brandGrow.value;
+    const txEnd = width / 2 - WORD_LEFT0 - wordBigWidth / 2; // centre it at the end
+    return {
+      transform: [
+        { translateX: p * txEnd },
+        { scale: wordScale0 + p * (1 - wordScale0) },
+      ],
+    };
+  });
+  // Share CTA waits until the flame has left the top-left corner (and, in
+  // reverse, clears out before the flame returns).
+  const shareStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(brandGrow.value, [0.5, 0.95], [0, 1], Extrapolation.CLAMP),
+  }));
+  // Scale the 125px pill down as the page narrows so its right edge always
+  // clears the centred wordmark's left edge (width/2 - ~56.5), anchored at its
+  // left so it stays tucked in the corner.
+  const shareScale = Math.min(1, Math.max(0.55, (width / 2 - 78.5) / 125));
+  // Counter lingers a touch longer, then is gone just before the wordmark
+  // arrives; on the way back it only returns once the wordmark has fully gone.
+  const counterStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(brandGrow.value, [0.1, 0.36], [1, 0], Extrapolation.CLAMP),
+  }));
 
   // Tap-to-toggle, matching how favoriting works: add the reaction
   // optimistically, or drop it if the rater already reacted with this
@@ -822,27 +854,36 @@ export default function SwipeScreen() {
               itself -- PressableScale supplies its own press-scale
               `transform`, which silently overwrites (not merges with) a
               translateX passed straight into its style prop. */}
-          {/* Small header wordmark (starts at x=69: flame 42 + gap 8 + 19
-              inset). On the closing slide it fades out as the crisp full-size
-              copy below fades in. */}
-          <Animated.View
-            style={[styles.centerContent, { position: 'absolute', left: 47, top: 0, bottom: 0 }, headerWordFade]}
-          >
-            <PressableScale onPress={goHome} scaleTo={0.96} hitSlop={8}>
-              <Text style={styles.brandText}>Everlit</Text>
-            </PressableScale>
-          </Animated.View>
-          {/* Crisp full-size wordmark, centred in the left half of the page and
-              on the header line. Rendered at its true font size (no transform
-              scale) so it stays sharp; crossfades in on the closing slide. */}
+          {/* One wordmark: slides + scales from the small top-left lockup to the
+              big centred size. Base font is the big size, only ever scaled down,
+              so it stays crisp; transformOrigin pins the left edge + vertical
+              centre while it grows. */}
           <Animated.View
             style={[
-              { position: 'absolute', left: 0, top: 0, bottom: 0, width: width / 2, alignItems: 'center', justifyContent: 'center' },
-              endWordFade,
+              { position: 'absolute', left: WORD_LEFT0, top: 18, transformOrigin: 'left center' },
+              movingWordStyle,
             ]}
-            pointerEvents="none"
+            pointerEvents="box-none"
           >
-            <Text style={[styles.brandText, { fontSize: endWordSize }]}>Everlit</Text>
+            <PressableScale onPress={goHome} scaleTo={0.96} hitSlop={8}>
+              <Text style={[styles.brandText, { fontSize: endWordSize, lineHeight: endWordSize * 1.34 }]}>
+                Everlit
+              </Text>
+            </PressableScale>
+          </Animated.View>
+          {/* Share-with-family CTA, fading in top-left. Vertically centred on
+              the icon line; its left inset (18) equals the gap from its top rim
+              to the top edge, so the pill is symmetrically tucked in the
+              corner. */}
+          <Animated.View
+            style={[{ position: 'absolute', left: 18, top: 0, bottom: 0, justifyContent: 'center' }, shareStyle]}
+            pointerEvents={onEndSlide ? 'auto' : 'none'}
+          >
+            <View style={{ transform: [{ scale: shareScale }], transformOrigin: 'left center' }}>
+              <PressableScale onPress={() => setMenuOpen(true)} scaleTo={0.95} style={styles.shareCta}>
+                <Text style={styles.shareCtaText}>Share with family</Text>
+              </PressableScale>
+            </View>
           </Animated.View>
           {/* Flame: separate wrapper that flies to the middle of the slide and
               crossfades to the ringed icon. Sits above the wordmark's z so the
@@ -856,12 +897,20 @@ export default function SwipeScreen() {
               <Animated.Image source={images.logoRing} style={[styles.flameRing, flameRingStyle]} resizeMode="contain" />
             </PressableScale>
           </Animated.View>
-          {viewMode === 'deck' && photos.length > 0 && liveIndex < photos.length && (
-            <View style={[styles.headerCounter, quarterCenterStyle(width / 2)]}>
-              <Text style={styles.counterText}>{String(liveIndex + 1).padStart(2, '0')}</Text>
+          {viewMode === 'deck' && photos.length > 0 && (
+            // Kept mounted through the end-slide transition so it can fade
+            // (not pop) out and back. The displayed index is clamped so it never
+            // flashes "07 / 06" while fading out on the closing slide.
+            <Animated.View
+              style={[styles.headerCounter, quarterCenterStyle(width / 2), counterStyle]}
+              pointerEvents="none"
+            >
+              <Text style={styles.counterText}>
+                {String(Math.min(liveIndex, photos.length - 1) + 1).padStart(2, '0')}
+              </Text>
               <Text style={styles.counterSeparator}>/</Text>
               <Text style={styles.counterText}>{String(photos.length).padStart(2, '0')}</Text>
-            </View>
+            </Animated.View>
           )}
           <View style={[styles.headerActions, { marginLeft: 'auto' }]}>
             {photos.length > 0 && (
@@ -1391,6 +1440,8 @@ function PhotoDeck({
               hitSlop={10}
               style={[styles.navButtonBig, glassSurface, glassBlur, styles.navButtonLight, index === 0 && styles.navButtonDisabled]}
             >
+              <View style={styles.navButtonTint} pointerEvents="none" />
+              <NavButtonSheen />
               <NavChevron direction="left" />
             </PressableScale>
           </Animated.View>
@@ -1403,6 +1454,8 @@ function PhotoDeck({
               hitSlop={10}
               style={[styles.navButtonBig, glassSurface, glassBlur, styles.navButtonLight, index === lastIndex && styles.navButtonDisabled]}
             >
+              <View style={styles.navButtonTint} pointerEvents="none" />
+              <NavButtonSheen />
               <NavChevron direction="right" />
             </PressableScale>
           </Animated.View>
@@ -1416,7 +1469,9 @@ function PhotoDeck({
           {currentPhoto && (
             <View style={styles.controlColumn}>
               <Animated.View style={[styles.commentGlow, commentGlowStyle]} pointerEvents="none">
-                <RadialGlow color={colors.goldWarm} />
+                {/* Green glow, matching the comment icon's own accent, so the
+                    nudge after a like reads as "add a comment". */}
+                <RadialGlow color={colors.comment} />
               </Animated.View>
               <PressableScale
                 onPress={() => onOpenComments(currentPhoto)}
@@ -1470,7 +1525,7 @@ function PhotoDeck({
                 hitSlop={12}
               >
                 <View style={[styles.glassCircle, glassSurface, glassBlur, styles.navButtonContrast]}>
-                  <DetailsIcon />
+                  <DetailsIcon active={!!(currentPhoto.photoDate || currentPhoto.location)} />
                 </View>
               </PressableScale>
               <Text style={styles.controlLabel}>Details</Text>
@@ -1492,39 +1547,65 @@ function PhotoDeck({
 function NavChevron({ direction }: { direction: 'left' | 'right' }) {
   if (Platform.OS === 'web') {
     const mirror = direction === 'left';
+    // Bright gold with a soft dark halo so the arrow stays crisp and legible on
+    // any background (light sky or dark) without the muddy engraved look.
+    const legible = 'drop-shadow(0 1px 2px rgba(0,0,0,0.45))';
     return React.createElement(
       'svg',
       {
         width: 44,
         height: 40,
         viewBox: '0 0 28 24',
-        style: mirror ? { transform: 'scaleX(-1)' } : undefined,
+        style: { filter: legible, ...(mirror ? { transform: 'scaleX(-1)' } : {}) },
       },
       React.createElement('path', {
         d: 'M9 6 C 14 9, 19 11, 24 12 C 19 13, 14 15, 9 18',
-        stroke: colors.goldWarm,
-        strokeWidth: 2,
+        stroke: colors.gold,
+        strokeWidth: 2.4,
         strokeLinecap: 'round',
         strokeLinejoin: 'round',
         fill: 'none',
       }),
       React.createElement('path', {
         d: 'M2 9.5 L7.5 10.8',
-        stroke: colors.goldWarm,
-        strokeWidth: 1.1,
+        stroke: colors.gold,
+        strokeWidth: 1.2,
         strokeLinecap: 'round',
-        opacity: 0.45,
+        opacity: 0.5,
       }),
       React.createElement('path', {
         d: 'M2 14.5 L7.5 13.2',
-        stroke: colors.goldWarm,
-        strokeWidth: 1.1,
+        stroke: colors.gold,
+        strokeWidth: 1.2,
         strokeLinecap: 'round',
-        opacity: 0.45,
+        opacity: 0.5,
       })
     );
   }
   return <View style={[styles.chevron, direction === 'left' ? styles.chevronLeft : styles.chevronRight]} />;
+}
+
+// Radial sheen filling the nav button, brightest at the centre and fading to
+// the button's own edge fill, so the disc reads as gently domed. Web-only
+// (RN has no radial-gradient); native keeps the flat fill.
+function NavButtonSheen() {
+  if (Platform.OS !== 'web') return null;
+  return React.createElement('div', {
+    style: {
+      position: 'absolute',
+      inset: 0,
+      borderRadius: '50%',
+      // Restrained: a soft lift toward the centre (per request) plus a delicate
+      // gold ring set just inside the edge, echoing the flame emblem's compass
+      // ring. No glossy dome -- it stays in the app's warm, engraved-line
+      // language while giving the disc a defined, on-brand rim.
+      background:
+        'radial-gradient(circle at 50% 44%, rgba(255,255,255,0.26) 0%, rgba(255,255,255,0.08) 58%, rgba(255,255,255,0) 100%)',
+      boxShadow:
+        'inset 0 0 0 1px rgba(212,169,118,0.55), inset 0 0 0 4px rgba(212,169,118,0.14), inset 0 1px 1px rgba(255,255,255,0.22)',
+      pointerEvents: 'none',
+    },
+  });
 }
 
 // A true radial gradient (fades to transparent at the edges) instead of a
@@ -1598,8 +1679,8 @@ function formatPhotoDetails(photo: Photo): string | null {
 // Small info glyph for the details chip: a circle with an "i". Web-only inline
 // SVG (same escape hatch as CommentIcon/NavChevron); native falls back to a
 // bordered circle.
-function DetailsIcon() {
-  const color = 'rgba(255, 255, 255, 0.85)';
+function DetailsIcon({ active }: { active: boolean }) {
+  const color = active ? colors.detail : 'rgba(255, 255, 255, 0.85)';
   if (Platform.OS === 'web') {
     return React.createElement(
       'svg',
@@ -1609,7 +1690,7 @@ function DetailsIcon() {
       React.createElement('path', { d: 'M10 9 L10 14', stroke: color, strokeWidth: 1.5, strokeLinecap: 'round' })
     );
   }
-  return <View style={styles.detailsIconFallback} />;
+  return <View style={[styles.detailsIconFallback, active && { borderColor: colors.detail }]} />;
 }
 
 type EndOfDeckSlideProps = {
@@ -1895,26 +1976,26 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   logo: {
-    width: 20,
-    height: 20,
-    borderRadius: 5,
+    width: 42,
+    height: 42,
+    borderRadius: 9,
   },
   // Holds the plain flame and the (larger) ringed icon on a shared centre so
   // the crossfade lands the inner flame in the same spot.
   flameBox: {
-    width: 20,
-    height: 20,
+    width: 42,
+    height: 42,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // The ring icon's flame sits at ~40% of its height, so at 46px its inner
-  // flame reads about the same size as the 20px plain flame it fades over.
+  // The ring icon's flame sits at ~40% of its height, so at 97px its inner
+  // flame reads about the same size as the 42px plain flame it fades over.
   flameRing: {
     position: 'absolute',
-    width: 46,
-    height: 46,
-    left: (20 - 46) / 2,
-    top: (20 - 46) / 2,
+    width: 97,
+    height: 97,
+    left: (42 - 97) / 2,
+    top: (42 - 97) / 2,
   },
   brandText: {
     fontFamily: 'PlayfairDisplay_600SemiBold',
@@ -1926,6 +2007,23 @@ const styles = StyleSheet.create({
   // and down, never up the page.
   wordmarkOrigin: {
     transformOrigin: 'left top',
+  },
+  // Closing-slide CTA on the left, gold-tinted pill.
+  shareCta: {
+    height: 30,
+    paddingHorizontal: 12,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(212, 169, 118, 0.4)',
+    backgroundColor: 'rgba(212, 169, 118, 0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shareCtaText: {
+    fontFamily: 'Poppins_500Medium',
+    fontSize: 11,
+    letterSpacing: 0.2,
+    color: colors.goldWarm,
   },
   gate: {
     flex: 1,
@@ -2389,6 +2487,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.18)',
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.36)',
+  },
+  // Sits between the blurred glass fill and the sheen/icon (rendered first,
+  // so later siblings paint over it): a flat dark layer, no blur of its own,
+  // that just mutes whatever photo colour is shining through the frosted
+  // glass. Self-clipping (absoluteFill + its own radius) so it matches the
+  // 80px/radius-40 button exactly regardless of overflow settings, and
+  // inherits navButtonDisabled's opacity fade same as every other child.
+  navButtonTint: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 40,
+    backgroundColor: 'rgba(0, 0, 0, 0.22)',
   },
   // Details chip sits just above the controls row, left-aligned.
   detailsChipWrap: {

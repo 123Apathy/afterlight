@@ -20,6 +20,7 @@ export const colors = {
   goldDeep: '#A6794A',
   heart: '#E8536B',
   comment: '#4FCE7E',
+  detail: '#5AA9F0',
   white: '#FFFFFF',
   cream: '#F5F0EB',
   textFaint: 'rgba(255, 255, 255, 0.77)',

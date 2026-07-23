@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -152,20 +152,48 @@ export default function CoachMark({
           pointerEvents="none"
         />
       ) : (
-        <Animated.View
-          style={[
-            styles.ring,
-            {
-              width: ringSize,
-              height: ringSize,
-              borderRadius: ringSize / 2,
-              left: anchor.x - ringSize / 2,
-              top: anchor.y - ringSize / 2,
-            },
-            ringStyle,
-          ]}
-          pointerEvents="none"
-        />
+        <>
+          {/* The touch-blocking hole above is a square (it's built from four
+              rectangles), but the ring drawn on it is round, so the square's
+              corners poked out past the ring as bright, undimmed patches. This
+              re-dims exactly that leftover corner area using a circular
+              box-shadow spread -- the web/CSS way to paint "everything outside
+              a circle" -- so the visible gap matches the round ring and round
+              button underneath instead of a square. Decorative only
+              (pointerEvents none); the real hole is still the rectangles
+              above. Native falls back to the flat rectangles, unaffected. */}
+          {Platform.OS === 'web' && (
+            <View
+              pointerEvents="none"
+              style={[
+                styles.holeRounder,
+                {
+                  left: anchor.x - ringSize / 2,
+                  top: anchor.y - ringSize / 2,
+                  width: ringSize,
+                  height: ringSize,
+                  borderRadius: ringSize / 2,
+                  // @ts-expect-error web-only CSS shorthand, not in RN's style types
+                  boxShadow: `0 0 0 ${Math.max(screenWidth, screenHeight)}px rgba(10, 8, 7, 0.32)`,
+                },
+              ]}
+            />
+          )}
+          <Animated.View
+            style={[
+              styles.ring,
+              {
+                width: ringSize,
+                height: ringSize,
+                borderRadius: ringSize / 2,
+                left: anchor.x - ringSize / 2,
+                top: anchor.y - ringSize / 2,
+              },
+              ringStyle,
+            ]}
+            pointerEvents="none"
+          />
+        </>
       )}
 
       {/* Message bubble: the same card language as the Comment/Details sheets
@@ -198,6 +226,12 @@ const styles = StyleSheet.create({
   scrim: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(10, 8, 7, 0.55)',
+  },
+  // Positioned/sized per-instance; backgroundColor stays transparent so only
+  // its box-shadow (added inline, web-only) paints.
+  holeRounder: {
+    position: 'absolute',
+    backgroundColor: 'transparent',
   },
   // Lighter dim for interactive steps so the element they must tap stays clear.
   scrimLight: {
