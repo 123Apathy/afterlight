@@ -423,8 +423,12 @@ export default function SwipeScreen() {
             <StreakDivider />
           </Animated.View>
           <Animated.View style={[styles.gateSegment, enterStyleC]}>
+            <Text style={styles.gateCondolence}>
+              We&rsquo;re so sorry for your loss.
+            </Text>
             <Text style={styles.gateSubtitle}>
-              Your name will appear with your favorites so we can see whose moments resonated most.
+              Thank you for being here to help remember them. Add your name — it appears with the
+              photos you favourite, so the family can see whose moments resonated most.
             </Text>
             <TextInput
               value={nameDraft}
@@ -1532,6 +1536,14 @@ const styles = StyleSheet.create({
     color: colors.white,
     textAlign: 'center',
     marginBottom: 8,
+  },
+  gateCondolence: {
+    fontFamily: 'PlayfairDisplay_500Medium',
+    fontSize: 19,
+    lineHeight: 26,
+    color: colors.goldWarm,
+    textAlign: 'center',
+    marginBottom: 10,
   },
   gateSubtitle: {
     fontFamily: 'Poppins_400Regular',
