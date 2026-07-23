@@ -57,6 +57,11 @@ export type Photo = {
   thumbUrl?: string | null;
   originalName: string;
   createdAt: string;
+  // Family-added, both optional/free text. photoDate is intentionally a
+  // string ("1998", "June 1998", or a full date) since most people only
+  // remember the year -- still enough to sort roughly chronologically.
+  photoDate?: string | null;
+  location?: string | null;
   ratings: Rating[];
   comments: Comment[];
   avgRating: number | null;
@@ -286,6 +291,16 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ author, text }),
     }),
+
+  updatePhotoDetails: (photoId: string, details: { photoDate: string; location: string }) =>
+    request<{ id: string; photoDate: string | null; location: string | null }>(
+      `/api/photos/${photoId}/details`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(details),
+      }
+    ),
 
   toggleCommentReaction: (commentId: string, rater: string, emoji: string) =>
     request<Reaction[]>(`/api/comments/${commentId}/reactions`, {

@@ -448,6 +448,8 @@ app.get('/api/projects/:projectId/photos', async (req, res, next) => {
           thumbUrl: photo.thumb_path ? await signPhotoUrl(photo.thumb_path) : null,
           originalName: photo.original_name,
           createdAt: photo.created_at,
+          photoDate: photo.photo_date ?? null,
+          location: photo.location ?? null,
           ratings: photoRatings.map(mapRating),
           comments: photoComments.map((c) => mapComment(c, reactions.filter((r) => r.comment_id === c.id))),
           avgRating,
@@ -622,6 +624,26 @@ app.delete('/api/photos/:photoId', rateLimit(30), requireInvite(projectFromPhoto
     const { error } = await supabase.from('afterlight_photos').delete().eq('id', req.params.photoId);
     assertOk(error);
     res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Family-added photo details (when + where it was taken). Both free text and
+// optional -- either can be cleared by sending an empty string. Invite-code
+// authed like every other family write.
+app.patch('/api/photos/:photoId/details', rateLimit(30), requireInvite(projectFromPhoto), async (req, res, next) => {
+  try {
+    const photoDate = typeof req.body?.photoDate === 'string' ? req.body.photoDate.trim().slice(0, 120) : null;
+    const location = typeof req.body?.location === 'string' ? req.body.location.trim().slice(0, 200) : null;
+    const { data: row, error } = await supabase
+      .from('afterlight_photos')
+      .update({ photo_date: photoDate || null, location: location || null })
+      .eq('id', req.params.photoId)
+      .select('id, photo_date, location')
+      .single();
+    assertOk(error);
+    res.json({ id: row.id, photoDate: row.photo_date ?? null, location: row.location ?? null });
   } catch (err) {
     next(err);
   }

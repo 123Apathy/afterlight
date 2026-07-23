@@ -20,6 +20,7 @@ import HamburgerButton from '../components/HamburgerButton';
 import ViewModeButton from '../components/ViewModeButton';
 import MenuOverlay from '../components/MenuOverlay';
 import CommentSheet from '../components/CommentSheet';
+import DetailsSheet from '../components/DetailsSheet';
 import PhotoGrid from '../components/PhotoGrid';
 import PressableScale from '../components/PressableScale';
 import GoldButton from '../components/GoldButton';
@@ -58,6 +59,7 @@ export default function SwipeScreen() {
   const [loadError, setLoadError] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [commentPhotoId, setCommentPhotoId] = useState<string | null>(null);
+  const [detailsPhotoId, setDetailsPhotoId] = useState<string | null>(null);
   const [inputFocused, setInputFocused] = useState(false);
   const [viewMode, setViewMode] = useState<'deck' | 'grid'>('deck');
   const [deckIndex, setDeckIndex] = useState(0);
@@ -241,6 +243,23 @@ export default function SwipeScreen() {
     } catch {
       if (typeof window !== 'undefined') {
         window.alert("That comment didn't save — check your connection and try again.");
+      }
+      refresh();
+    }
+  };
+
+  const saveDetails = async (photo: Photo, details: { photoDate: string; location: string }) => {
+    setPhotos((prev) =>
+      prev.map((p) =>
+        p.id === photo.id ? { ...p, photoDate: details.photoDate || null, location: details.location || null } : p
+      )
+    );
+    if (DEMO) return; // in-memory only, no backend
+    try {
+      await api.updatePhotoDetails(photo.id, details);
+    } catch {
+      if (typeof window !== 'undefined') {
+        window.alert("Those details didn't save — check your connection and try again.");
       }
       refresh();
     }
@@ -456,9 +475,10 @@ export default function SwipeScreen() {
           height={height}
           raterName={raterName}
           initialIndex={deckIndex}
-          navEnabled={!commentPhotoId}
+          navEnabled={!commentPhotoId && !detailsPhotoId}
           onToggleFavorite={toggleFavorite}
           onOpenComments={(photo) => setCommentPhotoId(photo.id)}
+          onOpenDetails={(photo) => setDetailsPhotoId(photo.id)}
           onIndexChange={setLiveIndex}
           reduceMotion={reduceMotion}
           projectName={projectDetails?.name || 'their'}
@@ -471,6 +491,12 @@ export default function SwipeScreen() {
         onSubmit={addComment}
         onReact={reactToComment}
         raterName={raterName}
+      />
+
+      <DetailsSheet
+        photo={photos.find((p) => p.id === detailsPhotoId) ?? null}
+        onClose={() => setDetailsPhotoId(null)}
+        onSave={saveDetails}
       />
 
       <View style={styles.headerOverlay} pointerEvents="box-none">
@@ -663,6 +689,7 @@ type PhotoDeckProps = {
   navEnabled?: boolean;
   onToggleFavorite: (photo: Photo) => void;
   onOpenComments: (photo: Photo) => void;
+  onOpenDetails: (photo: Photo) => void;
   onIndexChange?: (index: number) => void;
   reduceMotion: boolean;
   projectName: string;
@@ -712,6 +739,7 @@ function PhotoDeck({
   navEnabled = true,
   onToggleFavorite,
   onOpenComments,
+  onOpenDetails,
   onIndexChange,
   reduceMotion,
   projectName,
@@ -866,6 +894,26 @@ function PhotoDeck({
           reduceMotion={reduceMotion}
         />
       </ScrollView>
+
+      {/* Details chip: sits above the controls, left-aligned. Shows the
+          photo's saved date/location when it has any (so it doubles as a
+          caption), otherwise invites adding them. Opens the DetailsSheet for
+          the current photo. */}
+      {currentPhoto && (
+        <View style={styles.detailsChipWrap} pointerEvents="box-none">
+          <PressableScale
+            onPress={() => onOpenDetails(currentPhoto)}
+            scaleTo={0.96}
+            hitSlop={8}
+            style={[styles.detailsChip, glassSurface, glassBlur]}
+          >
+            <DetailsIcon />
+            <Text style={styles.detailsChipText} numberOfLines={1}>
+              {formatPhotoDetails(currentPhoto) ?? 'Add details'}
+            </Text>
+          </PressableScale>
+        </View>
+      )}
 
       {/* Fixed overlay: unlike the photos themselves, none of this scrolls
           away mid-swipe -- it all reads off `currentPhoto`/`index` instead
@@ -1054,6 +1102,30 @@ function CommentIcon({ active }: { active: boolean }) {
     );
   }
   return <View style={[styles.commentIconFallback, active && { borderColor: colors.comment }]} />;
+}
+
+// "1998 · Cape Town" from whatever's filled in; null when the photo has
+// neither, so the chip falls back to its "Add details" invitation.
+function formatPhotoDetails(photo: Photo): string | null {
+  const parts = [photo.photoDate, photo.location].map((s) => (s || '').trim()).filter(Boolean);
+  return parts.length ? parts.join(' · ') : null;
+}
+
+// Small info glyph for the details chip: a circle with an "i". Web-only inline
+// SVG (same escape hatch as CommentIcon/NavChevron); native falls back to a
+// bordered circle.
+function DetailsIcon() {
+  const color = 'rgba(255, 255, 255, 0.85)';
+  if (Platform.OS === 'web') {
+    return React.createElement(
+      'svg',
+      { width: 15, height: 15, viewBox: '0 0 20 20' },
+      React.createElement('circle', { cx: 10, cy: 10, r: 8, stroke: color, strokeWidth: 1.6, fill: 'none' }),
+      React.createElement('circle', { cx: 10, cy: 6.2, r: 1, fill: color }),
+      React.createElement('path', { d: 'M10 9 L10 14', stroke: color, strokeWidth: 1.6, strokeLinecap: 'round' })
+    );
+  }
+  return <View style={styles.detailsIconFallback} />;
 }
 
 type EndOfDeckSlideProps = {
@@ -1679,6 +1751,36 @@ const styles = StyleSheet.create({
     // glass buttons have room without crowding the nav arrows.
     bottom: 26,
     height: 48,
+  },
+  // Details chip sits just above the controls row, left-aligned.
+  detailsChipWrap: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 92,
+    flexDirection: 'row',
+  },
+  detailsChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    maxWidth: '78%',
+    height: 34,
+    paddingHorizontal: 13,
+    borderRadius: 17,
+  },
+  detailsChipText: {
+    flexShrink: 1,
+    fontFamily: 'Poppins_500Medium',
+    fontSize: 12.5,
+    color: 'rgba(255, 255, 255, 0.9)',
+  },
+  detailsIconFallback: {
+    width: 15,
+    height: 15,
+    borderRadius: 8,
+    borderWidth: 1.6,
+    borderColor: 'rgba(255, 255, 255, 0.85)',
   },
   // Shared column for the comment + heart controls: a fixed-height box that
   // vertically centers the glass button so its center lines up with the nav
