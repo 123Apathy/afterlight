@@ -21,6 +21,7 @@ import ViewModeButton from '../components/ViewModeButton';
 import MenuOverlay from '../components/MenuOverlay';
 import CommentSheet from '../components/CommentSheet';
 import DetailsSheet from '../components/DetailsSheet';
+import CoachMark from '../components/CoachMark';
 import PhotoGrid from '../components/PhotoGrid';
 import PressableScale from '../components/PressableScale';
 import GoldButton from '../components/GoldButton';
@@ -42,6 +43,10 @@ export default function SwipeScreen() {
   // Photos size to the app card (which grows with the viewport on desktop),
   // not the whole window -- kept in lockstep with the frame in app/_layout.
   const width = stageWidth(winWidth, height);
+  // Same centered-band math the controls row uses, so the tour can point at
+  // the heart button's real on-screen x (band == width on phones).
+  const bandApp = Math.min(width, CONTROLS_BAND_MAX);
+  const bandLeftApp = (width - bandApp) / 2;
   const reduceMotion = useReducedMotion();
   const { projectId, setProject, known } = useActiveProject();
   const [raterName, setRaterName] = useLocalStorage('everlit.rater', '');
@@ -61,6 +66,19 @@ export default function SwipeScreen() {
   const [commentPhotoId, setCommentPhotoId] = useState<string | null>(null);
   const [detailsPhotoId, setDetailsPhotoId] = useState<string | null>(null);
   const [inputFocused, setInputFocused] = useState(false);
+
+  // First-run guided tour. Three intro coach marks (counter -> menu -> heart)
+  // the first time the deck opens, then two event-triggered prompts: leaving a
+  // comment after the first favourite, and adding details after that comment
+  // step. Each stage persists a "seen" flag so it only ever runs on first run.
+  type TourStep = null | 'counter' | 'menu' | 'like' | 'comment' | 'details';
+  const [tourStep, setTourStep] = useState<TourStep>(null);
+  const [tourIntroDone, setTourIntroDone] = useLocalStorage('everlit.tour.introDone', false);
+  const [tourCommentDone, setTourCommentDone] = useLocalStorage('everlit.tour.commentDone', false);
+  const [tourDetailsDone, setTourDetailsDone] = useLocalStorage('everlit.tour.detailsDone', false);
+  // A comment was posted during the current prompted comment step, so on close
+  // we know whether they engaged or skipped (the details prompt fires either way).
+  const commentStepActive = useRef(false);
   const [viewMode, setViewMode] = useState<'deck' | 'grid'>('deck');
   const [deckIndex, setDeckIndex] = useState(0);
   // Mirrors PhotoDeck's live swipe position for the header counter. Kept
@@ -210,6 +228,15 @@ export default function SwipeScreen() {
         return { ...p, ratings: nextRatings, ratingCount: nextRatings.length };
       })
     );
+    // First-favourite tour trigger: once the intro is done, the first time
+    // someone actually favourites a photo, invite them to leave a comment and
+    // open the comment sheet for them. Fires once ever.
+    if (!alreadyFavorited && tourIntroDone && !tourCommentDone) {
+      setTourCommentDone(true);
+      commentStepActive.current = true;
+      setTourStep('comment');
+      setCommentPhotoId(photo.id);
+    }
     if (DEMO) return; // in-memory only, no backend
     try {
       if (alreadyFavorited) {
@@ -262,6 +289,65 @@ export default function SwipeScreen() {
         window.alert("Those details didn't save — check your connection and try again.");
       }
       refresh();
+    }
+  };
+
+  // Kick off the 3-step intro coach marks the first time the deck is actually
+  // on screen (past every gate, photos loaded, nothing else open on top).
+  // Guarded by a ref and deliberately WITHOUT a cancelling cleanup: a
+  // cleanup-on-rerender would clear the pending 650ms timer whenever an
+  // unrelated dep changed in that window, so the first mark sometimes never
+  // fired. The ref keeps it strictly once-only instead.
+  const deckReady =
+    !loading && !loadError && photos.length > 0 && viewMode === 'deck' && !!raterName;
+  const introStartedRef = useRef(false);
+  useEffect(() => {
+    if (
+      deckReady &&
+      !tourIntroDone &&
+      !introStartedRef.current &&
+      !menuOpen &&
+      !commentPhotoId &&
+      !detailsPhotoId
+    ) {
+      introStartedRef.current = true;
+      setTimeout(() => setTourStep('counter'), 650);
+    }
+  }, [deckReady, tourIntroDone, menuOpen, commentPhotoId, detailsPhotoId]);
+
+  // Debounced so an accidental double onPress can't skip a step.
+  const lastAdvanceRef = useRef(0);
+  const advanceTour = () => {
+    const now = Date.now();
+    if (now - lastAdvanceRef.current < 350) return;
+    lastAdvanceRef.current = now;
+    setTourStep((s) => {
+      if (s === 'counter') return 'menu';
+      if (s === 'menu') return 'like';
+      if (s === 'like') {
+        setTourIntroDone(true);
+        return null;
+      }
+      if (s === 'details') {
+        setTourDetailsDone(true);
+        return null;
+      }
+      return null;
+    });
+  };
+
+  // Closing the comment sheet. If it was opened by the first-favourite tour
+  // step, then whether they left a comment or not, follow up by pointing at
+  // the details chip (once). A short delay lets the sheet finish sliding down
+  // before the details ring appears where it used to be.
+  const closeComments = () => {
+    setCommentPhotoId(null);
+    if (commentStepActive.current) {
+      commentStepActive.current = false;
+      setTourStep(null);
+      if (!tourDetailsDone) {
+        setTimeout(() => setTourStep('details'), 340);
+      }
     }
   };
 
@@ -491,7 +577,7 @@ export default function SwipeScreen() {
 
       <CommentSheet
         photo={photos.find((p) => p.id === commentPhotoId) ?? null}
-        onClose={() => setCommentPhotoId(null)}
+        onClose={closeComments}
         onSubmit={addComment}
         onReact={reactToComment}
         raterName={raterName}
@@ -501,6 +587,60 @@ export default function SwipeScreen() {
         photo={photos.find((p) => p.id === detailsPhotoId) ?? null}
         onClose={() => setDetailsPhotoId(null)}
         onSave={saveDetails}
+      />
+
+      {/* First-run guided tour. The three intro steps + the details prompt use
+          the blocking CoachMark (tap Next/Got it to advance). The comment step
+          instead shows a non-blocking banner while the comment sheet is open,
+          so it never blocks typing. */}
+      {tourStep === 'comment' && (
+        <View style={styles.tourBanner} pointerEvents="none">
+          <Text style={styles.tourBannerText}>
+            That&rsquo;s your first favourite 💛  Say what you remember about this one — a comment
+            keeps the memory with the photo.
+          </Text>
+        </View>
+      )}
+
+      <CoachMark
+        visible={tourStep === 'counter'}
+        text="These are the photos in the memorial — the number shows how many there are and which one you're on. Swipe left and right to move through them."
+        anchor={{ x: width / 2, y: 26 }}
+        placement="below"
+        buttonLabel="Next"
+        onNext={advanceTour}
+        screenWidth={width}
+        screenHeight={height}
+      />
+      <CoachMark
+        visible={tourStep === 'menu'}
+        text="Everything else lives in the menu — invite family, see everyone's favourites, and share your own memories."
+        anchor={{ x: width - 30, y: 26 }}
+        placement="below"
+        buttonLabel="Next"
+        onNext={advanceTour}
+        screenWidth={width}
+        screenHeight={height}
+      />
+      <CoachMark
+        visible={tourStep === 'like'}
+        text="Tap the heart to favourite a photo that moves you. Your favourites help the family choose what goes into the tribute film."
+        anchor={{ x: bandLeftApp + (bandApp * 3) / 4, y: height - 50 }}
+        placement="above"
+        buttonLabel="Got it"
+        onNext={advanceTour}
+        screenWidth={width}
+        screenHeight={height}
+      />
+      <CoachMark
+        visible={tourStep === 'details'}
+        text="If you know when or where this was taken, add it here. Even just the year helps — it enriches the memorial and lets us put the photos in the right order."
+        anchor={{ x: 78, y: height - 109 }}
+        placement="above"
+        buttonLabel="Got it"
+        onNext={advanceTour}
+        screenWidth={width}
+        screenHeight={height}
       />
 
       <View style={styles.headerOverlay} pointerEvents="box-none">
@@ -1793,6 +1933,27 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1.6,
     borderColor: 'rgba(255, 255, 255, 0.85)',
+  },
+  // Non-blocking tour banner shown over the comment sheet (so it never blocks
+  // the input) during the first-favourite comment prompt.
+  tourBanner: {
+    position: 'absolute',
+    top: 92,
+    left: 16,
+    right: 16,
+    zIndex: 60,
+    backgroundColor: 'rgba(28, 22, 20, 0.9)',
+    borderWidth: 1,
+    borderColor: 'rgba(212, 169, 118, 0.4)',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+  },
+  tourBannerText: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 13.5,
+    lineHeight: 20,
+    color: colors.white,
   },
   // Shared column for the comment + heart controls: a fixed-height box that
   // vertically centers the glass button so its center lines up with the nav
