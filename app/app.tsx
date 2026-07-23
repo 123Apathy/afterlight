@@ -20,6 +20,7 @@ import Animated, {
 import HamburgerButton from '../components/HamburgerButton';
 import ViewModeButton from '../components/ViewModeButton';
 import MenuOverlay from '../components/MenuOverlay';
+import LoadingState from '../components/LoadingState';
 import CommentSheet from '../components/CommentSheet';
 import DetailsSheet from '../components/DetailsSheet';
 import CoachMark from '../components/CoachMark';
@@ -945,123 +946,6 @@ function StreakDivider() {
       end={{ x: 1, y: 0.5 }}
       style={styles.streak}
     />
-  );
-}
-
-// Comforting lines that rotate while the memorial loads — the wait becomes a
-// held breath rather than a spinner. Kept warm, present-tense, and dash-free.
-// Each line is pre-split into two halves so the larger type always breaks in
-// the same, readable place (top clause / bottom clause) instead of wrapping
-// wherever the width happens to run out.
-const LOADING_PHRASES: [string, string][] = [
-  ['Take all the time', 'you need.'],
-  ['Every memory', 'keeps them close.'],
-  ['Grief is love', 'with a home here.'],
-  ['You are not', 'alone in this.'],
-  ['Their light', 'stays with us.'],
-  ['Breathe.', 'There is no rush.'],
-  ['Hold the good', 'moments close.'],
-  ['We remember them,', 'together.'],
-];
-
-// Repeating unit that produces the 1,2,3,2,1,2,3,2,1... dot rhythm.
-const DOT_PATTERN = [1, 2, 3, 2];
-
-// The brand emblem (flame in its compass ring) breathing over a soft gold glow,
-// with a slow carousel of comforting lines beneath it. As the glow swells the
-// gold emblem crossfades to its charcoal version, so at the glow's apex it
-// reads as a dark silhouette against the light, then returns to gold as the
-// glow settles. A small dim label above names whatever is loading. The ringed
-// mark makes the wait feel finished and cared-for, not a half-built placeholder.
-function LoadingState({
-  reduceMotion,
-  label = 'Loading your memorial',
-}: {
-  reduceMotion: boolean;
-  label?: string;
-}) {
-  const breath = useSharedValue(0);
-  const fade = useSharedValue(1);
-  const [phrase, setPhrase] = useState(0);
-  // Dot count cycles 1,2,3,2,1,2,3,2,... as an extra "still working" indicator.
-  const [dotStep, setDotStep] = useState(0);
-  const dotCount = reduceMotion ? 3 : DOT_PATTERN[dotStep];
-
-  useEffect(() => {
-    if (reduceMotion) return;
-    breath.value = withRepeat(
-      withTiming(1, { duration: 2600, easing: Easing.inOut(Easing.quad) }),
-      -1,
-      true
-    );
-  }, []);
-
-  useEffect(() => {
-    if (reduceMotion) return;
-    const id = setInterval(() => setDotStep((d) => (d + 1) % DOT_PATTERN.length), 420);
-    return () => clearInterval(id);
-  }, [reduceMotion]);
-
-  // Fade the current line out, swap it, fade the next one in.
-  useEffect(() => {
-    const id = setInterval(() => {
-      if (reduceMotion) {
-        setPhrase((p) => (p + 1) % LOADING_PHRASES.length);
-        return;
-      }
-      fade.value = withTiming(0, { duration: 600, easing: Easing.in(Easing.quad) });
-      setTimeout(() => {
-        setPhrase((p) => (p + 1) % LOADING_PHRASES.length);
-        fade.value = withTiming(1, { duration: 750, easing: Easing.out(Easing.quad) });
-      }, 640);
-    }, 4200);
-    return () => clearInterval(id);
-  }, [reduceMotion]);
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: 0.5 + breath.value * 0.4,
-    transform: [{ scale: 0.88 + breath.value * 0.24 }],
-  }));
-  // Gold shows when the glow is low; charcoal takes over as it peaks.
-  const goldStyle = useAnimatedStyle(() => ({
-    opacity: 1 - breath.value,
-    transform: [{ scale: 0.98 + breath.value * 0.05 }],
-  }));
-  const charcoalStyle = useAnimatedStyle(() => ({
-    opacity: breath.value,
-    transform: [{ scale: 0.98 + breath.value * 0.05 }],
-  }));
-  const phraseStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
-
-  return (
-    <View style={styles.pageContent}>
-      <View style={styles.loadingWrap}>
-        <Text style={styles.loadingLabel}>{label}</Text>
-        <View style={styles.loadingEmblem}>
-          <Animated.View style={[styles.loadingGlowWrap, glowStyle]} pointerEvents="none">
-            <RadialGlow color={colors.goldWarm} />
-          </Animated.View>
-          <Animated.Image source={images.logoRing} style={[styles.loadingIcon, goldStyle]} resizeMode="contain" />
-          <Animated.Image
-            source={images.logoRingCharcoal}
-            style={[styles.loadingIcon, styles.loadingIconAbs, charcoalStyle]}
-            resizeMode="contain"
-          />
-        </View>
-        <Animated.Text style={[styles.loadingPhrase, phraseStyle]}>
-          {LOADING_PHRASES[phrase][0]}
-          {'\n'}
-          {LOADING_PHRASES[phrase][1]}
-        </Animated.Text>
-        {/* Three-dot rhythm: always three slots (so the row stays centred),
-            with only `dotCount` of them lit. */}
-        <View style={styles.loadingDots}>
-          {[0, 1, 2].map((i) => (
-            <View key={i} style={[styles.loadingDot, { opacity: i < dotCount ? 0.9 : 0.16 }]} />
-          ))}
-        </View>
-      </View>
-    </View>
   );
 }
 
@@ -2066,65 +1950,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginTop: -6,
     marginBottom: 6,
-  },
-  loadingWrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-  },
-  loadingLabel: {
-    fontFamily: 'Poppins_400Regular',
-    fontSize: 11,
-    letterSpacing: 3,
-    textTransform: 'uppercase',
-    color: 'rgba(212, 169, 118, 0.6)',
-    textAlign: 'center',
-    // Extra gap so the label clears the top of the breathing glow underneath.
-    marginBottom: 72,
-  },
-  loadingDots: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 28,
-    alignSelf: 'center',
-  },
-  loadingDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.goldWarm,
-  },
-  loadingEmblem: {
-    width: 132,
-    height: 132,
-    alignItems: 'center',
-    justifyContent: 'center',
-    // Extra gap so the (now larger) phrase clears the bottom of the glow.
-    marginBottom: 72,
-  },
-  loadingGlowWrap: {
-    position: 'absolute',
-    width: 220,
-    height: 220,
-  },
-  loadingIcon: {
-    width: 108,
-    height: 108,
-  },
-  // The charcoal emblem stacks exactly over the gold one to crossfade.
-  loadingIconAbs: {
-    position: 'absolute',
-  },
-  loadingPhrase: {
-    fontFamily: 'PlayfairDisplay_500Medium',
-    fontSize: 40,
-    lineHeight: 50,
-    letterSpacing: -0.4,
-    color: colors.white,
-    textAlign: 'center',
-    alignSelf: 'center',
-    paddingHorizontal: 16,
   },
   vignettePulse: {
     position: 'absolute',

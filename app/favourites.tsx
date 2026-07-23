@@ -1,8 +1,10 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import GoldButton from '../components/GoldButton';
+import LoadingState from '../components/LoadingState';
 import PressableScale from '../components/PressableScale';
 import { colors } from '../constants/theme';
 import { DEMO, DEMO_PHOTOS } from '../constants/demo';
@@ -15,6 +17,7 @@ import { useActiveProject } from '../lib/useActiveProject';
 // artifact for the operator).
 export default function FavouritesScreen() {
   const router = useRouter();
+  const reduceMotion = useReducedMotion();
   const { projectId, projectName } = useActiveProject();
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -40,6 +43,10 @@ export default function FavouritesScreen() {
     .filter((p) => heartCount(p) > 0)
     .sort((a, b) => heartCount(b) - heartCount(a));
 
+  if (!loaded) {
+    return <LoadingState reduceMotion={reduceMotion} label="Loading your favourites" />;
+  }
+
   return (
     <View style={styles.page}>
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -57,7 +64,7 @@ export default function FavouritesScreen() {
             style={styles.streak}
           />
 
-          {!loaded ? null : hearted.length === 0 ? (
+          {hearted.length === 0 ? (
             <Text style={styles.empty}>
               No favourites yet. Go back and double-tap the photos that matter to you, they&rsquo;ll gather
               here for the whole family to see.

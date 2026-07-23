@@ -1,9 +1,11 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import BackdropVideo from '../components/BackdropVideo';
 import GoldButton from '../components/GoldButton';
+import LoadingState from '../components/LoadingState';
 import PressableScale from '../components/PressableScale';
 import { colors } from '../constants/theme';
 import { api, type Project } from '../lib/api';
@@ -14,6 +16,7 @@ import { useActiveProject } from '../lib/useActiveProject';
 // which only shows once the admin publishes a video for this memorial.
 export default function FilmScreen() {
   const router = useRouter();
+  const reduceMotion = useReducedMotion();
   const { projectId } = useActiveProject();
   const [project, setProject] = useState<Project | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -31,6 +34,10 @@ export default function FilmScreen() {
   }, [projectId]);
 
   const back = () => router.replace('/app');
+
+  if (!loaded) {
+    return <LoadingState reduceMotion={reduceMotion} label="Loading your film" />;
+  }
 
   return (
     <View style={styles.page}>
@@ -57,7 +64,7 @@ export default function FilmScreen() {
           style={styles.streak}
         />
 
-        {!loaded ? null : project?.videoUrl && Platform.OS === 'web' ? (
+        {project?.videoUrl && Platform.OS === 'web' ? (
           <View style={styles.playerWrap}>
             {React.createElement('video', {
               src: project.videoUrl,

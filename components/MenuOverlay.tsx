@@ -31,6 +31,7 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
   const [project, setProjectDetails] = useState<Project | null>(null);
   const [copied, setCopied] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [changingCover, setChangingCover] = useState(false);
 
   useEffect(() => {
     const duration = reduceMotion ? 0 : visible ? 220 : 180;
@@ -117,6 +118,28 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
       window.alert('Those photos were not added. Please check your internet and try again.');
     } finally {
       setUploading(false);
+    }
+  };
+
+  // Re-entry point for the cover-photo gate the project creator saw right
+  // after creation -- if they tapped "Skip for now" there, this was the only
+  // way back in (previously admin-dashboard only, per setCoverPhoto's own
+  // comment). Same upload+set flow as that gate, just reachable any time.
+  const handleChangeCoverPhoto = async () => {
+    if (!projectId) return;
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85 });
+    if (result.canceled || !result.assets.length) return;
+    setChangingCover(true);
+    try {
+      const asset = result.assets[0];
+      const [uploaded] = await api.uploadPhotos(projectId, [
+        { uri: asset.uri, name: asset.fileName || `cover-${Date.now()}.jpg`, type: asset.mimeType || 'image/jpeg' },
+      ]);
+      await api.setCoverPhoto(projectId, uploaded.id);
+    } catch {
+      window.alert("That photo didn't upload. Please check your connection and try again.");
+    } finally {
+      setChangingCover(false);
     }
   };
 
@@ -230,6 +253,13 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
                     <View style={[styles.uploadPlusBar, { transform: [{ rotate: '90deg' }] }]} />
                   </View>
                   <Text style={styles.uploadPillText}>{uploading ? 'Adding photos…' : 'Add photos'}</Text>
+                </PressableScale>
+              )}
+              {!!projectId && (
+                <PressableScale onPress={handleChangeCoverPhoto} style={styles.switchLink} scaleTo={0.98}>
+                  <Text style={styles.switchText}>
+                    {changingCover ? 'Updating…' : 'Change the cover photo'}
+                  </Text>
                 </PressableScale>
               )}
               {!!projectId && (
