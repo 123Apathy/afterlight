@@ -117,18 +117,19 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: 0,
+    // Floats up so its bottom edge is level with the deck's arrow buttons
+    // (navRowUp bottom = 92); a proper rounded/bordered card, matching
+    // CommentSheet.
+    bottom: 92,
     maxWidth: 640,
     marginHorizontal: 'auto',
     backgroundColor: 'rgba(32, 26, 24, 0.52)',
     borderWidth: 1,
-    borderBottomWidth: 0,
     borderColor: 'rgba(255, 255, 255, 0.12)',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderRadius: 24,
     paddingHorizontal: 20,
     paddingTop: 18,
-    paddingBottom: 28,
+    paddingBottom: 20,
     zIndex: 50,
   },
   header: {

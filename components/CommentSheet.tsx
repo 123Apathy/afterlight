@@ -194,22 +194,24 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: 0,
+    // Floats up off the very bottom so its lower edge sits level with the
+    // bottom of the deck's arrow buttons (navRowUp bottom = 92), leaving the
+    // labelled action buttons visible below it. A proper card now (rounded +
+    // bordered on all four sides) rather than flush to the screen bottom.
+    bottom: 92,
     // Desktop: a full-window-wide sheet reads as a wall — cap and center it.
     // marginHorizontal 'auto' is a no-op while the cap exceeds the viewport
     // (phones), so mobile is untouched.
     maxWidth: 640,
     marginHorizontal: 'auto',
-    maxHeight: '72%',
+    maxHeight: '68%',
     backgroundColor: 'rgba(32, 26, 24, 0.52)',
     borderWidth: 1,
-    borderBottomWidth: 0,
     borderColor: 'rgba(255, 255, 255, 0.12)',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderRadius: 24,
     paddingHorizontal: 20,
     paddingTop: 18,
-    paddingBottom: 28,
+    paddingBottom: 20,
     zIndex: 50,
   },
   header: {
