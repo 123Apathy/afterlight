@@ -16,6 +16,7 @@ import { api, inviteUrl, type ButtonKey, type Project } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
 import BackdropVideo from './BackdropVideo';
 import PressableScale from './PressableScale';
+import { glassBlur } from '../lib/glass';
 
 type MenuOverlayProps = {
   visible: boolean;
@@ -150,6 +151,7 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
         pointerEvents="none"
       />
       <View style={styles.content}>
+      <View style={[styles.glassCard, glassBlur]}>
       <View style={styles.header}>
         <Text style={styles.title}>Menu</Text>
         <PressableScale onPress={onClose} style={styles.closeButton} scaleTo={0.94}>
@@ -239,6 +241,31 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
           )}
         </>
       )}
+
+      <View style={styles.legalLinks}>
+        <PressableScale
+          onPress={() => {
+            if (typeof window !== 'undefined') window.open('https://everlit.co.za/terms', '_blank');
+          }}
+          scaleTo={0.97}
+        >
+          <Text style={styles.legalLinkText}>Terms & Conditions</Text>
+        </PressableScale>
+        <View style={styles.legalDot} />
+        <PressableScale
+          onPress={() => {
+            onClose();
+            try {
+              localStorage.removeItem('everlit.tour.done');
+            } catch {}
+            if (typeof window !== 'undefined') window.location.reload();
+          }}
+          scaleTo={0.97}
+        >
+          <Text style={styles.legalLinkText}>Run the tutorial again</Text>
+        </PressableScale>
+      </View>
+      </View>
 
       <View style={styles.footer} pointerEvents="none">
         <Image source={images.logo} style={styles.footerMark} resizeMode="contain" />
@@ -390,6 +417,36 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 620,
     flex: 1, // keeps the footer's marginTop:'auto' pinned to the bottom
+  },
+  // Frosted glass card matching CommentSheet/DetailsSheet's `sheet` treatment,
+  // so the menu reads as one floating panel over the dimmed backdrop rather
+  // than flat full-bleed content.
+  glassCard: {
+    backgroundColor: 'rgba(32, 26, 24, 0.52)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 20,
+  },
+  legalLinks: {
+    marginTop: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  legalLinkText: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 12,
+    color: colors.textFainter,
+  },
+  legalDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: colors.textFainter,
+    opacity: 0.6,
   },
   header: {
     flexDirection: 'row',
