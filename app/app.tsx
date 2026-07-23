@@ -692,7 +692,7 @@ export default function SwipeScreen() {
         text="This shows how many photos there are and which one you're on. Swipe left or right to move through them."
         anchor={{ x: width / 2, y: 31 }}
         placement="below"
-        ringSize={44}
+        box={{ left: width / 2 - 36, top: 16, width: 72, height: 30 }}
         buttonLabel="Next"
         onNext={advanceTour}
         screenWidth={width}
@@ -1145,6 +1145,22 @@ function PhotoDeck({
   const band = Math.min(width, CONTROLS_BAND_MAX);
   const bandLeft = (width - band) / 2;
 
+  // On the closing slide (the logo grows + centres), there is nowhere forward
+  // to go: fade the Next arrow away and glide the Prev arrow to the middle so
+  // "go back" is the single, obvious control. Reverses when you step back.
+  const atEnd = index === lastIndex;
+  const endArrows = useSharedValue(0);
+  useEffect(() => {
+    endArrows.value = withTiming(atEnd ? 1 : 0, {
+      duration: reduceMotion ? 0 : 460,
+      easing: Easing.inOut(Easing.cubic),
+    });
+  }, [atEnd, reduceMotion]);
+  const prevShiftStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: endArrows.value * (width / 2 - (bandLeft + band / 3)) }],
+  }));
+  const nextFadeStyle = useAnimatedStyle(() => ({ opacity: 1 - endArrows.value }));
+
   const favorited = currentPhoto ? isFavoritedBy(currentPhoto, raterName) : false;
   const count = currentPhoto ? heartCount(currentPhoto) : 0;
   const heartScale = useSharedValue(1);
@@ -1235,24 +1251,28 @@ function PhotoDeck({
           labelled buttons below are the primary action family. */}
       <View style={styles.navRowUp} pointerEvents="box-none">
         <View style={quarterCenterStyle(bandLeft + band / 3)}>
-          <PressableScale
-            onPress={() => goTo(index - 1)}
-            scaleTo={0.9}
-            hitSlop={10}
-            style={[styles.navButtonBig, glassSurface, glassBlur, styles.navButtonLight, index === 0 && styles.navButtonDisabled]}
-          >
-            <NavChevron direction="left" />
-          </PressableScale>
+          <Animated.View style={prevShiftStyle}>
+            <PressableScale
+              onPress={() => goTo(index - 1)}
+              scaleTo={0.9}
+              hitSlop={10}
+              style={[styles.navButtonBig, glassSurface, glassBlur, styles.navButtonLight, index === 0 && styles.navButtonDisabled]}
+            >
+              <NavChevron direction="left" />
+            </PressableScale>
+          </Animated.View>
         </View>
-        <View style={quarterCenterStyle(bandLeft + (band * 2) / 3)}>
-          <PressableScale
-            onPress={() => goTo(index + 1)}
-            scaleTo={0.9}
-            hitSlop={10}
-            style={[styles.navButtonBig, glassSurface, glassBlur, styles.navButtonLight, index === lastIndex && styles.navButtonDisabled]}
-          >
-            <NavChevron direction="right" />
-          </PressableScale>
+        <View style={quarterCenterStyle(bandLeft + (band * 2) / 3)} pointerEvents={atEnd ? 'none' : 'box-none'}>
+          <Animated.View style={nextFadeStyle}>
+            <PressableScale
+              onPress={() => goTo(index + 1)}
+              scaleTo={0.9}
+              hitSlop={10}
+              style={[styles.navButtonBig, glassSurface, glassBlur, styles.navButtonLight, index === lastIndex && styles.navButtonDisabled]}
+            >
+              <NavChevron direction="right" />
+            </PressableScale>
+          </Animated.View>
         </View>
       </View>
 

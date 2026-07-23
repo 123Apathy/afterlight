@@ -9,7 +9,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { colors } from '../constants/theme';
-import { glassBlur, glassSurface } from '../lib/glass';
+import { glassBlur } from '../lib/glass';
 import PressableScale from './PressableScale';
 
 type CoachMarkProps = {
@@ -103,14 +103,29 @@ export default function CoachMark({
       ? { top: anchor.y + ringSize / 2 + GAP }
       : { bottom: screenHeight - (anchor.y - ringSize / 2 - GAP) };
 
+  // Only the recommended action is reachable while a mark is up: a
+  // non-interactive step fully blocks everything but its Next button;
+  // an interactive step blocks everything EXCEPT a hole cut around the exact
+  // element it's asking you to tap (the grid button, a photo, an arrow), so
+  // you can't swipe past it, only do the one thing.
+  const hole = box || {
+    left: anchor.x - ringSize / 2,
+    top: anchor.y - ringSize / 2,
+    width: ringSize,
+    height: ringSize,
+  };
   return (
-    // box-none (not 'auto'): the scrim only lightly darkens the scene and never
-    // blocks, so the deck can still be swiped/scrolled while a mark is up. The
-    // bubble (with Next) still receives its own taps; everything else passes
-    // through to the app underneath. Interactive steps go fully pass-through.
-    <View style={StyleSheet.absoluteFill} pointerEvents={interactive ? 'none' : 'box-none'}>
-      {/* A light, non-blocking dim to focus attention without trapping input. */}
-      <View style={[styles.scrim, styles.scrimLight]} pointerEvents="none" />
+    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+      {interactive ? (
+        <>
+          <Pressable style={[styles.scrim, styles.scrimLight, { bottom: undefined, height: Math.max(0, hole.top) }]} onPress={() => {}} />
+          <Pressable style={[styles.scrim, styles.scrimLight, { top: hole.top + hole.height }]} onPress={() => {}} />
+          <Pressable style={[styles.scrim, styles.scrimLight, { top: hole.top, bottom: undefined, height: hole.height, right: undefined, width: Math.max(0, hole.left) }]} onPress={() => {}} />
+          <Pressable style={[styles.scrim, styles.scrimLight, { top: hole.top, bottom: undefined, height: hole.height, left: hole.left + hole.width }]} onPress={() => {}} />
+        </>
+      ) : (
+        <Pressable style={[styles.scrim, styles.scrimLight]} onPress={() => {}} />
+      )}
 
       {/* Highlight on the target, pulsing: a copy of the target's glyph
           (pulseNode) that swells in place, else a rectangular box that rims a
@@ -153,14 +168,13 @@ export default function CoachMark({
         />
       )}
 
-      {/* Message bubble: the lighter frosted-glass treatment (glassSurface +
-          glassBlur) people preferred. No pointer arrow -- the highlight
-          already shows the target, and the arrow was the bit that read as a
-          chipped-out notch on the edge. */}
+      {/* Message bubble: the same card language as the Comment/Details sheets
+          (warm dark glass, hairline border, 24px radius) so the tour reads as
+          part of the app, not a separate overlay. No pointer arrow -- the
+          highlight already shows the target. */}
       <View
         style={[
           styles.bubble,
-          glassSurface,
           glassBlur,
           { left: bubbleLeft, width: BUBBLE_WIDTH },
           bubblePos,
@@ -209,35 +223,40 @@ const styles = StyleSheet.create({
   },
   bubble: {
     position: 'absolute',
-    backgroundColor: BUBBLE_BG,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 15,
+    // Matches the Comment/Details sheet card exactly.
+    backgroundColor: 'rgba(32, 26, 24, 0.52)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 18,
     zIndex: 2,
   },
   text: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: 15,
+    lineHeight: 22,
     color: colors.white,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   // No button follows in interactive mode, so the text needs no bottom gap.
   textInteractive: {
     marginBottom: 0,
   },
+  // Matches the sheet's gold action button (Post / Save details).
   button: {
     alignSelf: 'flex-end',
-    height: 34,
-    paddingHorizontal: 18,
-    borderRadius: 17,
+    height: 44,
+    paddingHorizontal: 24,
+    borderRadius: 22,
     backgroundColor: colors.goldWarm,
     alignItems: 'center',
     justifyContent: 'center',
   },
   buttonText: {
     fontFamily: 'Poppins_600SemiBold',
-    fontSize: 13,
+    fontSize: 15,
     color: '#1A1613',
   },
   arrowUp: {
