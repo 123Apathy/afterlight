@@ -19,8 +19,12 @@ type CoachMarkProps = {
   anchor: { x: number; y: number };
   // Whether the message bubble sits above or below that point.
   placement: 'above' | 'below';
-  buttonLabel: string;
-  onNext: () => void;
+  buttonLabel?: string;
+  onNext?: () => void;
+  // Interactive step: the user advances by tapping the real element the ring
+  // points at (e.g. the grid button), not a Next button. Everything becomes
+  // non-blocking so those taps reach the app, and no button is shown.
+  interactive?: boolean;
   // Viewport size, for clamping the bubble on-screen.
   screenWidth: number;
   screenHeight: number;
@@ -43,6 +47,7 @@ export default function CoachMark({
   placement,
   buttonLabel,
   onNext,
+  interactive = false,
   screenWidth,
   screenHeight,
   ringSize = 66,
@@ -85,9 +90,15 @@ export default function CoachMark({
       : { bottom: screenHeight - (anchor.y - ringSize / 2 - GAP) };
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="auto">
-      {/* Scrim swallows taps so the app can't be interacted with mid-step. */}
-      <Pressable style={styles.scrim} onPress={() => {}} />
+    <View style={StyleSheet.absoluteFill} pointerEvents={interactive ? 'none' : 'auto'}>
+      {/* Non-interactive: a solid scrim swallows taps so nothing but Next is
+          reachable. Interactive: a lighter, non-blocking scrim so the tap the
+          step is asking for reaches the real element. */}
+      {interactive ? (
+        <View style={[styles.scrim, styles.scrimLight]} pointerEvents="none" />
+      ) : (
+        <Pressable style={styles.scrim} onPress={() => {}} />
+      )}
 
       {/* Highlight ring on the target. */}
       <Animated.View
@@ -114,16 +125,19 @@ export default function CoachMark({
           { left: bubbleLeft, width: BUBBLE_WIDTH },
           bubblePos,
         ]}
+        pointerEvents={interactive ? 'none' : 'auto'}
       >
         {/* Arrow */}
         {placement === 'below' ? (
           <View style={[styles.arrowUp, { left: arrowLeft }]} pointerEvents="none" />
         ) : null}
 
-        <Text style={styles.text}>{text}</Text>
-        <PressableScale onPress={onNext} scaleTo={0.96} style={styles.button}>
-          <Text style={styles.buttonText}>{buttonLabel}</Text>
-        </PressableScale>
+        <Text style={[styles.text, interactive && styles.textInteractive]}>{text}</Text>
+        {!interactive && (
+          <PressableScale onPress={onNext} scaleTo={0.96} style={styles.button}>
+            <Text style={styles.buttonText}>{buttonLabel}</Text>
+          </PressableScale>
+        )}
 
         {placement === 'above' ? (
           <View style={[styles.arrowDown, { left: arrowLeft }]} pointerEvents="none" />
@@ -139,6 +153,10 @@ const styles = StyleSheet.create({
   scrim: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(10, 8, 7, 0.55)',
+  },
+  // Lighter dim for interactive steps so the element they must tap stays clear.
+  scrimLight: {
+    backgroundColor: 'rgba(10, 8, 7, 0.32)',
   },
   ring: {
     position: 'absolute',
@@ -160,6 +178,10 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     color: colors.white,
     marginBottom: 12,
+  },
+  // No button follows in interactive mode, so the text needs no bottom gap.
+  textInteractive: {
+    marginBottom: 0,
   },
   button: {
     alignSelf: 'flex-end',

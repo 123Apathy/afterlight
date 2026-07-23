@@ -67,18 +67,28 @@ export default function SwipeScreen() {
   const [detailsPhotoId, setDetailsPhotoId] = useState<string | null>(null);
   const [inputFocused, setInputFocused] = useState(false);
 
-  // First-run guided tour. Three intro coach marks (counter -> menu -> heart)
-  // the first time the deck opens, then two event-triggered prompts: leaving a
-  // comment after the first favourite, and adding details after that comment
-  // step. Each stage persists a "seen" flag so it only ever runs on first run.
-  type TourStep = null | 'counter' | 'menu' | 'like' | 'comment' | 'details';
+  // First-run guided tour, one pass the first time the deck opens. A mix of
+  // "read + tap Next" slides (counter, menu, favourites, comments, details)
+  // and interactive steps the user drives by tapping the real element:
+  //   grid     -> tap the grid button (advances when viewMode becomes 'grid')
+  //   gridInfo -> tap any photo    (advances when viewMode returns to 'deck')
+  //   arrows   -> tap next          (finishes when the photo index changes)
+  // One persisted flag marks the whole tour done.
+  type TourStep =
+    | null
+    | 'counter'
+    | 'menu'
+    | 'grid'
+    | 'gridInfo'
+    | 'favourites'
+    | 'comments'
+    | 'details'
+    | 'arrows';
   const [tourStep, setTourStep] = useState<TourStep>(null);
-  const [tourIntroDone, setTourIntroDone] = useLocalStorage('everlit.tour.introDone', false);
-  const [tourCommentDone, setTourCommentDone] = useLocalStorage('everlit.tour.commentDone', false);
-  const [tourDetailsDone, setTourDetailsDone] = useLocalStorage('everlit.tour.detailsDone', false);
-  // A comment was posted during the current prompted comment step, so on close
-  // we know whether they engaged or skipped (the details prompt fires either way).
-  const commentStepActive = useRef(false);
+  const [tourDone, setTourDone] = useLocalStorage('everlit.tour.done', false);
+  // The photo index when the final 'arrows' step began, so we can tell when the
+  // user has actually moved to the next photo and end the tour.
+  const arrowsStartIndex = useRef<number | null>(null);
   // Photos that have already had a comment posted / details saved this session.
   // The sheet auto-closes only the FIRST time either action happens for a
   // photo; after that it stays open so people can keep adding without it
@@ -234,15 +244,6 @@ export default function SwipeScreen() {
         return { ...p, ratings: nextRatings, ratingCount: nextRatings.length };
       })
     );
-    // First-favourite tour trigger: once the intro is done, the first time
-    // someone actually favourites a photo, invite them to leave a comment and
-    // open the comment sheet for them. Fires once ever.
-    if (!alreadyFavorited && tourIntroDone && !tourCommentDone) {
-      setTourCommentDone(true);
-      commentStepActive.current = true;
-      setTourStep('comment');
-      setCommentPhotoId(photo.id);
-    }
     if (DEMO) return; // in-memory only, no backend
     try {
       if (alreadyFavorited) {
@@ -300,64 +301,63 @@ export default function SwipeScreen() {
     }
   };
 
-  // Kick off the 3-step intro coach marks the first time the deck is actually
-  // on screen (past every gate, photos loaded, nothing else open on top).
-  // Guarded by a ref and deliberately WITHOUT a cancelling cleanup: a
-  // cleanup-on-rerender would clear the pending 650ms timer whenever an
-  // unrelated dep changed in that window, so the first mark sometimes never
-  // fired. The ref keeps it strictly once-only instead.
+  // Start the tour the first time the deck is on screen (past every gate,
+  // photos loaded, nothing else open). Ref-guarded with no cancelling cleanup
+  // so an unrelated re-render can't clear the pending timer before it fires.
   const deckReady =
     !loading && !loadError && photos.length > 0 && viewMode === 'deck' && !!raterName;
   const introStartedRef = useRef(false);
   useEffect(() => {
-    if (
-      deckReady &&
-      !tourIntroDone &&
-      !introStartedRef.current &&
-      !menuOpen &&
-      !commentPhotoId &&
-      !detailsPhotoId
-    ) {
+    if (deckReady && !tourDone && !introStartedRef.current && !menuOpen && !commentPhotoId && !detailsPhotoId) {
       introStartedRef.current = true;
       setTimeout(() => setTourStep('counter'), 650);
     }
-  }, [deckReady, tourIntroDone, menuOpen, commentPhotoId, detailsPhotoId]);
+  }, [deckReady, tourDone, menuOpen, commentPhotoId, detailsPhotoId]);
 
-  // Debounced so an accidental double onPress can't skip a step.
+  // Interactive steps advance when the user performs the action, not on a Next
+  // tap: open the grid, come back from it, and finally move to the next photo.
+  useEffect(() => {
+    if (tourStep === 'grid' && viewMode === 'grid') setTourStep('gridInfo');
+  }, [tourStep, viewMode]);
+  useEffect(() => {
+    if (tourStep === 'gridInfo' && viewMode === 'deck') setTourStep('favourites');
+  }, [tourStep, viewMode]);
+  useEffect(() => {
+    if (tourStep !== 'arrows') {
+      arrowsStartIndex.current = null;
+      return;
+    }
+    if (arrowsStartIndex.current === null) {
+      arrowsStartIndex.current = liveIndex;
+      return;
+    }
+    if (liveIndex !== arrowsStartIndex.current) {
+      arrowsStartIndex.current = null;
+      setTourDone(true);
+      setTourStep(null);
+    }
+  }, [tourStep, liveIndex]);
+
+  // The "read + tap Next" slides. Debounced so a stray double-tap (older users
+  // especially) can't skip a step. The interactive steps in between (grid,
+  // gridInfo, arrows) advance from the effects above, not here.
   const lastAdvanceRef = useRef(0);
   const advanceTour = () => {
     const now = Date.now();
-    // 600ms so a stray double-tap (older users especially) can't skip a step.
     if (now - lastAdvanceRef.current < 600) return;
     lastAdvanceRef.current = now;
     setTourStep((s) => {
       if (s === 'counter') return 'menu';
-      if (s === 'menu') return 'like';
-      if (s === 'like') {
-        setTourIntroDone(true);
-        return null;
-      }
-      if (s === 'details') {
-        setTourDetailsDone(true);
-        return null;
-      }
-      return null;
+      if (s === 'menu') return 'grid';
+      if (s === 'favourites') return 'comments';
+      if (s === 'comments') return 'details';
+      if (s === 'details') return 'arrows';
+      return s;
     });
   };
 
-  // Closing the comment sheet. If it was opened by the first-favourite tour
-  // step, then whether they left a comment or not, follow up by pointing at
-  // the details chip (once). A short delay lets the sheet finish sliding down
-  // before the details ring appears where it used to be.
   const closeComments = () => {
     setCommentPhotoId(null);
-    if (commentStepActive.current) {
-      commentStepActive.current = false;
-      setTourStep(null);
-      if (!tourDetailsDone) {
-        setTimeout(() => setTourStep('details'), 340);
-      }
-    }
   };
 
   // Tap-to-toggle, matching how favoriting works: add the reaction
@@ -626,24 +626,15 @@ export default function SwipeScreen() {
         </View>
       )}
 
-      {/* First-run guided tour. The three intro steps + the details prompt use
-          the blocking CoachMark (tap Next/Got it to advance). The comment step
-          instead shows a non-blocking banner while the comment sheet is open,
-          so it never blocks typing. */}
-      {tourStep === 'comment' && (
-        <View style={styles.tourBanner} pointerEvents="none">
-          <Text style={styles.tourBannerText}>
-            That&rsquo;s your first favourite 💛  Say what you remember about this one — a comment
-            keeps the memory with the photo.
-          </Text>
-        </View>
-      )}
-
+      {/* First-run guided tour: read + tap Next slides interleaved with three
+          interactive steps (grid, gridInfo, arrows) the user drives by tapping
+          the real element. */}
       <CoachMark
         visible={tourStep === 'counter'}
-        text="These are the photos in the memorial — the number shows how many there are and which one you're on. Swipe left and right to move through them."
+        text="This shows how many photos there are and which one you're on. Swipe left or right to move through them."
         anchor={{ x: width / 2, y: 33 }}
         placement="below"
+        ringSize={52}
         buttonLabel="Next"
         onNext={advanceTour}
         screenWidth={width}
@@ -651,31 +642,72 @@ export default function SwipeScreen() {
       />
       <CoachMark
         visible={tourStep === 'menu'}
-        text="Everything else lives in the menu — invite family with a share link, see everyone's favourites, and share your own memories."
+        text="The menu is here. Open it to invite family with a share link, see everyone's favourites, or share your own memories."
         anchor={{ x: width - 34, y: 33 }}
         placement="below"
+        ringSize={52}
         buttonLabel="Next"
         onNext={advanceTour}
         screenWidth={width}
         screenHeight={height}
       />
       <CoachMark
-        visible={tourStep === 'like'}
-        text="Tap the heart to favourite a photo that moves you. Your favourites help the family choose what goes into the tribute film."
+        visible={tourStep === 'grid'}
+        text="Tap here to see every photo at once."
+        anchor={{ x: width - 78, y: 33 }}
+        placement="below"
+        ringSize={52}
+        interactive
+        screenWidth={width}
+        screenHeight={height}
+      />
+      <CoachMark
+        visible={tourStep === 'gridInfo'}
+        text="Here they all are together. Tap any photo to open it and start swiping."
+        anchor={{ x: width / 4, y: 150 }}
+        placement="below"
+        ringSize={96}
+        interactive
+        screenWidth={width}
+        screenHeight={height}
+      />
+      <CoachMark
+        visible={tourStep === 'favourites'}
+        text="Tap the heart to favourite a photo you love. Your favourites help the family choose what goes into the film."
         anchor={{ x: bandLeftApp + bandApp / 2, y: height - 54 }}
         placement="above"
-        buttonLabel="Got it"
+        buttonLabel="Next"
+        onNext={advanceTour}
+        screenWidth={width}
+        screenHeight={height}
+      />
+      <CoachMark
+        visible={tourStep === 'comments'}
+        text="Leave a memory here. Comments stay with the photo for the whole family to read."
+        anchor={{ x: bandLeftApp + bandApp / 6, y: height - 54 }}
+        placement="above"
+        buttonLabel="Next"
         onNext={advanceTour}
         screenWidth={width}
         screenHeight={height}
       />
       <CoachMark
         visible={tourStep === 'details'}
-        text="If you know when or where this was taken, add it here. Even just the year helps — it enriches the memorial and lets us put the photos in the right order."
+        text="Know when or where a photo was taken? Add it here. Even just the year helps us put them in order."
         anchor={{ x: bandLeftApp + (bandApp * 5) / 6, y: height - 54 }}
         placement="above"
-        buttonLabel="Got it"
+        buttonLabel="Next"
         onNext={advanceTour}
+        screenWidth={width}
+        screenHeight={height}
+      />
+      <CoachMark
+        visible={tourStep === 'arrows'}
+        text="Last thing: tap here to move to the next photo."
+        anchor={{ x: bandLeftApp + (bandApp * 2) / 3, y: height - 132 }}
+        placement="above"
+        ringSize={88}
+        interactive
         screenWidth={width}
         screenHeight={height}
       />

@@ -85,7 +85,7 @@ export default function DetailsSheet({ photo, onClose, onSave, autoCloseOnSave =
         <TextInput
           value={photoDate}
           onChangeText={setPhotoDate}
-          placeholder="Even just the year — e.g. 1998"
+          placeholder="Even just the year, like 1998"
           placeholderTextColor={colors.textFaintest}
           style={styles.input}
           returnKeyType="next"
