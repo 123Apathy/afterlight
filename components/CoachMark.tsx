@@ -173,8 +173,14 @@ export default function CoachMark({
                   width: ringSize,
                   height: ringSize,
                   borderRadius: ringSize / 2,
+                  // Spread must exceed the viewport DIAGONAL, not just its
+                  // larger side: a box-shadow's corners are rounded (radius
+                  // grows with the spread), so at wide/tall ratios an
+                  // under-sized spread let the far corner's arc curve back into
+                  // view as an undimmed wedge. Sizing off hypot()*2 keeps those
+                  // rounded corners far off-screen at ANY aspect ratio.
                   // @ts-expect-error web-only CSS shorthand, not in RN's style types
-                  boxShadow: `0 0 0 ${Math.max(screenWidth, screenHeight)}px rgba(10, 8, 7, 0.32)`,
+                  boxShadow: `0 0 0 ${Math.ceil(Math.hypot(screenWidth, screenHeight) * 2)}px rgba(10, 8, 7, 0.32)`,
                 },
               ]}
             />
