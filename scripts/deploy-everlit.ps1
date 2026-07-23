@@ -37,11 +37,16 @@ if ($pending) {
 }
 
 # One-time login if needed (opens browser, waits for you to approve).
-npx netlify api getCurrentUser *> $null
-if ($LASTEXITCODE -ne 0) {
+# NOTE: `netlify api getCurrentUser` exits 0 even when unauthorized, so we must
+# inspect its OUTPUT (a logged-in reply contains the account "id"), not $?.
+$who = (npx netlify api getCurrentUser 2>&1 | Out-String)
+if ($who -notmatch '"id"') {
     Write-Host 'Not logged in to Netlify yet -- opening browser for one-time login...' -ForegroundColor Yellow
     npx netlify login
     if ($LASTEXITCODE -ne 0) { Write-Host 'Login failed/cancelled. Nothing deployed.' -ForegroundColor Red; exit 1 }
+    # Re-check after login.
+    $who = (npx netlify api getCurrentUser 2>&1 | Out-String)
+    if ($who -notmatch '"id"') { Write-Host 'Still not authenticated. Nothing deployed.' -ForegroundColor Red; exit 1 }
 }
 
 Write-Host 'Building locally (expo export) and uploading -- no Netlify build credits used.' -ForegroundColor Gray
