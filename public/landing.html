@@ -176,18 +176,19 @@
        loops perfectly. Sits above the atmosphere/fluid-cursor layer (z-index
        8) but below the hero text (z-index 10), so the headline always wins
        if they ever overlap. */
-    /* Browser position: a grid item in .hero-content's 3rd column, spanning
-       both rows (grid-row: 1/3 -- row 1 is the tagline/CTA block, row 2 is
-       the wordmark). align-self:stretch (grid default) fills that combined
+    /* Browser position: a grid item in .hero-content's 2nd column (see
+       .hero-content -- column 1 is sized to exactly match .hero-right's own
+       width, so column 2 is precisely "everything after the text"),
+       spanning both rows (row 1 is the tagline/CTA block, row 2 is the
+       wordmark). align-self:stretch (grid default) fills that combined
        height, so the top edge lands on the tagline's top and the bottom
-       edge on the wordmark's bottom -- automatically, and stays true as
-       either row's content changes instead of being hand-measured pixel
-       offsets that go stale. justify-self:center centers it in column 3
-       (the right third of a 3-equal-column grid); width is then derived
-       from that stretched height via aspect-ratio.
+       edge on the wordmark's bottom automatically. justify-self:center
+       centers it within column 2, which makes its gap to the text and its
+       gap to the card's edge equal by construction, at any viewport width.
+       Width is then derived from the stretched height via aspect-ratio.
        Mobile: see the ≤768px override below (TBD placement/treatment). */
     .phone-mock {
-      grid-column: 3;
+      grid-column: 2;
       grid-row: 1 / 3;
       justify-self: center;
       align-self: stretch;
@@ -490,14 +491,18 @@
     }
 
     /* Hero Content */
-    /* 3 equal-width columns across the card: text occupies the left two
-       (cols 1-2), the phone mockup occupies the right one (col 3), centered
-       in it. The phone is a grid item spanning BOTH rows (grid-row: 1/-1),
-       so it's stretched by the grid to exactly match the combined height of
-       row 1 (tagline/description/CTA) + row 2 (wordmark) -- its top lands
-       on the tagline's top and its bottom on the wordmark's bottom
-       automatically, and stays true as either row's content/size changes,
-       instead of being hand-measured pixel offsets that go stale. */
+    /* Column 1 is sized to EXACTLY match .hero-right's own width formula
+       (clamp(300px,34vw,560px) -- see .hero-right), so the column boundary
+       always sits precisely at the tagline block's right edge, never wider
+       or narrower than the text actually is. Column 2 is everything left
+       over up to the card's padding edge. The phone mockup lives in column
+       2, justify-self:center -- centered in "everything after the text"
+       means its gap to the text and its gap to the card edge are always
+       equal, by construction, at any viewport width (not just hand-tuned
+       at one size). It also spans both rows (grid-row: 1/-1), stretched to
+       the combined height of row 1 (tagline/CTA) + row 2 (wordmark), so its
+       top lands on the tagline's top and its bottom on the wordmark's
+       bottom automatically. */
     .hero-content {
       position: absolute;
       bottom: 0;
@@ -506,7 +511,7 @@
       z-index: 10;
       padding: 64px 32px;
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: clamp(300px, 34vw, 560px) 1fr;
       column-gap: 24px;
       row-gap: 40px;
     }
@@ -542,15 +547,12 @@
     }
 
     .hero-right {
-      grid-column: 1 / 3;
+      grid-column: 1;
       grid-row: 1;
       display: flex;
       flex-direction: column;
       gap: clamp(20px, 4vh, 48px);
       padding-bottom: 16px;
-      /* Fluid so it grows with big screens instead of freezing at 420px
-         while the wordmark keeps scaling. */
-      max-width: clamp(300px, 34vw, 560px);
       min-width: 0;
     }
 
@@ -1360,7 +1362,7 @@
       }
 
       /* Mobile position/treatment still TBD -- temporary fallback so the
-         3-column browser grid doesn't break here: collapse to a single
+         2-column browser grid doesn't break here: collapse to a single
          stacked column in document order (tagline block, wordmark, phone),
          phone sized on its own terms instead of stretched to the text's
          combined height. */
