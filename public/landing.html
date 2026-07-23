@@ -491,29 +491,45 @@
     }
 
     /* Hero Content */
-    /* Column 1 is sized to EXACTLY match .hero-right's own width formula
-       (clamp(300px,34vw,560px) -- see .hero-right), so the column boundary
-       always sits precisely at the tagline block's right edge, never wider
-       or narrower than the text actually is. Column 2 is everything left
-       over up to the card's padding edge. The phone mockup lives in column
-       2, justify-self:center -- centered in "everything after the text"
-       means its gap to the text and its gap to the card edge are always
-       equal, by construction, at any viewport width (not just hand-tuned
-       at one size). It also spans both rows (grid-row: 1/-1), stretched to
-       the combined height of row 1 (tagline/CTA) + row 2 (wordmark), so its
-       top lands on the tagline's top and its bottom on the wordmark's
-       bottom automatically. */
+    /* The whole composition (tagline/CTA block, wordmark, phone) is scaled
+       up ~26.7% from where it was (that increase = the rendered height of
+       the lowercase "v" in "Everlit", ~125px at a 1280-wide reference --
+       measured via canvas text metrics, not eyeballed) and centered as one
+       intrinsically-sized unit: inset:0 + margin:auto + width/height:
+       fit-content is the standard trick for centering an absolutely
+       positioned element of unknown size, and it gives EXACTLY equal
+       margins on opposing sides (left=right, top=bottom) natively at any
+       viewport width -- no hand-computed pixel offsets to go stale.
+       Column 1 matches .hero-right's own width formula exactly, so the
+       column boundary always sits precisely at the tagline block's right
+       edge. Column 2 is "auto" (not "1fr") specifically because the
+       container is fit-content now, not full-bleed -- 1fr would have
+       nothing to expand into. The phone mockup lives in column 2, spanning
+       both rows (grid-row: 1/-1) so it's stretched to the combined height
+       of row 1 (tagline/CTA) + row 2 (wordmark) -- its top lands on the
+       tagline's top and its bottom on the wordmark's bottom automatically,
+       and (since it's driven by the SAME scaled text sizes) grows in
+       lockstep with the other two pieces rather than needing its own
+       separate scale factor. */
     .hero-content {
       position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
+      inset: 0;
+      margin: auto;
+      width: fit-content;
+      height: fit-content;
       z-index: 10;
-      padding: 64px 32px;
       display: grid;
-      grid-template-columns: clamp(300px, 34vw, 560px) 1fr;
-      column-gap: 24px;
-      row-gap: 40px;
+      grid-template-columns: clamp(380px, 43.07vw, 709px) auto;
+      /* .hero-title spans both columns and is left-aligned within that span
+         -- since it's wider than column 1 alone (the wordmark needs more
+         room than the tagline block does), its ink extends past column 1's
+         boundary into column 2's territory, which the phone now fills
+         edge-to-edge (no slack, since column 2 is fit-content-sized to
+         exactly match the phone). A large column-gap is the buffer that
+         keeps that overflow clear of the phone. Tuned + verified against
+         actual rendered text width, not guessed. */
+      column-gap: clamp(130px, 20vw, 400px);
+      row-gap: 51px;
     }
 
     .hero-title {
@@ -521,8 +537,9 @@
       grid-row: 2;
       /* vh cap stops the wordmark growing forever on wide monitors (raw 20vw
          used to outgrow the frozen 420px tagline block and read as "the
-         layout stopped scaling"). */
-      font-size: min(20vw, 30vh);
+         layout stopped scaling"). Both numbers scaled ~1.267x along with
+         everything else in this composition. */
+      font-size: min(25.34vw, 38vh);
       font-weight: 500;
       line-height: 0.85;
       letter-spacing: -0.07em;
@@ -551,24 +568,30 @@
       grid-row: 1;
       display: flex;
       flex-direction: column;
-      gap: clamp(20px, 4vh, 48px);
-      padding-bottom: 16px;
+      gap: clamp(25px, 5.07vh, 61px);
+      padding-bottom: 20px;
       min-width: 0;
     }
 
     .hero-tagline {
       font-family: 'Playfair Display', Georgia, serif;
-      font-size: clamp(24px, 1.6vw + 8px, 36px);
+      font-size: clamp(30px, 2.03vw + 10px, 46px);
       line-height: 1.1;
       color: var(--primary);
+      /* Soft dark halo so the hero copy stays legible over the brightest
+         parts of the candle video underneath it. */
+      text-shadow: 0 1px 14px rgba(0, 0, 0, 0.55);
       opacity: 0;
       transform: translateY(20px);
       animation: pullUp 0.8s 0.4s forwards;
     }
 
     .hero-description {
-      color: var(--primary-70);
-      font-size: clamp(14px, 0.9vw + 4px, 18px);
+      /* Was --primary-70 (0.7 alpha) -- too faint over the video. Full
+         brightness + a dark halo for contrast. */
+      color: var(--primary);
+      text-shadow: 0 1px 12px rgba(0, 0, 0, 0.6);
+      font-size: clamp(18px, 1.14vw + 5px, 23px);
       line-height: 1.4;
       opacity: 0;
       transform: translateY(20px);
@@ -690,7 +713,10 @@
     }
 
     .about-body .char {
-      opacity: 0.3;
+      /* Unlit floor raised from 0.3 -- at 0.3 the not-yet-revealed words
+         were nearly invisible on the dark card. 0.5 keeps a clear
+         dim-to-bright reveal contrast while staying readable throughout. */
+      opacity: 0.5;
       transition: opacity 0.18s;
     }
 
@@ -1332,7 +1358,7 @@
       }
 
       .hero-title {
-        font-size: min(24vw, 28vh);
+        font-size: min(30.41vw, 35.48vh);
       }
 
       .navbar-links {
@@ -1345,30 +1371,82 @@
         padding: 16px;
       }
 
+      /* Candle repositioned to sit behind the "Everlit" wordmark on mobile
+         (desktop's own translateX(-14%) tuning, from centering the candle
+         there, doesn't apply here -- portrait aspect crops the video very
+         differently). Same derivation as desktop: candle sits at source
+         fraction (0.64, 0.5) -- measured directly from raw video pixels --
+         and the wordmark's on-screen center is at container-relative
+         fraction (0.4997, 0.6336), measured via getBoundingClientRect.
+         Solved for the transform that lands the candle exactly there. */
+      .hero-video-container video {
+        transform: translate(-50%, -50%) translateX(-14.02%) translateY(9.54%);
+      }
+
       .hero-card {
         border-radius: 1rem;
       }
 
+      /* Mobile locked layout (deliberate, not a placeholder): text block and
+         phone mockup share the SAME grid cell (row 1) and overlap -- the
+         phone sits large in the left half of that cell, behind (z-index),
+         and the tagline/CTA block sits on top of it, confined to the left
+         two-thirds. The wordmark sits in row 2, below both, in normal flow.
+         Browser (>768px) layout is untouched by anything in this block --
+         its own rules live above; this only resets the fit-content-
+         centering trick used there back to plain bottom-anchored
+         full-bleed for mobile. */
       .hero-content {
+        inset: auto;
+        /* Top-anchored (not bottom-anchored) specifically so the whole
+           group can be moved up as a block: 114px measured to cut the old
+           277.7px nav-to-content gap down to ~1/4 (69.4px target). */
+        top: 114px;
+        bottom: auto;
+        left: 0;
+        right: 0;
+        margin: 0;
+        width: auto;
+        height: auto;
         padding: 24px 16px;
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto;
+        row-gap: 20px;
       }
 
       .hero-title {
-        font-size: min(26vw, 26vh);
+        /* Sized so the wordmark's right margin matches its left margin --
+           measured (16px left vs 84.3px right at 375 wide), not eyeballed. */
+        font-size: min(33.3vw, 26vh);
       }
 
       .hero-right {
         gap: 20px;
+        /* Zeroed so .hero-right's own bottom edge IS the button's bottom
+           edge -- .phone-mock below stretches to match this box exactly. */
+        padding-bottom: 0;
       }
 
-      /* Mobile position/treatment still TBD -- temporary fallback so the
-         2-column browser grid doesn't break here: collapse to a single
-         stacked column in document order (tagline block, wordmark, phone),
-         phone sized on its own terms instead of stretched to the text's
-         combined height. */
-      .hero-content {
-        grid-template-columns: 1fr;
-        row-gap: 24px;
+      /* Shrunk (~0.68x) so it fits in the left half with equal breathing
+         room on both sides of it -- measured the overflow past the
+         midline, not eyeballed. Real font-size/padding/icon-size (not a
+         transform) specifically because .phone-mock's height below is
+         tied to .hero-right's actual rendered height, which a transform
+         wouldn't shrink. */
+      .hero-btn-text {
+        font-size: 9.5px;
+        padding-left: 18px;
+        padding-right: 4px;
+      }
+
+      .hero-btn-icon {
+        width: 22px;
+        height: 22px;
+      }
+
+      .hero-btn {
+        gap: 4px;
+        padding: 2px 2px 2px 0;
       }
 
       .hero-right,
@@ -1377,16 +1455,31 @@
         grid-column: 1;
       }
 
+      .hero-right {
+        grid-row: 1;
+        z-index: 2;
+        width: 66%;
+        align-self: start;
+      }
+
       .hero-title {
         grid-row: 2;
       }
 
       .phone-mock {
-        grid-row: 3;
-        justify-self: start;
-        align-self: auto;
-        width: min(44vw, 24vh, 220px);
-        height: auto;
+        grid-row: 1;
+        justify-self: end;
+        /* stretch (not start) fills row 1's own height, which .hero-right
+           (align-self:start, natural content height) determines -- so the
+           phone's bottom lands exactly on the button's bottom (the last
+           thing in .hero-right) automatically, while its top stays where
+           it already was correct. Width is then derived from that
+           stretched height via aspect-ratio, same pattern as the browser
+           layout. */
+        align-self: stretch;
+        aspect-ratio: 9 / 19.5;
+        width: auto;
+        z-index: 1;
       }
 
       .navbar-links {
@@ -1832,8 +1925,12 @@
       const rect = bodyEl.getBoundingClientRect();
       const windowH = window.innerHeight;
 
-      const start = windowH * 0.8;
-      const end = windowH * 0.2;
+      // progress runs 0 -> 1 as the block travels from "just entering the
+      // bottom of the viewport" to "vertically centered in the viewport":
+      //   start (progress 0): element top at the bottom edge  -> rect.top = windowH
+      //   end   (progress 1): element CENTER at screen center -> rect.top = windowH/2 - height/2
+      const start = windowH;
+      const end = windowH / 2 - rect.height / 2;
       const progress = Math.max(0, Math.min(1, (start - rect.top) / (start - end)));
 
       const chars = bodyEl.querySelectorAll('.char');
