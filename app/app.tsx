@@ -1926,14 +1926,16 @@ const styles = StyleSheet.create({
   },
   counterText: {
     fontFamily: 'Courier New',
-    fontSize: 12,
+    // Scaled up so the counter matches the ~32px header brand lockup height,
+    // per "make these elements equal height to the tallest".
+    fontSize: 22,
     letterSpacing: 1,
     fontWeight: '600',
     color: 'rgba(255, 255, 255, 0.75)',
   },
   counterSeparator: {
     fontFamily: 'Courier New',
-    fontSize: 10,
+    fontSize: 17,
     letterSpacing: 1,
     color: 'rgba(255, 255, 255, 0.5)',
   },
@@ -1982,11 +1984,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Softer fill than navButtonContrast so the (physically largest) arrows
-  // don't out-shout the heart -- but the border now matches the bottom three
-  // buttons exactly (2px, rgba .36) per request.
+  // Fill AND border now match the bottom three buttons exactly (same as
+  // navButtonContrast) per request.
   navButtonLight: {
-    backgroundColor: 'rgba(255, 255, 255, 0.10)',
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.36)',
   },
