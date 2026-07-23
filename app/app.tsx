@@ -319,7 +319,8 @@ export default function SwipeScreen() {
   const lastAdvanceRef = useRef(0);
   const advanceTour = () => {
     const now = Date.now();
-    if (now - lastAdvanceRef.current < 350) return;
+    // 600ms so a stray double-tap (older users especially) can't skip a step.
+    if (now - lastAdvanceRef.current < 600) return;
     lastAdvanceRef.current = now;
     setTourStep((s) => {
       if (s === 'counter') return 'menu';
@@ -605,7 +606,7 @@ export default function SwipeScreen() {
       <CoachMark
         visible={tourStep === 'counter'}
         text="These are the photos in the memorial — the number shows how many there are and which one you're on. Swipe left and right to move through them."
-        anchor={{ x: width / 2, y: 26 }}
+        anchor={{ x: width / 2, y: 33 }}
         placement="below"
         buttonLabel="Next"
         onNext={advanceTour}
@@ -615,7 +616,7 @@ export default function SwipeScreen() {
       <CoachMark
         visible={tourStep === 'menu'}
         text="Everything else lives in the menu — invite family with a share link, see everyone's favourites, and share your own memories."
-        anchor={{ x: width - 30, y: 26 }}
+        anchor={{ x: width - 34, y: 33 }}
         placement="below"
         buttonLabel="Next"
         onNext={advanceTour}
