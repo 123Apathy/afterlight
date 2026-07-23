@@ -407,10 +407,22 @@ export default function SwipeScreen() {
   });
   const flamePlainStyle = useAnimatedStyle(() => ({ opacity: 1 - brandGrow.value }));
   const flameRingStyle = useAnimatedStyle(() => ({ opacity: brandGrow.value }));
+  // Wordmark: slides its left edge back to where the flame started (x=19) and
+  // enlarges to span from there to where the counter number ends (~width/2+33).
+  // transformOrigin 'left top' (set in styles.wordmarkOrigin) keeps the top
+  // edge pinned, so growth goes rightward and downward, never up the page.
+  const WORD_LEFT0 = 59; // resting left edge of "Everlit"
+  const WORD_W0 = 49.5; // resting rendered width of "Everlit"
+  const FLAME_LEFT = 19;
   const wordmarkStyle = useAnimatedStyle(() => {
     const p = brandGrow.value;
+    const targetRight = width / 2 + 33;
+    const scaleEnd = (targetRight - FLAME_LEFT) / WORD_W0;
     return {
-      transform: [{ translateX: -p * 40 }, { scale: 1 + p * 0.12 }],
+      transform: [
+        { translateX: p * (FLAME_LEFT - WORD_LEFT0) },
+        { scale: 1 + p * (scaleEnd - 1) },
+      ],
     };
   });
 
@@ -822,13 +834,13 @@ export default function SwipeScreen() {
           {/* Wordmark: its own wrapper so it can slide left + grow slightly,
               independent of the flame. Starts at x=59 (flame 32 + gap 8 + the
               19 inset) so the resting lockup looks unchanged. */}
-          <Animated.View
-            style={[styles.centerContent, { position: 'absolute', left: 59, top: 0, bottom: 0 }, wordmarkStyle]}
-          >
+          <View style={[styles.centerContent, { position: 'absolute', left: 59, top: 0, bottom: 0 }]}>
             <PressableScale onPress={goHome} scaleTo={0.96} hitSlop={8}>
-              <Text style={styles.brandText}>Everlit</Text>
+              <Animated.Text style={[styles.brandText, styles.wordmarkOrigin, wordmarkStyle]}>
+                Everlit
+              </Animated.Text>
             </PressableScale>
-          </Animated.View>
+          </View>
           {/* Flame: separate wrapper that flies to the middle of the slide and
               crossfades to the ringed icon. Sits above the wordmark's z so the
               ring never clips behind the text as it grows. */}
@@ -884,34 +896,73 @@ function StreakDivider() {
   );
 }
 
-// A slowly-breathing candle glow instead of a generic pulsing dot — the same
-// gold radial language as HorizonGlow and the heart's glowPulse.
+// Comforting lines that rotate while the memorial loads — the wait becomes a
+// held breath rather than a spinner. Kept warm, present-tense, and dash-free.
+const LOADING_PHRASES = [
+  'Take all the time you need.',
+  'Every memory you share keeps them close.',
+  'Grief is love with nowhere to go. Let it rest here a while.',
+  'You are not alone in this.',
+  'Their light stays with us.',
+  'Breathe. There is no rush at all.',
+  'Hold gently to the moments that made you smile.',
+  'This is a space for remembering, together.',
+];
+
+// The brand emblem (flame in its compass ring) breathing over a soft gold glow,
+// with a slow carousel of comforting lines beneath it. The ringed mark makes
+// the wait feel finished and cared-for rather than a half-built placeholder.
 function LoadingState({ reduceMotion }: { reduceMotion: boolean }) {
   const breath = useSharedValue(0);
+  const fade = useSharedValue(1);
+  const [phrase, setPhrase] = useState(0);
 
   useEffect(() => {
     if (reduceMotion) return;
     breath.value = withRepeat(
-      withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.quad) }),
+      withTiming(1, { duration: 2600, easing: Easing.inOut(Easing.quad) }),
       -1,
       true
     );
   }, []);
 
-  const style = useAnimatedStyle(() => ({
-    opacity: 0.45 + breath.value * 0.45,
-    transform: [{ scale: 0.92 + breath.value * 0.12 }],
+  // Fade the current line out, swap it, fade the next one in.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (reduceMotion) {
+        setPhrase((p) => (p + 1) % LOADING_PHRASES.length);
+        return;
+      }
+      fade.value = withTiming(0, { duration: 600, easing: Easing.in(Easing.quad) });
+      setTimeout(() => {
+        setPhrase((p) => (p + 1) % LOADING_PHRASES.length);
+        fade.value = withTiming(1, { duration: 750, easing: Easing.out(Easing.quad) });
+      }, 640);
+    }, 4200);
+    return () => clearInterval(id);
+  }, [reduceMotion]);
+
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: 0.5 + breath.value * 0.4,
+    transform: [{ scale: 0.88 + breath.value * 0.24 }],
   }));
+  const emblemStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 0.98 + breath.value * 0.05 }],
+  }));
+  const phraseStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
 
   return (
     <View style={styles.pageContent}>
-      <View style={styles.emptyState}>
-        <View style={styles.emptyCard}>
-          <Animated.View style={[styles.loadingGlow, style]}>
+      <View style={styles.loadingWrap}>
+        <View style={styles.loadingEmblem}>
+          <Animated.View style={[styles.loadingGlowWrap, glowStyle]} pointerEvents="none">
             <RadialGlow color={colors.goldWarm} />
           </Animated.View>
-          <Text style={styles.emptySubtitle}>Opening the space…</Text>
+          <Animated.Image source={images.logoRing} style={[styles.loadingIcon, emblemStyle]} resizeMode="contain" />
         </View>
+        <Animated.Text style={[styles.loadingPhrase, phraseStyle]}>
+          {LOADING_PHRASES[phrase]}
+        </Animated.Text>
       </View>
     </View>
   );
@@ -1823,6 +1874,11 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
     color: colors.white,
   },
+  // Grows the wordmark from its top-left corner so enlarging pushes it right
+  // and down, never up the page.
+  wordmarkOrigin: {
+    transformOrigin: 'left top',
+  },
   gate: {
     flex: 1,
     alignItems: 'center',
@@ -1865,9 +1921,35 @@ const styles = StyleSheet.create({
     marginTop: -6,
     marginBottom: 6,
   },
-  loadingGlow: {
-    width: 96,
-    height: 96,
+  loadingWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 44,
+  },
+  loadingEmblem: {
+    width: 132,
+    height: 132,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 40,
+  },
+  loadingGlowWrap: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+  },
+  loadingIcon: {
+    width: 108,
+    height: 108,
+  },
+  loadingPhrase: {
+    fontFamily: 'PlayfairDisplay_500Medium',
+    fontSize: 20,
+    lineHeight: 32,
+    color: colors.white,
+    textAlign: 'center',
+    maxWidth: 340,
   },
   vignettePulse: {
     position: 'absolute',
