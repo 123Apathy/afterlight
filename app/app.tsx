@@ -28,6 +28,11 @@ import GoldButton from '../components/GoldButton';
 import BackdropVideo from '../components/BackdropVideo';
 import { colors, copy, images, stageWidth, CONTROLS_BAND_MAX } from '../constants/theme';
 import { DEMO, DEMO_PHOTOS } from '../constants/demo';
+
+// Dev-only: append ?loading=1 to the URL to hold the loading screen on screen
+// (so its design can be iterated). Never true in a normal session.
+const FORCE_LOADING =
+  typeof window !== 'undefined' && /[?&]loading=1/.test(window.location.search);
 import { API_BASE, api, heartCount, isFavoritedBy, photoThumbUrl, photoUrl, setInviteCode, type Photo, type Project } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
 import { useLocalStorage } from '../lib/useLocalStorage';
@@ -141,6 +146,8 @@ export default function SwipeScreen() {
   }));
 
   const refresh = async () => {
+    // Dev only: ?loading=1 pins the loading screen so we can design it.
+    if (FORCE_LOADING) return;
     if (DEMO) {
       // Seed once; keep the reviewer's in-memory favourites/comments across
       // menu opens instead of resetting them.
