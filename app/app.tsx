@@ -1200,8 +1200,8 @@ function NavChevron({ direction }: { direction: 'left' | 'right' }) {
     return React.createElement(
       'svg',
       {
-        width: 22,
-        height: 20,
+        width: 44,
+        height: 40,
         viewBox: '0 0 28 24',
         style: mirror ? { transform: 'scaleX(-1)' } : undefined,
       },
@@ -2248,8 +2248,8 @@ const styles = StyleSheet.create({
     color: colors.heart,
   },
   chevron: {
-    width: 13,
-    height: 13,
+    width: 26,
+    height: 26,
   },
   chevronLeft: {
     borderTopWidth: 2.5,
