@@ -162,18 +162,23 @@
        loops perfectly. Sits above the atmosphere/fluid-cursor layer (z-index
        8) but below the hero text (z-index 10), so the headline always wins
        if they ever overlap. */
-    /* ONE instance, in normal flex flow inside .hero-top next to the tagline
-       block, at every viewport size. It used to be two duplicated copies (an
-       absolutely-positioned corner one + an inline mobile one) swapped per
-       breakpoint; because the corner copy was positioned blind against
-       bottom-anchored siblings, every size tweak found a new collision.
-       In-flow, collisions are structurally impossible.
-       Width is capped three ways: by vw (phones), by vh (short/wide browser
-       windows -- the mock is ~2.17x taller than wide, so width 20vh ≈ height
-       43vh), and by px (huge monitors). */
+    /* Two deliberate positions, not one fluid formula trying to cover both:
+       - Browser (this rule): pinned to the hero-card's top-right corner,
+         independent of the text stack below. Top+right stay fixed as it
+         grows, so making it bigger extends down and left -- like dragging
+         its bottom-left corner outward -- and it can never collide with
+         the bottom-anchored tagline/wordmark because it isn't laid out
+         relative to them at all.
+       - Mobile: see the ≤768px override below (TBD placement).
+       Markup lives as a direct child of .hero-card (sibling of .hero-content),
+       not inside .hero-top, specifically so its position is independent of
+       how tall the text stack is. */
     .phone-mock {
-      flex-shrink: 0;
-      width: min(13vw + 60px, 20vh, 260px);
+      position: absolute;
+      z-index: 8;
+      top: clamp(96px, 9vh, 140px);
+      right: clamp(32px, 4vw, 90px);
+      width: min(16vw + 90px, 26vh, 340px);
       aspect-ratio: 9 / 19.5;
       /* Upright, not tilted -- a rotated frame around a perfectly rectilinear
          UI (straight header row, grid-square icons, right-angle chevrons)
@@ -489,11 +494,11 @@
       gap: 40px;
     }
 
+    /* Just wraps the tagline block now -- the phone mockup moved out to be
+       a direct .hero-card child (see .phone-mock) so its position is fixed
+       to the card corner, not to this row. */
     .hero-top {
       display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      gap: 24px;
     }
 
     .hero-title {
@@ -1434,10 +1439,52 @@
         </div>
       </nav>
 
-      <!-- Hero Content: one flex stack -- tagline/CTA block + phone mockup
-           side by side (the mockup is a live CSS recreation of the real
-           app.tsx swipe/heart/comment interaction), wordmark below owning
-           the bottom. Single phone instance at every size; see .phone-mock. -->
+      <!-- Device mockup: live CSS recreation of the real app.tsx swipe/heart/
+           comment interaction. Pinned to the card's top-right corner
+           independent of the text stack below -- see .phone-mock. -->
+      <div class="phone-mock" aria-hidden="true">
+        <div class="phone-mock-frame">
+          <div class="phone-mock-screen">
+            <img src="/mock-photo-web.jpg" class="mock-photo" alt="" />
+            <div class="mock-topscrim"></div>
+            <div class="mock-bottomscrim"></div>
+            <div class="mock-header">
+              <div class="mock-brand">
+                <img src="/logo-mark-gold.png" alt="" />
+                <span class="mock-brand-text">Everlit</span>
+              </div>
+              <div class="mock-counter"><span>01</span><span class="mock-counter-sep">/</span><span>06</span></div>
+              <div class="mock-header-actions">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2.4"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2.4" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+              </div>
+            </div>
+            <div class="mock-burst">♥</div>
+            <div class="mock-comment-bubble">
+              <span class="mock-bubble-author">Mom</span>
+              <span class="mock-bubble-text">That golden hour again 💛</span>
+            </div>
+            <div class="mock-controls">
+              <div class="mock-comment-btn">
+                <svg viewBox="0 0 30 26" width="18" height="16"><rect x="3" y="3" width="24" height="15" rx="7.5" stroke="currentColor" stroke-width="2.2" fill="none"/><path d="M9 18 L7 24 L14 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+                <span class="mock-comment-count">1</span>
+              </div>
+              <div class="mock-nav">
+                <div class="mock-nav-btn"><svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></svg></div>
+                <div class="mock-nav-btn"><svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+              </div>
+              <div class="mock-heart-btn">
+                <span class="mock-heart-outline">♡</span>
+                <span class="mock-heart-filled">♥</span>
+                <span class="mock-heart-count">3</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hero Content: tagline/CTA block above the wordmark, which owns
+           the bottom of the card. -->
       <div class="hero-content">
         <div class="hero-top">
           <div class="hero-right">
@@ -1451,46 +1498,6 @@
                 <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
               </div>
             </a>
-          </div>
-          <div class="phone-mock" aria-hidden="true">
-            <div class="phone-mock-frame">
-              <div class="phone-mock-screen">
-                <img src="/mock-photo-web.jpg" class="mock-photo" alt="" />
-                <div class="mock-topscrim"></div>
-                <div class="mock-bottomscrim"></div>
-                <div class="mock-header">
-                  <div class="mock-brand">
-                    <img src="/logo-mark-gold.png" alt="" />
-                    <span class="mock-brand-text">Everlit</span>
-                  </div>
-                  <div class="mock-counter"><span>01</span><span class="mock-counter-sep">/</span><span>06</span></div>
-                  <div class="mock-header-actions">
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2.4"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2.4" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-                  </div>
-                </div>
-                <div class="mock-burst">♥</div>
-                <div class="mock-comment-bubble">
-                  <span class="mock-bubble-author">Mom</span>
-                  <span class="mock-bubble-text">That golden hour again 💛</span>
-                </div>
-                <div class="mock-controls">
-                  <div class="mock-comment-btn">
-                    <svg viewBox="0 0 30 26" width="18" height="16"><rect x="3" y="3" width="24" height="15" rx="7.5" stroke="currentColor" stroke-width="2.2" fill="none"/><path d="M9 18 L7 24 L14 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
-                    <span class="mock-comment-count">1</span>
-                  </div>
-                  <div class="mock-nav">
-                    <div class="mock-nav-btn"><svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></svg></div>
-                    <div class="mock-nav-btn"><svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
-                  </div>
-                  <div class="mock-heart-btn">
-                    <span class="mock-heart-outline">♡</span>
-                    <span class="mock-heart-filled">♥</span>
-                    <span class="mock-heart-count">3</span>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
         <h1 class="hero-title">
