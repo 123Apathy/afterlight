@@ -444,6 +444,18 @@ export default function SwipeScreen() {
                 onPress={handleCreateProject}
                 style={styles.gateButton}
               />
+              <Text style={styles.gateTerms}>
+                By beginning, you agree to our{' '}
+                <Text
+                  style={styles.gateTermsLink}
+                  onPress={() => {
+                    if (typeof window !== 'undefined') window.open('https://everlit.co.za/terms', '_blank');
+                  }}
+                >
+                  Terms &amp; Conditions
+                </Text>
+                .
+              </Text>
 
               {known.length > 0 && (
                 <View style={styles.knownBlock}>
@@ -548,6 +560,18 @@ export default function SwipeScreen() {
               onPress={() => nameDraft.trim() && setRaterName(nameDraft.trim())}
               style={styles.gateButton}
             />
+            <Text style={styles.gateTerms}>
+              By entering, you agree to our{' '}
+              <Text
+                style={styles.gateTermsLink}
+                onPress={() => {
+                  if (typeof window !== 'undefined') window.open('https://everlit.co.za/terms', '_blank');
+                }}
+              >
+                Terms &amp; Conditions
+              </Text>
+              .
+            </Text>
           </Animated.View>
         </View>
       </View>
@@ -1476,7 +1500,9 @@ function EndOfDeckSlide({ width, height, projectName, photos, reduceMotion }: En
         Thank you for going through{' '}
         <Text style={styles.endNameFirst}>{nameFirst}</Text>
         {nameRest ? <Text style={styles.endNameRest}> {nameRest}</Text> : null}
-        &rsquo;s photos.
+        {/* No possessive on the "their" fallback: "their photos", not
+            "their's photos". A real name keeps the 's ("Mary's photos"). */}
+        {nameFirst === 'their' && !nameRest ? ' photos.' : '’s photos.'}
       </Text>
       <Text style={styles.endSubtitle}>
         Now you can see what everyone else loved. Tap below to look through the favourites, and the
@@ -1861,6 +1887,20 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 340,
     height: 52,
+  },
+  // Subtle, respectful consent line under the gate's primary button.
+  gateTerms: {
+    marginTop: 16,
+    maxWidth: 320,
+    textAlign: 'center',
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 11.5,
+    lineHeight: 17,
+    color: 'rgba(255, 255, 255, 0.42)',
+  },
+  gateTermsLink: {
+    color: colors.goldWarm,
+    textDecorationLine: 'underline',
   },
   gateButtonText: {
     fontFamily: 'Poppins_500Medium',

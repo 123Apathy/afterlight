@@ -104,15 +104,13 @@ export default function CoachMark({
       : { bottom: screenHeight - (anchor.y - ringSize / 2 - GAP) };
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents={interactive ? 'none' : 'auto'}>
-      {/* Non-interactive: a solid scrim swallows taps so nothing but Next is
-          reachable. Interactive: a lighter, non-blocking scrim so the tap the
-          step is asking for reaches the real element. */}
-      {interactive ? (
-        <View style={[styles.scrim, styles.scrimLight]} pointerEvents="none" />
-      ) : (
-        <Pressable style={styles.scrim} onPress={() => {}} />
-      )}
+    // box-none (not 'auto'): the scrim only lightly darkens the scene and never
+    // blocks, so the deck can still be swiped/scrolled while a mark is up. The
+    // bubble (with Next) still receives its own taps; everything else passes
+    // through to the app underneath. Interactive steps go fully pass-through.
+    <View style={StyleSheet.absoluteFill} pointerEvents={interactive ? 'none' : 'box-none'}>
+      {/* A light, non-blocking dim to focus attention without trapping input. */}
+      <View style={[styles.scrim, styles.scrimLight]} pointerEvents="none" />
 
       {/* Highlight on the target, pulsing: a copy of the target's glyph
           (pulseNode) that swells in place, else a rectangular box that rims a
@@ -155,33 +153,26 @@ export default function CoachMark({
         />
       )}
 
-      {/* Message bubble. Solid BUBBLE_BG (no glassSurface tint/border) so the
-          little pointer arrow, which is the same BUBBLE_BG, blends into the
-          edge seamlessly instead of reading as a chipped-out notch. */}
+      {/* Message bubble: the lighter frosted-glass treatment (glassSurface +
+          glassBlur) people preferred. No pointer arrow -- the highlight
+          already shows the target, and the arrow was the bit that read as a
+          chipped-out notch on the edge. */}
       <View
         style={[
           styles.bubble,
+          glassSurface,
           glassBlur,
           { left: bubbleLeft, width: BUBBLE_WIDTH },
           bubblePos,
         ]}
         pointerEvents={interactive ? 'none' : 'auto'}
       >
-        {/* Arrow */}
-        {placement === 'below' ? (
-          <View style={[styles.arrowUp, { left: arrowLeft }]} pointerEvents="none" />
-        ) : null}
-
         <Text style={[styles.text, interactive && styles.textInteractive]}>{text}</Text>
         {!interactive && (
           <PressableScale onPress={onNext} scaleTo={0.96} style={styles.button}>
             <Text style={styles.buttonText}>{buttonLabel}</Text>
           </PressableScale>
         )}
-
-        {placement === 'above' ? (
-          <View style={[styles.arrowDown, { left: arrowLeft }]} pointerEvents="none" />
-        ) : null}
       </View>
     </View>
   );
