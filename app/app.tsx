@@ -407,27 +407,14 @@ export default function SwipeScreen() {
   });
   const flamePlainStyle = useAnimatedStyle(() => ({ opacity: 1 - brandGrow.value }));
   const flameRingStyle = useAnimatedStyle(() => ({ opacity: brandGrow.value }));
-  // Wordmark: slides its left edge back to where the flame started (x=19) and
-  // enlarges to span from there to where the counter number ends (~width/2+33).
-  // transformOrigin 'left top' (set in styles.wordmarkOrigin) keeps the top
-  // edge pinned, so growth goes rightward and downward, never up the page.
-  const WORD_LEFT0 = 69; // resting left edge of "Everlit"
-  const WORD_W0 = 74; // resting rendered width of "Everlit" at 24px
-  const wordmarkStyle = useAnimatedStyle(() => {
-    const p = brandGrow.value;
-    // Sits centred in the left half of the page (between the left edge and the
-    // vertical middle line), at half the earlier hero size. transformOrigin
-    // 'left top' keeps the top pinned, so it grows down, not up.
-    const targetWidth = width / 4 + 7;
-    const scaleEnd = targetWidth / WORD_W0;
-    const leftEdge = width / 8 - 3.5; // centres targetWidth on width/4
-    return {
-      transform: [
-        { translateX: p * (leftEdge - WORD_LEFT0) },
-        { scale: 1 + p * (scaleEnd - 1) },
-      ],
-    };
-  });
+  // Wordmark: rather than transform-scaling the header text up (which the GPU
+  // bitmap-scales, softening it), we crossfade. The small 24px header wordmark
+  // fades out while a second copy, rendered crisply at its final size and
+  // centred in the left half of the page, fades in. Both ends stay sharp.
+  const WORD_W0 = 74; // rendered width of "Everlit" at 24px
+  const endWordSize = (24 * (width / 4 + 7)) / WORD_W0; // final crisp size
+  const headerWordFade = useAnimatedStyle(() => ({ opacity: 1 - brandGrow.value }));
+  const endWordFade = useAnimatedStyle(() => ({ opacity: brandGrow.value }));
 
   // Tap-to-toggle, matching how favoriting works: add the reaction
   // optimistically, or drop it if the rater already reacted with this
@@ -835,16 +822,28 @@ export default function SwipeScreen() {
               itself -- PressableScale supplies its own press-scale
               `transform`, which silently overwrites (not merges with) a
               translateX passed straight into its style prop. */}
-          {/* Wordmark: its own wrapper so it can slide left + grow slightly,
-              independent of the flame. Starts at x=69 (flame 42 + gap 8 + the
-              19 inset) so the resting lockup looks unchanged. */}
-          <View style={[styles.centerContent, { position: 'absolute', left: 69, top: 0, bottom: 0 }]}>
+          {/* Small header wordmark (starts at x=69: flame 42 + gap 8 + 19
+              inset). On the closing slide it fades out as the crisp full-size
+              copy below fades in. */}
+          <Animated.View
+            style={[styles.centerContent, { position: 'absolute', left: 69, top: 0, bottom: 0 }, headerWordFade]}
+          >
             <PressableScale onPress={goHome} scaleTo={0.96} hitSlop={8}>
-              <Animated.Text style={[styles.brandText, styles.wordmarkOrigin, wordmarkStyle]}>
-                Everlit
-              </Animated.Text>
+              <Text style={styles.brandText}>Everlit</Text>
             </PressableScale>
-          </View>
+          </Animated.View>
+          {/* Crisp full-size wordmark, centred in the left half of the page and
+              on the header line. Rendered at its true font size (no transform
+              scale) so it stays sharp; crossfades in on the closing slide. */}
+          <Animated.View
+            style={[
+              { position: 'absolute', left: 0, top: 0, bottom: 0, width: width / 2, alignItems: 'center', justifyContent: 'center' },
+              endWordFade,
+            ]}
+            pointerEvents="none"
+          >
+            <Text style={[styles.brandText, { fontSize: endWordSize }]}>Everlit</Text>
+          </Animated.View>
           {/* Flame: separate wrapper that flies to the middle of the slide and
               crossfades to the ringed icon. Sits above the wordmark's z so the
               ring never clips behind the text as it grows. */}
@@ -902,15 +901,18 @@ function StreakDivider() {
 
 // Comforting lines that rotate while the memorial loads — the wait becomes a
 // held breath rather than a spinner. Kept warm, present-tense, and dash-free.
-const LOADING_PHRASES = [
-  'Take all the time you need.',
-  'Every memory you share keeps them close.',
-  'Grief is love with nowhere to go. Let it rest here a while.',
-  'You are not alone in this.',
-  'Their light stays with us.',
-  'Breathe. There is no rush at all.',
-  'Hold gently to the moments that made you smile.',
-  'This is a space for remembering, together.',
+// Each line is pre-split into two halves so the larger type always breaks in
+// the same, readable place (top clause / bottom clause) instead of wrapping
+// wherever the width happens to run out.
+const LOADING_PHRASES: [string, string][] = [
+  ['Take all the time', 'you need.'],
+  ['Every memory', 'keeps them close.'],
+  ['Grief is love', 'with a home here.'],
+  ['You are not', 'alone in this.'],
+  ['Their light', 'stays with us.'],
+  ['Breathe.', 'There is no rush.'],
+  ['Hold the good', 'moments close.'],
+  ['We remember them,', 'together.'],
 ];
 
 // Repeating unit that produces the 1,2,3,2,1,2,3,2,1... dot rhythm.
@@ -998,7 +1000,9 @@ function LoadingState({
           />
         </View>
         <Animated.Text style={[styles.loadingPhrase, phraseStyle]}>
-          {LOADING_PHRASES[phrase]}
+          {LOADING_PHRASES[phrase][0]}
+          {'\n'}
+          {LOADING_PHRASES[phrase][1]}
         </Animated.Text>
         {/* Three-dot rhythm: always three slots (so the row stays centred),
             with only `dotCount` of them lit. */}
@@ -1969,7 +1973,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 44,
+    paddingHorizontal: 16,
   },
   loadingLabel: {
     fontFamily: 'Poppins_400Regular',
@@ -1998,7 +2002,8 @@ const styles = StyleSheet.create({
     height: 132,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 40,
+    // Extra gap so the (now larger) phrase clears the bottom of the glow.
+    marginBottom: 72,
   },
   loadingGlowWrap: {
     position: 'absolute',
@@ -2015,12 +2020,13 @@ const styles = StyleSheet.create({
   },
   loadingPhrase: {
     fontFamily: 'PlayfairDisplay_500Medium',
-    fontSize: 20,
-    lineHeight: 32,
+    fontSize: 40,
+    lineHeight: 50,
+    letterSpacing: -0.4,
     color: colors.white,
     textAlign: 'center',
-    maxWidth: 300,
     alignSelf: 'center',
+    paddingHorizontal: 16,
   },
   vignettePulse: {
     position: 'absolute',
