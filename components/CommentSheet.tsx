@@ -19,6 +19,9 @@ type CommentSheetProps = {
   onSubmit: (photo: Photo, text: string) => void;
   onReact: (photo: Photo, commentId: string, emoji: string) => void;
   raterName: string;
+  // Auto-close after posting only the first time for this photo; after that
+  // the sheet stays open so people can keep adding comments.
+  autoCloseOnPost?: boolean;
 };
 
 // Facebook-style comment thread as a slide-up sheet over the photo. The photo
@@ -30,7 +33,7 @@ type CommentSheetProps = {
 // feels stuck.
 const AUTO_CLOSE_MS = 900;
 
-export default function CommentSheet({ photo, onClose, onSubmit, onReact, raterName }: CommentSheetProps) {
+export default function CommentSheet({ photo, onClose, onSubmit, onReact, raterName, autoCloseOnPost = true }: CommentSheetProps) {
   const reduceMotion = useReducedMotion();
   const progress = useSharedValue(0);
   const [draft, setDraft] = useState('');
@@ -83,13 +86,15 @@ export default function CommentSheet({ photo, onClose, onSubmit, onReact, raterN
     if (!text || !photo) return;
     onSubmit(photo, text);
     setDraft('');
-    // Let them see it land in the thread, then close on its own -- one less
-    // tap for something that's already done.
-    if (autoCloseRef.current) clearTimeout(autoCloseRef.current);
-    autoCloseRef.current = setTimeout(() => {
-      autoCloseRef.current = null;
-      onClose();
-    }, AUTO_CLOSE_MS);
+    // First comment on this photo: let them see it land, then close on its own
+    // (one less tap). After that, stay open so they can keep adding.
+    if (autoCloseOnPost) {
+      if (autoCloseRef.current) clearTimeout(autoCloseRef.current);
+      autoCloseRef.current = setTimeout(() => {
+        autoCloseRef.current = null;
+        onClose();
+      }, AUTO_CLOSE_MS);
+    }
   };
 
   const react = (commentId: string, emoji: string) => {

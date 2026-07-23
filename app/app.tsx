@@ -79,6 +79,12 @@ export default function SwipeScreen() {
   // A comment was posted during the current prompted comment step, so on close
   // we know whether they engaged or skipped (the details prompt fires either way).
   const commentStepActive = useRef(false);
+  // Photos that have already had a comment posted / details saved this session.
+  // The sheet auto-closes only the FIRST time either action happens for a
+  // photo; after that it stays open so people can keep adding without it
+  // shutting each time.
+  const postedPhotos = useRef<Set<string>>(new Set());
+  const savedPhotos = useRef<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'deck' | 'grid'>('deck');
   const [deckIndex, setDeckIndex] = useState(0);
   // Mirrors PhotoDeck's live swipe position for the header counter. Kept
@@ -264,6 +270,7 @@ export default function SwipeScreen() {
     setPhotos((prev) =>
       prev.map((p) => (p.id === photo.id ? { ...p, comments: [...p.comments, optimistic] } : p))
     );
+    postedPhotos.current.add(photo.id);
     if (DEMO) return; // in-memory only, no backend
     try {
       await api.addComment(photo.id, raterName, text);
@@ -281,6 +288,7 @@ export default function SwipeScreen() {
         p.id === photo.id ? { ...p, photoDate: details.photoDate || null, location: details.location || null } : p
       )
     );
+    savedPhotos.current.add(photo.id);
     if (DEMO) return; // in-memory only, no backend
     try {
       await api.updatePhotoDetails(photo.id, details);
@@ -582,12 +590,14 @@ export default function SwipeScreen() {
         onSubmit={addComment}
         onReact={reactToComment}
         raterName={raterName}
+        autoCloseOnPost={!!commentPhotoId && !postedPhotos.current.has(commentPhotoId)}
       />
 
       <DetailsSheet
         photo={photos.find((p) => p.id === detailsPhotoId) ?? null}
         onClose={() => setDetailsPhotoId(null)}
         onSave={saveDetails}
+        autoCloseOnSave={!!detailsPhotoId && !savedPhotos.current.has(detailsPhotoId)}
       />
 
       {/* Keep the button that opened a sheet BRIGHT above that sheet's dimming
@@ -1335,10 +1345,10 @@ function DetailsIcon() {
   if (Platform.OS === 'web') {
     return React.createElement(
       'svg',
-      { width: 15, height: 15, viewBox: '0 0 20 20' },
-      React.createElement('circle', { cx: 10, cy: 10, r: 8, stroke: color, strokeWidth: 1.6, fill: 'none' }),
+      { width: 26, height: 26, viewBox: '0 0 20 20' },
+      React.createElement('circle', { cx: 10, cy: 10, r: 8, stroke: color, strokeWidth: 1.5, fill: 'none' }),
       React.createElement('circle', { cx: 10, cy: 6.2, r: 1, fill: color }),
-      React.createElement('path', { d: 'M10 9 L10 14', stroke: color, strokeWidth: 1.6, strokeLinecap: 'round' })
+      React.createElement('path', { d: 'M10 9 L10 14', stroke: color, strokeWidth: 1.5, strokeLinecap: 'round' })
     );
   }
   return <View style={styles.detailsIconFallback} />;
@@ -2053,9 +2063,9 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.9)',
   },
   detailsIconFallback: {
-    width: 15,
-    height: 15,
-    borderRadius: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     borderWidth: 1.6,
     borderColor: 'rgba(255, 255, 255, 0.85)',
   },

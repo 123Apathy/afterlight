@@ -17,12 +17,15 @@ type DetailsSheetProps = {
   photo: Photo | null;
   onClose: () => void;
   onSave: (photo: Photo, details: { photoDate: string; location: string }) => void;
+  // Close after saving only the first time for this photo; after that the
+  // sheet stays open so people can keep refining.
+  autoCloseOnSave?: boolean;
 };
 
 // Slide-up sheet (same glass language as CommentSheet) with two free-text
 // fields — when the photo was taken and where. Both optional. "When" is text,
 // not a date picker, because most people only remember the year.
-export default function DetailsSheet({ photo, onClose, onSave }: DetailsSheetProps) {
+export default function DetailsSheet({ photo, onClose, onSave, autoCloseOnSave = true }: DetailsSheetProps) {
   const reduceMotion = useReducedMotion();
   const progress = useSharedValue(0);
   const [photoDate, setPhotoDate] = useState('');
@@ -54,7 +57,8 @@ export default function DetailsSheet({ photo, onClose, onSave }: DetailsSheetPro
   const save = () => {
     if (!photo) return;
     onSave(photo, { photoDate: photoDate.trim(), location: location.trim() });
-    onClose();
+    // Close on the first save for this photo; after that stay open for edits.
+    if (autoCloseOnSave) onClose();
   };
 
   return (
