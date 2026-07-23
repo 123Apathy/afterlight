@@ -951,6 +951,54 @@ function PhotoDeck({
     return () => window.removeEventListener('wheel', handleWheel);
   }, [width, photos.length]);
 
+  // Web mouse/pen: the native paging ScrollView only pans via touch + wheel,
+  // so on a desktop a click-drag "swipe" did nothing -- only the buttons
+  // worked. Translate a horizontal mouse/pen drag into a real drag-scroll on
+  // the same scroll node, snapping to the nearest photo on release. Touch is
+  // left entirely to the native scroller (guarded by pointerType), so mobile
+  // swiping is unchanged.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const node: any = (scrollRef.current as any)?.getScrollableNode?.();
+    if (!node) return;
+    let dragging = false;
+    let startX = 0;
+    let startScroll = 0;
+    const onDown = (e: PointerEvent) => {
+      if (e.pointerType === 'touch' || !navEnabledRef.current) return;
+      dragging = true;
+      startX = e.clientX;
+      startScroll = node.scrollLeft;
+      node.style.scrollSnapType = 'none';
+      node.style.cursor = 'grabbing';
+      node.style.userSelect = 'none';
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!dragging) return;
+      node.scrollLeft = startScroll - (e.clientX - startX);
+    };
+    const onUp = () => {
+      if (!dragging) return;
+      dragging = false;
+      node.style.scrollSnapType = '';
+      node.style.cursor = 'grab';
+      node.style.userSelect = '';
+      const target = Math.max(0, Math.min(lastIndex, Math.round(node.scrollLeft / width)));
+      scrollRef.current?.scrollTo({ x: target * width, animated: true });
+      setIndex(target);
+    };
+    node.style.cursor = 'grab';
+    node.addEventListener('pointerdown', onDown);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => {
+      node.style.cursor = '';
+      node.removeEventListener('pointerdown', onDown);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+  }, [width, photos.length, lastIndex]);
+
   // Controls band: full width on phones, capped + centered on desktop.
   const band = Math.min(width, CONTROLS_BAND_MAX);
   const bandLeft = (width - band) / 2;
