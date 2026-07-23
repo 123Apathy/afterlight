@@ -625,7 +625,7 @@ export default function SwipeScreen() {
       <CoachMark
         visible={tourStep === 'like'}
         text="Tap the heart to favourite a photo that moves you. Your favourites help the family choose what goes into the tribute film."
-        anchor={{ x: bandLeftApp + bandApp / 2, y: height - 50 }}
+        anchor={{ x: bandLeftApp + bandApp / 2, y: height - 54 }}
         placement="above"
         buttonLabel="Got it"
         onNext={advanceTour}
@@ -635,7 +635,7 @@ export default function SwipeScreen() {
       <CoachMark
         visible={tourStep === 'details'}
         text="If you know when or where this was taken, add it here. Even just the year helps — it enriches the memorial and lets us put the photos in the right order."
-        anchor={{ x: bandLeftApp + (bandApp * 5) / 6, y: height - 50 }}
+        anchor={{ x: bandLeftApp + (bandApp * 5) / 6, y: height - 54 }}
         placement="above"
         buttonLabel="Got it"
         onNext={advanceTour}
@@ -1092,22 +1092,22 @@ function PhotoDeck({
           arrows on purpose -- direction reads instantly, and the three
           labelled buttons below are the primary action family. */}
       <View style={styles.navRowUp} pointerEvents="box-none">
-        <View style={quarterCenterStyle(bandLeft + band * 0.3)}>
+        <View style={quarterCenterStyle(bandLeft + band / 3)}>
           <PressableScale
             onPress={() => goTo(index - 1)}
             scaleTo={0.9}
             hitSlop={10}
-            style={[styles.navButtonBig, glassSurface, glassBlur, styles.navButtonContrast, index === 0 && styles.navButtonDisabled]}
+            style={[styles.navButtonBig, glassSurface, glassBlur, styles.navButtonLight, index === 0 && styles.navButtonDisabled]}
           >
             <NavChevron direction="left" />
           </PressableScale>
         </View>
-        <View style={quarterCenterStyle(bandLeft + band * 0.7)}>
+        <View style={quarterCenterStyle(bandLeft + (band * 2) / 3)}>
           <PressableScale
             onPress={() => goTo(index + 1)}
             scaleTo={0.9}
             hitSlop={10}
-            style={[styles.navButtonBig, glassSurface, glassBlur, styles.navButtonContrast, index === lastIndex && styles.navButtonDisabled]}
+            style={[styles.navButtonBig, glassSurface, glassBlur, styles.navButtonLight, index === lastIndex && styles.navButtonDisabled]}
           >
             <NavChevron direction="right" />
           </PressableScale>
@@ -1150,7 +1150,7 @@ function PhotoDeck({
                 <RadialGlow color={colors.heart} />
               </Animated.View>
               <PressableScale onPress={handleHeartPress} scaleTo={0.82} hitSlop={16}>
-                <View style={[styles.glassCircle, glassSurface, glassBlur, styles.navButtonContrast]}>
+                <View style={[styles.glassCircle, styles.glassCircleFav, glassSurface, glassBlur, styles.navButtonContrast]}>
                   <Animated.Text style={[styles.heartIconGlass, favorited && styles.heartIconActive, heartStyle]}>
                     {favorited ? '♥' : '♡'}
                   </Animated.Text>
@@ -1950,10 +1950,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    // Lower + taller than before so the new labels under the comment/heart
-    // glass buttons have room without crowding the nav arrows.
     bottom: 26,
-    height: 48,
+    // Tall enough to hold the largest labelled button (Favourites, 56) so all
+    // three circles centre on the same line regardless of their own size.
+    height: 56,
   },
   // Generic positioned slot for each labelled control (comment/favourites/
   // details) -- centres its column on the x passed via quarterCenterStyle.
@@ -1965,17 +1965,25 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: 104,
-    height: 54,
+    bottom: 110,
+    height: 62,
   },
-  // Slightly bigger than the labelled action buttons (48) so the arrows read
-  // as the distinct navigation layer.
+  // Biggest touch target of all (older users navigate constantly), but paired
+  // with the lighter navButtonLight fill so it recedes visually -- generous
+  // to tap without stealing focus from Favourites, the emotional primary.
   navButtonBig: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 62,
+    height: 62,
+    borderRadius: 31,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // Lighter than navButtonContrast: the arrows are physically the largest, so
+  // a softer fill keeps them from out-shouting the heart.
+  navButtonLight: {
+    backgroundColor: 'rgba(255, 255, 255, 0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.22)',
   },
   // Details chip sits just above the controls row, left-aligned.
   detailsChipWrap: {
@@ -2034,31 +2042,38 @@ const styles = StyleSheet.create({
   // count badge float via absolute positioning and don't shift that center.
   controlColumn: {
     position: 'relative',
-    height: 48,
+    // Matches controlsRow so every circle centres on one line; the label
+    // hangs below via its own absolute offset.
+    height: 56,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Frosted glass circle for the comment + heart icons -- same treatment and
-  // size as the nav arrows (glassSurface + glassBlur + navButtonContrast) so
-  // all three controls read as one button family.
+  // Frosted glass circle for the comment + details icons (secondary actions),
+  // same treatment as the nav arrows so the controls read as one family.
   glassCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Heart glyph sized to sit inside the 48px glass circle (the standalone
-  // heartIcon is 42px, which filled the circle edge-to-edge).
+  // Favourites is the emotional primary -- bigger than its siblings (and the
+  // only red one) so it's the clear focal action, applied over glassCircle.
+  glassCircleFav: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+  },
+  // Heart glyph sized to sit inside the 56px favourites circle.
   heartIconGlass: {
-    fontSize: 30,
-    lineHeight: 34,
+    fontSize: 34,
+    lineHeight: 38,
     color: 'rgba(255, 255, 255, 0.85)',
     zIndex: 2,
   },
   controlLabel: {
     position: 'absolute',
-    top: 50,
+    top: 60,
     left: -16,
     right: -16,
     textAlign: 'center',
