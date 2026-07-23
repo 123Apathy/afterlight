@@ -77,8 +77,8 @@ export default function DetailsSheet({ photo, onClose, onSave, autoCloseOnSave =
         </View>
 
         <Text style={styles.blurb}>
-          Anything you remember helps. It enriches the memorial and lets us put the photos in
-          roughly the right order.
+          Anything you remember helps. It brings the story into focus and helps us place the
+          photos in the right order.
         </Text>
 
         <Text style={styles.label}>When was this taken?</Text>

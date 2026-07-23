@@ -56,7 +56,7 @@ export const images = {
 export const copy = {
   slogan: 'A memory you can hold.',
   landing: {
-    title: "We're sorry for your loss.",
-    subtitle: "Everlit gathers photos from everyone who knew them, a digital space where their life can be honored, one favorite at a time. Not a eulogy. Just the moments that mattered.",
+    title: "Let's help you remember them well.",
+    subtitle: "Everlit brings together the photos everyone holds of them into one gentle place, so nothing is lost and no one has to grieve alone. Just the moments that mattered, gathered with care.",
   },
 };

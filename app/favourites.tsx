@@ -46,7 +46,9 @@ export default function FavouritesScreen() {
         <View style={styles.content}>
           <Text style={styles.overline}>Everyone&rsquo;s favourites</Text>
           <Text style={styles.title}>
-            {projectName ? `The moments ${projectName} was loved for` : 'What your family loved most'}
+            {projectName
+              ? `What your family will always remember about ${projectName}`
+              : 'What your family will always remember'}
           </Text>
           <LinearGradient
             colors={['rgba(196,154,108,0)', 'rgba(212,169,118,0.9)', 'rgba(196,154,108,0)']}
@@ -57,7 +59,8 @@ export default function FavouritesScreen() {
 
           {!loaded ? null : hearted.length === 0 ? (
             <Text style={styles.empty}>
-              No favourites yet. Go back and double-tap the photos that matter, they&rsquo;ll gather here.
+              No favourites yet. Go back and double-tap the photos that matter to you, they&rsquo;ll gather
+              here for the whole family to see.
             </Text>
           ) : (
             hearted.map((photo, index) => {

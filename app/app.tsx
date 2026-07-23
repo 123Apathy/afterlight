@@ -580,8 +580,8 @@ export default function SwipeScreen() {
           </Animated.View>
           <Animated.View style={[styles.gateSegment, enterStyleC]}>
             <Text style={styles.gateSubtitle}>
-              This is the photo people see first when you share the link — often the one displayed at the
-              service, near the casket.
+              This is the first photo people will see when you share the link with your family, so it is
+              worth choosing one that feels like them.
             </Text>
             <GoldButton
               label={uploadingCover ? 'Uploading…' : 'Choose a photo'}
@@ -622,8 +622,8 @@ export default function SwipeScreen() {
               We&rsquo;re so sorry for your loss.
             </Text>
             <Text style={styles.gateSubtitle}>
-              Thank you for being here to help remember them. Add your name and it appears with the
-              photos you favourite, so the family can see whose moments resonated most.
+              Thank you for being here to help remember them. Add your name so your favourites carry a
+              little of you with them, a quiet way of saying this moment mattered to you too.
             </Text>
             <TextInput
               value={nameDraft}
@@ -1733,7 +1733,9 @@ function EndOfDeckSlide({ width, height, projectName, photos, reduceMotion }: En
   // Two-tone name treatment from the memorial films' outro cards: first word
   // carries the weight, the rest breathes.
   const nameParts = projectName.trim().split(/\s+/);
-  const nameFirst = nameParts[0] || 'their';
+  // "them" (not "their") -- this fallback now feeds "remembering {name} with
+  // us", and "remembering them with us" is the grammatical one.
+  const nameFirst = nameParts[0] || 'them';
   const nameRest = nameParts.slice(1).join(' ');
 
   // In-app favourites screen now — no external report bounce, works even
@@ -1757,18 +1759,16 @@ function EndOfDeckSlide({ width, height, projectName, photos, reduceMotion }: En
         />
       </View>
       <Text style={styles.endTitle}>
-        Thank you for going through{' '}
+        Thank you for spending this time remembering{' '}
         <Text style={styles.endNameFirst}>{nameFirst}</Text>
         {nameRest ? <Text style={styles.endNameRest}> {nameRest}</Text> : null}
-        {/* No possessive on the "their" fallback: "their photos", not
-            "their's photos". A real name keeps the 's ("Mary's photos"). */}
-        {nameFirst === 'their' && !nameRest ? ' photos.' : '’s photos.'}
+        {' '}with us.
       </Text>
       <Text style={styles.endSubtitle}>
-        Now you can see what everyone else loved. Tap below to look through the favourites, and the
-        memories, your whole family shared.
+        Now you can see the moments your whole family chose to hold onto. Tap below to see the
+        favourites, and the memories everyone shared.
       </Text>
-      <GoldButton label="See Everybody's Favourites" onPress={openFavourites} style={styles.endButton} />
+      <GoldButton label="See What We All Loved" onPress={openFavourites} style={styles.endButton} />
     </View>
   );
 }

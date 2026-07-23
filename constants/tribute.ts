@@ -11,7 +11,7 @@ export const tributeCopy = {
   introSub: 'It only takes a few quiet minutes.',
   thanksTitle: 'Thank you',
   thanksBody:
-    'Your memories are a gift. Every story you’ve shared helps bring {name}’s tribute to life — and we hope this was a moment to smile, to remember, and to feel them close again.',
+    'Your memories are a gift. Every story you’ve shared helps bring {name}’s tribute to life, and we hope this was a moment to smile, to remember, and to feel them close again.',
   thanksSignoff: 'Have a wonderful day.',
 };
 

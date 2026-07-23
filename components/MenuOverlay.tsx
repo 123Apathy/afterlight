@@ -63,7 +63,7 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
   // WhatsApp/SMS/email by hand, or sent straight through the WhatsApp
   // button -- it always carries the same warm context, not a bare URL.
   const inviteMessage = (p: Project) =>
-    `We're gathering photos and memories to honour ${p.name}. Add yours here: ${inviteUrl(p)}`;
+    `We're gathering everyone's photos and memories of ${p.name} in one gentle place. Would you add yours? It means a lot: ${inviteUrl(p)}`;
 
   // The primary action: tapping "Invite family" opens WhatsApp directly
   // with the message ready to send, not a clipboard copy -- that's what was
@@ -191,7 +191,7 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
               <ActionCard
                 icon={<IconHeart />}
                 title="See your favourites"
-                subtitle="The photos your family loved the most"
+                subtitle="The moments your family chose to hold onto"
                 onPress={handleSeeFavourites}
               />
             )}

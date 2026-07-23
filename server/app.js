@@ -1257,8 +1257,8 @@ app.get('/join/:code', async (req, res, next) => {
       // copy from the message that brought them here.
       const title = from ? `${from} invited you to honour ${name}` : `Add your photos and memories for ${name}`;
       const desc = from
-        ? `${from} is gathering photos and memories to honour ${name}. Add yours here, it's a keepsake for the whole family to treasure, no app or account needed.`
-        : `We're gathering photos and memories to honour ${name}. Add yours here, it's a keepsake for the whole family to treasure, no app or account needed.`;
+        ? `${from} is gathering everyone's photos and memories of ${name} in one gentle place. Add yours here, it's a keepsake the whole family will treasure, no app or account needed.`
+        : `We're gathering everyone's photos and memories of ${name} in one gentle place. Add yours here, it's a keepsake the whole family will treasure, no app or account needed.`;
       const meta = `
     <title>${title}</title>
     <meta name="description" content="${desc}" />
