@@ -590,6 +590,32 @@ export default function SwipeScreen() {
         onSave={saveDetails}
       />
 
+      {/* Keep the button that opened a sheet BRIGHT above that sheet's dimming
+          backdrop: a lit copy sits exactly over the (now-dimmed) real button.
+          Rendered after the sheets so it paints above their backdrops, and
+          pinned to the bottom control row -- clear of the floating card above
+          it, so it never overlaps the sheet itself. */}
+      {commentPhotoId && (
+        <View style={styles.spotlightRow} pointerEvents="none">
+          <View style={[styles.controlColumn, quarterCenterStyle(bandLeftApp + bandApp / 6)]}>
+            <View style={[styles.glassCircle, glassSurface, glassBlur, styles.navButtonContrast]}>
+              <CommentIcon active />
+            </View>
+            <Text style={styles.controlLabel}>Comment</Text>
+          </View>
+        </View>
+      )}
+      {detailsPhotoId && (
+        <View style={styles.spotlightRow} pointerEvents="none">
+          <View style={[styles.controlColumn, quarterCenterStyle(bandLeftApp + (bandApp * 5) / 6)]}>
+            <View style={[styles.glassCircle, glassSurface, glassBlur, styles.navButtonContrast]}>
+              <DetailsIcon />
+            </View>
+            <Text style={styles.controlLabel}>Details</Text>
+          </View>
+        </View>
+      )}
+
       {/* First-run guided tour. The three intro steps + the details prompt use
           the blocking CoachMark (tap Next/Got it to advance). The comment step
           instead shows a non-blocking banner while the comment sheet is open,
@@ -1963,6 +1989,16 @@ const styles = StyleSheet.create({
   // details) -- centres its column on the x passed via quarterCenterStyle.
   controlSlot: {
     justifyContent: 'center',
+  },
+  // Bottom-anchored layer for the lit "spotlight" copy of an open sheet's
+  // trigger button; same geometry as controlsRow so the copy lands exactly
+  // over the real button.
+  spotlightRow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 26,
+    height: 56,
   },
   // Prev/Next row. Its TOP edge stays where the 62px version sat (top =
   // screen - (bottom + height) = screen - 172); the buttons grew 30% larger
