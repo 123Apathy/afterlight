@@ -45,7 +45,9 @@ export default function FavouritesScreen() {
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.content}>
           <Text style={styles.overline}>Everyone&rsquo;s favourites</Text>
-          <Text style={styles.title}>{projectName || 'The moments'} — what the family loved.</Text>
+          <Text style={styles.title}>
+            {projectName ? `The moments ${projectName} was loved for` : 'What your family loved most'}
+          </Text>
           <LinearGradient
             colors={['rgba(196,154,108,0)', 'rgba(212,169,118,0.9)', 'rgba(196,154,108,0)']}
             start={{ x: 0, y: 0.5 }}
@@ -55,27 +57,42 @@ export default function FavouritesScreen() {
 
           {!loaded ? null : hearted.length === 0 ? (
             <Text style={styles.empty}>
-              No favourites yet — go back and double-tap the photos that matter. They&rsquo;ll gather here.
+              No favourites yet. Go back and double-tap the photos that matter, they&rsquo;ll gather here.
             </Text>
           ) : (
-            hearted.map((photo) => {
+            hearted.map((photo, index) => {
               const raters = photo.ratings.map((r) => r.rater);
               return (
                 <View key={photo.id} style={styles.card}>
-                  <Image
-                    source={photo.localSource ?? { uri: photoThumbUrl(photo) }}
-                    style={styles.cardImage}
-                    resizeMode="cover"
-                  />
+                  <View style={styles.cardImageWrap}>
+                    <Image
+                      source={photo.localSource ?? { uri: photoThumbUrl(photo) }}
+                      style={styles.cardImage}
+                      resizeMode="cover"
+                    />
+                    <View style={styles.rankBadge}>
+                      <Text style={styles.rankBadgeText}>{String(index + 1).padStart(2, '0')}</Text>
+                    </View>
+                  </View>
                   <View style={styles.cardBody}>
-                    <Text style={styles.cardHearts}>
-                      ♥ {heartCount(photo)} · {raters.join(', ')}
-                    </Text>
-                    {photo.comments.map((c) => (
-                      <Text key={c.id} style={styles.cardComment}>
-                        <Text style={styles.cardCommentAuthor}>{c.author}</Text>  {c.text}
-                      </Text>
-                    ))}
+                    <View style={styles.heartRow}>
+                      <Text style={styles.heartCount}>♥ {heartCount(photo)}</Text>
+                      {raters.length > 0 && (
+                        <Text style={styles.lovedBy} numberOfLines={1}>
+                          Loved by {raters.join(', ')}
+                        </Text>
+                      )}
+                    </View>
+                    {photo.comments.length > 0 && (
+                      <View style={styles.commentStack}>
+                        {photo.comments.map((c) => (
+                          <Text key={c.id} style={styles.cardComment}>
+                            <Text style={styles.cardCommentAuthor}>{c.author}</Text>{'  '}
+                            {c.text}
+                          </Text>
+                        ))}
+                      </View>
+                    )}
                   </View>
                 </View>
               );
@@ -103,10 +120,10 @@ const styles = StyleSheet.create({
     maxWidth: 640,
     alignSelf: 'center',
     alignItems: 'center',
-    gap: 18,
+    gap: 20,
   },
   overline: {
-    fontFamily: 'Poppins_400Regular',
+    fontFamily: 'Poppins_500Medium',
     fontSize: 11,
     letterSpacing: 3,
     textTransform: 'uppercase',
@@ -114,9 +131,9 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: 'PlayfairDisplay_500Medium',
-    fontSize: 28,
+    fontSize: 29,
     letterSpacing: -0.3,
-    lineHeight: 36,
+    lineHeight: 38,
     color: colors.white,
     textAlign: 'center',
   },
@@ -137,25 +154,66 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '100%',
-    borderRadius: 18,
+    borderRadius: 24,
     overflow: 'hidden',
-    backgroundColor: colors.darkWarmLight,
+    backgroundColor: 'rgba(32, 26, 24, 0.52)',
     borderWidth: 1,
-    borderColor: 'rgba(212, 169, 118, 0.14)',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  cardImageWrap: {
+    width: '100%',
+    position: 'relative',
   },
   cardImage: {
     width: '100%',
     aspectRatio: 4 / 3,
     backgroundColor: colors.ink,
+    borderRadius: 16,
+  },
+  rankBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    minWidth: 34,
+    paddingHorizontal: 8,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(20, 16, 14, 0.72)',
+    borderWidth: 1,
+    borderColor: 'rgba(212, 169, 118, 0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rankBadgeText: {
+    fontFamily: 'Poppins_500Medium',
+    fontSize: 12,
+    letterSpacing: 0.5,
+    color: colors.goldWarm,
   },
   cardBody: {
-    padding: 16,
+    padding: 18,
+    gap: 10,
+  },
+  heartRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    flexWrap: 'wrap',
     gap: 8,
   },
-  cardHearts: {
-    fontFamily: 'Poppins_500Medium',
-    fontSize: 14,
+  heartCount: {
+    fontFamily: 'PlayfairDisplay_500Medium',
+    fontSize: 20,
     color: colors.goldWarm,
+  },
+  lovedBy: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 13,
+    color: colors.textFaint,
+    flexShrink: 1,
+  },
+  commentStack: {
+    gap: 6,
+    paddingTop: 2,
   },
   cardComment: {
     fontFamily: 'Poppins_400Regular',

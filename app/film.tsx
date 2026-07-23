@@ -69,7 +69,7 @@ export default function FilmScreen() {
         ) : (
           <Text style={styles.pending}>
             {projectId
-              ? 'The film is still being made. We’ll place it here, in this exact spot, the moment it’s ready.'
+              ? 'Your film will be ready to watch and download right here 24 hours before the due date, and within 48 hours of everyone’s choices being submitted or the deadline being reached, whichever comes first. We’ll place it in this exact spot the moment it’s ready.'
               : 'Open your memorial first, then come back here.'}
           </Text>
         )}

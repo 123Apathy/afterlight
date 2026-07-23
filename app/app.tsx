@@ -413,14 +413,17 @@ export default function SwipeScreen() {
   // edge pinned, so growth goes rightward and downward, never up the page.
   const WORD_LEFT0 = 59; // resting left edge of "Everlit"
   const WORD_W0 = 49.5; // resting rendered width of "Everlit"
-  const FLAME_LEFT = 19;
   const wordmarkStyle = useAnimatedStyle(() => {
     const p = brandGrow.value;
-    const targetRight = width / 2 + 33;
-    const scaleEnd = (targetRight - FLAME_LEFT) / WORD_W0;
+    // Sits centred in the left half of the page (between the left edge and the
+    // vertical middle line), at half the earlier hero size. transformOrigin
+    // 'left top' keeps the top pinned, so it grows down, not up.
+    const targetWidth = width / 4 + 7;
+    const scaleEnd = targetWidth / WORD_W0;
+    const leftEdge = width / 8 - 3.5; // centres targetWidth on width/4
     return {
       transform: [
-        { translateX: p * (FLAME_LEFT - WORD_LEFT0) },
+        { translateX: p * (leftEdge - WORD_LEFT0) },
         { scale: 1 + p * (scaleEnd - 1) },
       ],
     };
@@ -655,6 +658,7 @@ export default function SwipeScreen() {
             setDeckIndex(i);
             setViewMode('deck');
           }}
+          onOpenComments={(photo) => setCommentPhotoId(photo.id)}
         />
       ) : (
         <PhotoDeck
@@ -910,9 +914,18 @@ const LOADING_PHRASES = [
 ];
 
 // The brand emblem (flame in its compass ring) breathing over a soft gold glow,
-// with a slow carousel of comforting lines beneath it. The ringed mark makes
-// the wait feel finished and cared-for rather than a half-built placeholder.
-function LoadingState({ reduceMotion }: { reduceMotion: boolean }) {
+// with a slow carousel of comforting lines beneath it. As the glow swells the
+// gold emblem crossfades to its charcoal version, so at the glow's apex it
+// reads as a dark silhouette against the light, then returns to gold as the
+// glow settles. A small dim label above names whatever is loading. The ringed
+// mark makes the wait feel finished and cared-for, not a half-built placeholder.
+function LoadingState({
+  reduceMotion,
+  label = 'Loading your memorial',
+}: {
+  reduceMotion: boolean;
+  label?: string;
+}) {
   const breath = useSharedValue(0);
   const fade = useSharedValue(1);
   const [phrase, setPhrase] = useState(0);
@@ -946,7 +959,13 @@ function LoadingState({ reduceMotion }: { reduceMotion: boolean }) {
     opacity: 0.5 + breath.value * 0.4,
     transform: [{ scale: 0.88 + breath.value * 0.24 }],
   }));
-  const emblemStyle = useAnimatedStyle(() => ({
+  // Gold shows when the glow is low; charcoal takes over as it peaks.
+  const goldStyle = useAnimatedStyle(() => ({
+    opacity: 1 - breath.value,
+    transform: [{ scale: 0.98 + breath.value * 0.05 }],
+  }));
+  const charcoalStyle = useAnimatedStyle(() => ({
+    opacity: breath.value,
     transform: [{ scale: 0.98 + breath.value * 0.05 }],
   }));
   const phraseStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
@@ -954,11 +973,17 @@ function LoadingState({ reduceMotion }: { reduceMotion: boolean }) {
   return (
     <View style={styles.pageContent}>
       <View style={styles.loadingWrap}>
+        <Text style={styles.loadingLabel}>{label}</Text>
         <View style={styles.loadingEmblem}>
           <Animated.View style={[styles.loadingGlowWrap, glowStyle]} pointerEvents="none">
             <RadialGlow color={colors.goldWarm} />
           </Animated.View>
-          <Animated.Image source={images.logoRing} style={[styles.loadingIcon, emblemStyle]} resizeMode="contain" />
+          <Animated.Image source={images.logoRing} style={[styles.loadingIcon, goldStyle]} resizeMode="contain" />
+          <Animated.Image
+            source={images.logoRingCharcoal}
+            style={[styles.loadingIcon, styles.loadingIconAbs, charcoalStyle]}
+            resizeMode="contain"
+          />
         </View>
         <Animated.Text style={[styles.loadingPhrase, phraseStyle]}>
           {LOADING_PHRASES[phrase]}
@@ -1927,6 +1952,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 44,
   },
+  loadingLabel: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 11,
+    letterSpacing: 3,
+    textTransform: 'uppercase',
+    color: 'rgba(212, 169, 118, 0.6)',
+    textAlign: 'center',
+    marginBottom: 26,
+  },
   loadingEmblem: {
     width: 132,
     height: 132,
@@ -1943,13 +1977,18 @@ const styles = StyleSheet.create({
     width: 108,
     height: 108,
   },
+  // The charcoal emblem stacks exactly over the gold one to crossfade.
+  loadingIconAbs: {
+    position: 'absolute',
+  },
   loadingPhrase: {
     fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 20,
     lineHeight: 32,
     color: colors.white,
     textAlign: 'center',
-    maxWidth: 340,
+    maxWidth: 300,
+    alignSelf: 'center',
   },
   vignettePulse: {
     position: 'absolute',

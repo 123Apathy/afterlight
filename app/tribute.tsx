@@ -68,7 +68,7 @@ export default function TributeScreen() {
     } catch {
       if (typeof window !== 'undefined') {
         window.alert(
-          "Your answers may not have saved. Please check your connection — you can reopen this and submit again."
+          'Your answers may not have saved. Please check your connection, then reopen this and submit again.'
         );
       }
     }
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
   ornamentDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.goldWarm },
   title: {
     fontFamily: 'PlayfairDisplay_500Medium',
-    fontSize: 40,
+    fontSize: 36,
     letterSpacing: -0.4,
     color: colors.white,
     textAlign: 'center',
@@ -251,15 +251,15 @@ const styles = StyleSheet.create({
   nameInput: {
     width: '100%',
     maxWidth: 360,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.09)',
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.13)',
     borderWidth: 1,
-    borderColor: 'rgba(212, 169, 118, 0.25)',
-    paddingHorizontal: 18,
+    borderColor: 'rgba(255,255,255,0.10)',
+    paddingHorizontal: 16,
     color: colors.white,
     fontFamily: 'Poppins_400Regular',
-    fontSize: 16,
+    fontSize: 15,
     marginTop: 28,
   },
   cta: {
@@ -329,14 +329,14 @@ const styles = StyleSheet.create({
   answerInput: {
     width: '100%',
     minHeight: 150,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.13)',
     borderWidth: 1,
-    borderColor: 'rgba(212, 169, 118, 0.22)',
-    padding: 18,
+    borderColor: 'rgba(255,255,255,0.10)',
+    padding: 16,
     color: colors.white,
     fontFamily: 'Poppins_400Regular',
-    fontSize: 16,
+    fontSize: 15,
     lineHeight: 24,
   },
   qButtons: {

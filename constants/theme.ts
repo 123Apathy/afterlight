@@ -42,6 +42,9 @@ export const images = {
   // The flame framed by its double compass ring -- fades in over the plain
   // flame as it settles into the middle of the closing slide.
   logoRing: require('../assets/images/logo-ring-gold.png'),
+  // Charcoal (dark) variant of the ringed emblem -- crossfades with the gold
+  // one on the loading screen, syncing to the surrounding glow.
+  logoRingCharcoal: require('../assets/images/logo-ring-charcoal.png'),
   // Landing backdrop: golden-hour glow through cloud (Pexels #29150580,
   // free/commercial, no attribution required). The "afterglow" the name means.
   landingSky: require('../assets/images/landing-sky.jpg'),
