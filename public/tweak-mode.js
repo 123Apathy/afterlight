@@ -9,29 +9,51 @@
  * Inert until activated -- zero visual/behavioural impact on real visitors.
  *
  * Workflow: pick element(s) -> drag body to move, drag a handle to resize
- * -> "Copy CSS" grabs the resulting rules. These are PIXEL values at
- * whatever viewport size you were dragging at -- paste them into chat and
- * they'll get translated into the page's real fluid (clamp/vw) CSS, not
- * pasted in verbatim (that would undo the responsive scaling).
+ * -> "Copy CSS" grabs the resulting rules as PIXEL values at whatever
+ * viewport you were dragging at -- paste into chat for translation into
+ * real fluid CSS, not verbatim.
+ *
+ * Responsive workflow: arrange things at a desktop width -> "Lock browser
+ * position" -> resize the window to a phone ratio -> re-arrange -> "Lock
+ * mobile position" -> "Export responsive CSS" generates a linear vw-based
+ * interpolation between the two locked snapshots per element, in the same
+ * clamp()/vw idiom already used throughout this page -- pasteable as real
+ * production CSS, not a one-viewport snapshot.
  */
 (function () {
   'use strict';
 
   var active = false;
   var host, shadow, root;
-  var selection = []; // { el, selector, startRect, overlay }
-  var groupMode = false;
+  var selection = []; // { el, originalEl, selector, overlay, handles }
   var picking = false;
-  var drag = null; // { kind: 'move'|'resize', handle, startX, startY, items:[{el,startRect}], groupStartRect }
   var changed = new Set(); // elements with a live edit, for CSS export
+  var history = []; // undo stack: { type:'style', el, prop, before, after } | { type:'remove', el, parent, next }
+  var redoStack = [];
+  var applyingHistory = false;
+  var locks = { browser: null, mobile: null }; // { vw, vh, items: { selector: {el, tx, ty, width, height} } }
+  var panelPos = null; // { top, left } once user drags the panel; null = default bottom-right
 
   function init() {
     document.addEventListener('keydown', function (e) {
       if (e.ctrlKey && e.shiftKey && (e.key === 'M' || e.key === 'm')) {
         e.preventDefault();
         toggle();
+        return;
+      }
+      if (!active) return;
+      if (e.ctrlKey && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); undo(); return; }
+      if (e.ctrlKey && e.shiftKey && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); redo(); return; }
+      if (e.ctrlKey && (e.key === 'y' || e.key === 'Y')) { e.preventDefault(); redo(); return; }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selection.length && !isTypingTarget(e.target)) {
+        e.preventDefault();
+        deleteSelection();
       }
     });
+  }
+
+  function isTypingTarget(t) {
+    return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
   }
 
   function toggle() { active ? deactivate() : activate(); }
@@ -65,8 +87,14 @@
 
     root = document.createElement('div');
     root.className = 'panel';
+    if (panelPos) {
+      root.style.top = panelPos.top + 'px';
+      root.style.left = panelPos.left + 'px';
+      root.style.right = 'auto';
+      root.style.bottom = 'auto';
+    }
     root.innerHTML =
-      '<div class="hd"><b>Tweak Mode</b><span class="hint">Ctrl+Shift+M to exit</span></div>' +
+      '<div class="hd" id="hd"><b>Tweak Mode</b><span class="hint">Ctrl+Shift+M to exit</span></div>' +
       '<div class="row">' +
         '<button class="pickbtn" id="pick">Pick element</button>' +
         '<button class="pickbtn" id="pickmore" style="display:none">+ Add to group</button>' +
@@ -77,9 +105,25 @@
       '</div>' +
       '<div class="sel" id="sel">Nothing selected.</div>' +
       '<div class="row hint" id="tip"></div>' +
+      '<div class="row" id="delRow" style="display:none">' +
+        '<button class="btn warn" id="del">Delete selected (Del)</button>' +
+      '</div>' +
+      '<div class="divider"></div>' +
+      '<div class="row">' +
+        '<button class="pickbtn" id="lockBrowser">Lock as browser position</button>' +
+        '<button class="pickbtn" id="lockMobile">Lock as mobile position</button>' +
+      '</div>' +
+      '<div class="sel" id="lockStatus">No positions locked yet.</div>' +
       '<div class="ft">' +
         '<button class="btn ghost" id="clear">Clear</button>' +
-        '<button class="btn primary" id="copy">Copy CSS</button>' +
+        '<button class="btn primary" id="exportResponsive">Export responsive CSS</button>' +
+      '</div>' +
+      '<div class="ft" style="padding-top:0">' +
+        '<button class="btn ghost" id="undo">Undo (Ctrl+Z)</button>' +
+        '<button class="btn ghost" id="redo">Redo (Ctrl+Shift+Z)</button>' +
+      '</div>' +
+      '<div class="ft" style="padding-top:0">' +
+        '<button class="btn primary" id="copy">Copy CSS (this viewport)</button>' +
       '</div>';
     shadow.appendChild(root);
 
@@ -89,6 +133,45 @@
     shadow.getElementById('copy').addEventListener('click', copyCSS);
     shadow.getElementById('up').addEventListener('click', function () { stepLevel(1); });
     shadow.getElementById('down').addEventListener('click', function () { stepLevel(-1); });
+    shadow.getElementById('del').addEventListener('click', deleteSelection);
+    shadow.getElementById('undo').addEventListener('click', undo);
+    shadow.getElementById('redo').addEventListener('click', redo);
+    shadow.getElementById('lockBrowser').addEventListener('click', function () { lockPosition('browser'); });
+    shadow.getElementById('lockMobile').addEventListener('click', function () { lockPosition('mobile'); });
+    shadow.getElementById('exportResponsive').addEventListener('click', exportResponsiveCSS);
+    makePanelDraggable(shadow.getElementById('hd'));
+    updateLockStatus();
+  }
+
+  // Drag the panel by its header. Switches from the default right/bottom
+  // anchor to an explicit top/left once moved, so it can go anywhere,
+  // including away from whatever part of the page you're currently editing.
+  function makePanelDraggable(handle) {
+    handle.addEventListener('mousedown', function (e) {
+      e.preventDefault();
+      var r = root.getBoundingClientRect();
+      var startX = e.clientX, startY = e.clientY;
+      var startTop = r.top, startLeft = r.left;
+      root.style.right = 'auto';
+      root.style.bottom = 'auto';
+      root.style.top = startTop + 'px';
+      root.style.left = startLeft + 'px';
+      function onMove(ev) {
+        var top = startTop + (ev.clientY - startY);
+        var left = startLeft + (ev.clientX - startX);
+        top = Math.max(0, Math.min(window.innerHeight - 40, top));
+        left = Math.max(0, Math.min(window.innerWidth - 40, left));
+        root.style.top = top + 'px';
+        root.style.left = left + 'px';
+        panelPos = { top: top, left: left };
+      }
+      function onUp() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
   }
 
   // Re-targets the MOST RECENTLY selected item to its parent (dir=1) or the
@@ -115,11 +198,12 @@
     '*{box-sizing:border-box;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;}',
     '.panel{position:fixed;right:18px;bottom:18px;width:280px;background:#0f1117;color:#e5e7eb;',
       'border:1px solid #1f2430;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.45);',
-      'font-size:13px;z-index:2147483647;}',
-    '.hd{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #1f2430;}',
+      'font-size:13px;z-index:2147483647;max-height:92vh;overflow:auto;}',
+    '.hd{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #1f2430;cursor:move;user-select:none;}',
     '.hd b{font-size:13px;}',
     '.hint{color:#6b7280;font-size:11px;}',
     '.row{padding:10px 14px 0;display:flex;gap:8px;}',
+    '.divider{margin:12px 14px 0;border-top:1px solid #1f2430;}',
     '.pickbtn{flex:1;padding:9px;border:1px dashed #3a4252;border-radius:8px;background:#161a23;color:#cbd5e1;cursor:pointer;font-weight:600;font-size:12px;}',
     '.pickbtn.active{border-color:#6d28d9;color:#c4b5fd;}',
     '.sel{margin:10px 14px 0;font-size:11px;color:#a5b4fc;word-break:break-all;background:#161a23;padding:8px 9px;border-radius:7px;max-height:80px;overflow:auto;}',
@@ -128,9 +212,10 @@
     '.btn{flex:1;padding:9px;border:0;border-radius:8px;cursor:pointer;font-weight:600;font-size:12px;}',
     '.btn.primary{background:#6d28d9;color:#fff;}',
     '.btn.ghost{background:#1c2230;color:#cbd5e1;}',
+    '.btn.warn{background:#2a1620;color:#fca5a5;}',
     '.toast{position:fixed;right:18px;bottom:230px;z-index:2147483647;background:#111827;color:#fff;',
       'padding:9px 14px;border-radius:8px;font-size:12px;box-shadow:0 6px 20px rgba(0,0,0,.3);',
-      'max-width:280px;opacity:0;transform:translateY(6px);transition:all .18s;}',
+      'max-width:300px;opacity:0;transform:translateY(6px);transition:all .18s;}',
     '.toast.show{opacity:1;transform:translateY(0);}',
     '.ov{position:fixed;z-index:2147483646;border:2px solid #6d28d9;background:rgba(109,40,217,.08);',
       'box-sizing:border-box;cursor:move;}',
@@ -146,13 +231,81 @@
     t.textContent = msg;
     shadow.appendChild(t);
     requestAnimationFrame(function () { t.classList.add('show'); });
-    setTimeout(function () { t.classList.remove('show'); setTimeout(function () { t.remove(); }, 200); }, 3200);
+    setTimeout(function () { t.classList.remove('show'); setTimeout(function () { t.remove(); }, 200); }, 3600);
+  }
+
+  // ---- undo/redo ----------------------------------------------------------
+  // Every mutating action pushes a record here; undo/redo just replay
+  // inline-style snapshots (or DOM removal/reinsertion for delete), so they
+  // work uniformly across move/resize/delete without each needing its own
+  // inverse-logic.
+  function pushHistory(rec) {
+    if (applyingHistory) return;
+    history.push(rec);
+    redoStack = [];
+  }
+
+  function snapshotStyle(el) {
+    return { transform: el.style.transform, width: el.style.width, height: el.style.height, aspectRatio: el.style.aspectRatio, justifySelf: el.style.justifySelf, alignSelf: el.style.alignSelf };
+  }
+  function applyStyleSnapshot(el, snap) {
+    el.style.transform = snap.transform || '';
+    el.style.width = snap.width || '';
+    el.style.height = snap.height || '';
+    el.style.aspectRatio = snap.aspectRatio || '';
+    el.style.justifySelf = snap.justifySelf || '';
+    el.style.alignSelf = snap.alignSelf || '';
+  }
+
+  function undo() {
+    var rec = history.pop();
+    if (!rec) { toast('Nothing to undo.'); return; }
+    applyingHistory = true;
+    if (rec.type === 'style') {
+      applyStyleSnapshot(rec.el, rec.before);
+      selection.forEach(function (s) { if (s.el === rec.el) positionOverlay(s); });
+    } else if (rec.type === 'remove') {
+      if (rec.next) rec.parent.insertBefore(rec.el, rec.next);
+      else rec.parent.appendChild(rec.el);
+    }
+    applyingHistory = false;
+    redoStack.push(rec);
+    toast('Undid last change.');
+  }
+
+  function redo() {
+    var rec = redoStack.pop();
+    if (!rec) { toast('Nothing to redo.'); return; }
+    applyingHistory = true;
+    if (rec.type === 'style') {
+      applyStyleSnapshot(rec.el, rec.after);
+      selection.forEach(function (s) { if (s.el === rec.el) positionOverlay(s); });
+    } else if (rec.type === 'remove') {
+      rec.el.remove();
+    }
+    applyingHistory = false;
+    history.push(rec);
+    toast('Redid change.');
+  }
+
+  // ---- delete -------------------------------------------------------------
+  function deleteSelection() {
+    if (!selection.length) return;
+    var count = selection.length;
+    selection.slice().forEach(function (s) {
+      var parent = s.el.parentElement;
+      var next = s.el.nextSibling;
+      pushHistory({ type: 'remove', el: s.el, parent: parent, next: next });
+      s.el.remove();
+      changed.delete(s);
+    });
+    clearSelection();
+    toast('Deleted ' + count + ' element(s). Ctrl+Z to undo.');
   }
 
   // ---- picking ------------------------------------------------------------
   function startPicking(adding) {
     picking = true;
-    groupMode = adding;
     if (!adding) clearSelection();
     shadow.getElementById('pick').classList.add('active');
     document.body.style.cursor = 'crosshair';
@@ -248,6 +401,30 @@
     updateSelInfo();
     shadow.getElementById('pickmore').style.display = selection.length ? 'flex' : 'none';
     shadow.getElementById('levelRow').style.display = selection.length ? 'flex' : 'none';
+    shadow.getElementById('delRow').style.display = selection.length ? 'flex' : 'none';
+    suggestParentIfTiny(item);
+  }
+
+  // Nudge for the "I grabbed the video inside the phone" case: if the picked
+  // element is much smaller than a nearby ancestor with several children of
+  // its own (a sign it's one piece of a larger assembled component), suggest
+  // stepping up rather than silently guessing which level was meant.
+  function suggestParentIfTiny(item) {
+    var el = item.el;
+    var r = el.getBoundingClientRect();
+    var node = el.parentElement;
+    var hops = 0;
+    while (node && node !== document.body && hops < 5) {
+      var pr = node.getBoundingClientRect();
+      var muchBigger = pr.width > r.width * 1.6 || pr.height > r.height * 1.6;
+      var hasSiblingVariety = node.children.length >= 3;
+      if (muchBigger && hasSiblingVariety) {
+        toast('This looks like part of a larger group (inside "' + (node.className || node.tagName.toLowerCase()) + '"). Press "↑ Select parent" if you meant to move/resize the whole thing.');
+        return;
+      }
+      node = node.parentElement;
+      hops++;
+    }
   }
 
   function clearSelection() {
@@ -260,6 +437,7 @@
       updateSelInfo();
       shadow.getElementById('pickmore').style.display = 'none';
       shadow.getElementById('levelRow').style.display = 'none';
+      shadow.getElementById('delRow').style.display = 'none';
     }
   }
 
@@ -316,11 +494,13 @@
       var r = s.el.getBoundingClientRect();
       var cs = getComputedStyle(s.el);
       var m = cs.transform && cs.transform !== 'none' ? new DOMMatrix(cs.transform) : new DOMMatrix();
-      return { s: s, startRect: r, baseX: m.m41, baseY: m.m42 };
+      return { s: s, startRect: r, baseX: m.m41, baseY: m.m42, before: snapshotStyle(s.el) };
     });
     var startX = e.clientX, startY = e.clientY;
+    var moved = false;
 
     function onMove(ev) {
+      moved = true;
       var dx = ev.clientX - startX, dy = ev.clientY - startY;
       items.forEach(function (it) {
         it.s.el.style.transform = 'translate(' + (it.baseX + dx) + 'px,' + (it.baseY + dy) + 'px)';
@@ -331,6 +511,11 @@
     function onUp() {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
+      if (moved) {
+        items.forEach(function (it) {
+          pushHistory({ type: 'style', el: it.s.el, before: it.before, after: snapshotStyle(it.s.el) });
+        });
+      }
     }
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
@@ -338,6 +523,7 @@
 
   function startResize(e, handlePos) {
     e.preventDefault(); e.stopPropagation();
+    var befores = selection.map(function (s) { return { s: s, before: snapshotStyle(s.el) }; });
     // A grid/flex item with justify-self:center or align-self:stretch (this
     // page uses both) re-centers/re-stretches itself within its cell the
     // instant an explicit width/height is set, which silently moves the
@@ -366,8 +552,10 @@
     var gBottom = Math.max.apply(null, items.map(function (i) { return i.startRect.bottom; }));
     var g0 = { left: gLeft, top: gTop, width: gRight - gLeft, height: gBottom - gTop };
     var startX = e.clientX, startY = e.clientY;
+    var moved = false;
 
     function onMove(ev) {
+      moved = true;
       var dx = ev.clientX - startX, dy = ev.clientY - startY;
       var g = { left: g0.left, top: g0.top, width: g0.width, height: g0.height };
       if (handlePos.indexOf('w') !== -1) { g.left = g0.left + dx; g.width = g0.width - dx; }
@@ -400,6 +588,11 @@
     function onUp() {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
+      if (moved) {
+        befores.forEach(function (b) {
+          pushHistory({ type: 'style', el: b.s.el, before: b.before, after: snapshotStyle(b.s.el) });
+        });
+      }
     }
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
@@ -417,7 +610,81 @@
     if (selection.length) e.preventDefault();
   }
 
-  // ---- export -----------------------------------------------------------
+  // ---- responsive lock + interpolated export -------------------------------
+  function currentTranslate(el) {
+    var cs = getComputedStyle(el);
+    if (!cs.transform || cs.transform === 'none') return { x: 0, y: 0 };
+    var m = new DOMMatrix(cs.transform);
+    return { x: m.m41, y: m.m42 };
+  }
+
+  function lockPosition(which) {
+    if (!changed.size) { toast('Nothing has been moved/resized yet -- nothing to lock.'); return; }
+    var items = {};
+    changed.forEach(function (s) {
+      var t = currentTranslate(s.el);
+      var r = s.el.getBoundingClientRect();
+      items[s.selector] = { tx: t.x, ty: t.y, width: r.width, height: r.height };
+    });
+    locks[which] = { vw: window.innerWidth, vh: window.innerHeight, items: items };
+    updateLockStatus();
+    toast('Locked ' + Object.keys(items).length + ' element(s) as the ' + which + ' position at ' + window.innerWidth + 'x' + window.innerHeight + '.');
+  }
+
+  function updateLockStatus() {
+    if (!shadow) return;
+    var el = shadow.getElementById('lockStatus');
+    var parts = [];
+    parts.push('Browser: ' + (locks.browser ? (locks.browser.vw + 'x' + locks.browser.vh + ', ' + Object.keys(locks.browser.items).length + ' el(s)') : 'not locked'));
+    parts.push('Mobile: ' + (locks.mobile ? (locks.mobile.vw + 'x' + locks.mobile.vh + ', ' + Object.keys(locks.mobile.items).length + ' el(s)') : 'not locked'));
+    el.textContent = parts.join('\n');
+  }
+
+  // Linear interpolation in terms of the CSS `vw` unit (1vw = viewport-width/100),
+  // matching the clamp()/vw idiom already used throughout this page. Given two
+  // (viewportWidthPx, value) samples, value(W) = m*W + c; expressed as CSS
+  // that's calc(c_px + (100*m)*1vw), then clamped to the sampled range so it
+  // never extrapolates past either locked breakpoint.
+  function interpolate(w0, v0, w1, v1) {
+    if (w0 === w1) return v0 + 'px';
+    var m = (v1 - v0) / (w1 - w0);
+    var c = v0 - m * w0;
+    var vwCoeff = 100 * m;
+    var expr = 'calc(' + c.toFixed(2) + 'px + ' + vwCoeff.toFixed(4) + 'vw)';
+    var lo = Math.min(v0, v1).toFixed(2), hi = Math.max(v0, v1).toFixed(2);
+    return 'clamp(' + lo + 'px, ' + expr + ', ' + hi + 'px)';
+  }
+
+  function exportResponsiveCSS() {
+    if (!locks.browser || !locks.mobile) {
+      toast('Lock both a browser position and a mobile position first.');
+      return;
+    }
+    var b = locks.browser, m = locks.mobile;
+    var selectors = Object.keys(b.items).filter(function (sel) { return m.items[sel]; });
+    if (!selectors.length) {
+      toast('No element was moved/resized in BOTH locked positions -- nothing to interpolate.');
+      return;
+    }
+    var blocks = selectors.map(function (sel) {
+      var vb = b.items[sel], vm = m.items[sel];
+      var lines = [
+        '  transform: translate(' + interpolate(b.vw, vb.tx, m.vw, vm.tx) + ', ' + interpolate(b.vw, vb.ty, m.vw, vm.ty) + ');',
+        '  width: ' + interpolate(b.vw, vb.width, m.vw, vm.width) + ';',
+        '  height: ' + interpolate(b.vw, vb.height, m.vw, vm.height) + ';'
+      ];
+      return sel + ' {\n' + lines.join('\n') + '\n}';
+    });
+    var css = '/* Interpolated between browser (' + b.vw + 'px) and mobile (' + m.vw + 'px) locked positions. */\n' + blocks.join('\n\n');
+    navigator.clipboard.writeText(css).then(function () {
+      toast('Copied responsive CSS for ' + blocks.length + ' element(s) -- paste into chat, this is real fluid CSS ready to review.');
+    }, function () {
+      window.__tweakModeResponsiveCSS = css;
+      toast('Clipboard blocked -- read window.__tweakModeResponsiveCSS in devtools.');
+    });
+  }
+
+  // ---- export (single-viewport snapshot) -----------------------------------
   function copyCSS() {
     if (!changed.size) { toast('Nothing changed yet.'); return; }
     var seen = new Set();
