@@ -399,7 +399,7 @@ export default function SwipeScreen() {
     const p = brandGrow.value;
     return {
       transform: [
-        { translateX: p * (width / 2 - 35) },
+        { translateX: p * (width / 2 - 40) },
         { translateY: p * (height * 0.26 - 34) },
         { scale: 1 + p * 0.5 },
       ],
@@ -411,8 +411,8 @@ export default function SwipeScreen() {
   // enlarges to span from there to where the counter number ends (~width/2+33).
   // transformOrigin 'left top' (set in styles.wordmarkOrigin) keeps the top
   // edge pinned, so growth goes rightward and downward, never up the page.
-  const WORD_LEFT0 = 59; // resting left edge of "Everlit"
-  const WORD_W0 = 49.5; // resting rendered width of "Everlit"
+  const WORD_LEFT0 = 69; // resting left edge of "Everlit"
+  const WORD_W0 = 74; // resting rendered width of "Everlit" at 24px
   const wordmarkStyle = useAnimatedStyle(() => {
     const p = brandGrow.value;
     // Sits centred in the left half of the page (between the left edge and the
@@ -836,9 +836,9 @@ export default function SwipeScreen() {
               `transform`, which silently overwrites (not merges with) a
               translateX passed straight into its style prop. */}
           {/* Wordmark: its own wrapper so it can slide left + grow slightly,
-              independent of the flame. Starts at x=59 (flame 32 + gap 8 + the
+              independent of the flame. Starts at x=69 (flame 42 + gap 8 + the
               19 inset) so the resting lockup looks unchanged. */}
-          <View style={[styles.centerContent, { position: 'absolute', left: 59, top: 0, bottom: 0 }]}>
+          <View style={[styles.centerContent, { position: 'absolute', left: 69, top: 0, bottom: 0 }]}>
             <PressableScale onPress={goHome} scaleTo={0.96} hitSlop={8}>
               <Animated.Text style={[styles.brandText, styles.wordmarkOrigin, wordmarkStyle]}>
                 Everlit
@@ -913,6 +913,9 @@ const LOADING_PHRASES = [
   'This is a space for remembering, together.',
 ];
 
+// Repeating unit that produces the 1,2,3,2,1,2,3,2,1... dot rhythm.
+const DOT_PATTERN = [1, 2, 3, 2];
+
 // The brand emblem (flame in its compass ring) breathing over a soft gold glow,
 // with a slow carousel of comforting lines beneath it. As the glow swells the
 // gold emblem crossfades to its charcoal version, so at the glow's apex it
@@ -929,6 +932,9 @@ function LoadingState({
   const breath = useSharedValue(0);
   const fade = useSharedValue(1);
   const [phrase, setPhrase] = useState(0);
+  // Dot count cycles 1,2,3,2,1,2,3,2,... as an extra "still working" indicator.
+  const [dotStep, setDotStep] = useState(0);
+  const dotCount = reduceMotion ? 3 : DOT_PATTERN[dotStep];
 
   useEffect(() => {
     if (reduceMotion) return;
@@ -938,6 +944,12 @@ function LoadingState({
       true
     );
   }, []);
+
+  useEffect(() => {
+    if (reduceMotion) return;
+    const id = setInterval(() => setDotStep((d) => (d + 1) % DOT_PATTERN.length), 420);
+    return () => clearInterval(id);
+  }, [reduceMotion]);
 
   // Fade the current line out, swap it, fade the next one in.
   useEffect(() => {
@@ -988,6 +1000,13 @@ function LoadingState({
         <Animated.Text style={[styles.loadingPhrase, phraseStyle]}>
           {LOADING_PHRASES[phrase]}
         </Animated.Text>
+        {/* Three-dot rhythm: always three slots (so the row stays centred),
+            with only `dotCount` of them lit. */}
+        <View style={styles.loadingDots}>
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={[styles.loadingDot, { opacity: i < dotCount ? 0.9 : 0.16 }]} />
+          ))}
+        </View>
       </View>
     </View>
   );
@@ -1872,30 +1891,30 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   logo: {
-    width: 32,
-    height: 32,
-    borderRadius: 7,
+    width: 42,
+    height: 42,
+    borderRadius: 9,
   },
   // Holds the plain flame and the (larger) ringed icon on a shared centre so
   // the crossfade lands the inner flame in the same spot.
   flameBox: {
-    width: 32,
-    height: 32,
+    width: 42,
+    height: 42,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // The ring icon's flame sits at ~40% of its height, so at 74px its inner
-  // flame reads about the same size as the 32px plain flame it fades over.
+  // The ring icon's flame sits at ~40% of its height, so at 97px its inner
+  // flame reads about the same size as the 42px plain flame it fades over.
   flameRing: {
     position: 'absolute',
-    width: 74,
-    height: 74,
-    left: (32 - 74) / 2,
-    top: (32 - 74) / 2,
+    width: 97,
+    height: 97,
+    left: (42 - 97) / 2,
+    top: (42 - 97) / 2,
   },
   brandText: {
     fontFamily: 'PlayfairDisplay_600SemiBold',
-    fontSize: 16,
+    fontSize: 24,
     letterSpacing: 0.2,
     color: colors.white,
   },
@@ -1959,7 +1978,20 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: 'rgba(212, 169, 118, 0.6)',
     textAlign: 'center',
-    marginBottom: 26,
+    // Extra gap so the label clears the top of the breathing glow underneath.
+    marginBottom: 72,
+  },
+  loadingDots: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 28,
+    alignSelf: 'center',
+  },
+  loadingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.goldWarm,
   },
   loadingEmblem: {
     width: 132,
