@@ -207,6 +207,11 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 60,
     paddingHorizontal: 28,
+    // Same 640 content cap the rest of the app uses; a 30px question line
+    // running the full desktop width read as a wall of serif.
+    width: '100%',
+    maxWidth: 640,
+    alignSelf: 'center',
   },
   progressWrap: {
     marginBottom: 8,

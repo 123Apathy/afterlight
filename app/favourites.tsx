@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import GoldButton from '../components/GoldButton';
 import LoadingState from '../components/LoadingState';
 import PressableScale from '../components/PressableScale';
-import { colors } from '../constants/theme';
+import { colors, images } from '../constants/theme';
 import { DEMO, DEMO_PHOTOS } from '../constants/demo';
 import { api, heartCount, photoThumbUrl, type Photo } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
@@ -49,6 +49,13 @@ export default function FavouritesScreen() {
 
   return (
     <View style={styles.page}>
+      {/* Warm ambient wash so this screen shares the app's candlelit depth
+          instead of a flat page colour; static, one hue, never blocks touches. */}
+      <LinearGradient
+        colors={['rgba(42, 35, 33, 0.9)', 'rgba(25, 20, 19, 0)']}
+        style={styles.topWash}
+        pointerEvents="none"
+      />
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.content}>
           <Text style={styles.overline}>Everyone&rsquo;s favourites</Text>
@@ -65,10 +72,13 @@ export default function FavouritesScreen() {
           />
 
           {hearted.length === 0 ? (
-            <Text style={styles.empty}>
-              No favourites yet. Go back and double-tap the photos that matter to you, they&rsquo;ll gather
-              here for the whole family to see.
-            </Text>
+            <View style={styles.emptyWrap}>
+              <Image source={images.logoRing} style={styles.emptyEmblem} resizeMode="contain" />
+              <Text style={styles.empty}>
+                No favourites yet. Go back and double-tap the photos that matter to you, they&rsquo;ll gather
+                here for the whole family to see.
+              </Text>
+            </View>
           ) : (
             hearted.map((photo) => {
               const raters = photo.ratings.map((r) => r.rater);
@@ -150,6 +160,23 @@ const styles = StyleSheet.create({
     borderRadius: 1,
     marginBottom: 8,
   },
+  topWash: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 380,
+  },
+  emptyWrap: {
+    alignItems: 'center',
+    gap: 18,
+    paddingVertical: 24,
+  },
+  emptyEmblem: {
+    width: 64,
+    height: 64,
+    opacity: 0.7,
+  },
   empty: {
     fontFamily: 'Poppins_400Regular',
     fontSize: 15,
@@ -175,7 +202,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 340,
     backgroundColor: colors.ink,
-    borderRadius: 16,
   },
   cardBody: {
     padding: 18,

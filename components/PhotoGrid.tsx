@@ -119,7 +119,7 @@ export default function PhotoGrid({ photos, width, onSelect, onOpenComments }: P
                       <Pressable
                         style={styles.badge}
                         onPress={() => setPopup({ type: 'likes', photo })}
-                        hitSlop={5}
+                        hitSlop={8}
                       >
                         <Text style={styles.heart}>♥</Text>
                         <Text style={styles.badgeText}>{count}</Text>
@@ -129,7 +129,7 @@ export default function PhotoGrid({ photos, width, onSelect, onOpenComments }: P
                       <Pressable
                         style={styles.badge}
                         onPress={() => setPopup({ type: 'comments', photo })}
-                        hitSlop={5}
+                        hitSlop={8}
                       >
                         <CommentGlyph />
                         <Text style={styles.badgeText}>{comments}</Text>
@@ -223,19 +223,19 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 7,
-    height: 22,
-    borderRadius: 11,
+    gap: 4,
+    paddingHorizontal: 9,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: 'rgba(16, 14, 12, 0.6)',
   },
   heart: {
     color: colors.heart ?? '#F26D7D',
-    fontSize: 11,
+    fontSize: 12.5,
   },
   badgeText: {
     color: colors.white,
-    fontSize: 11,
+    fontSize: 12.5,
     fontFamily: 'Poppins_500Medium',
   },
   glyphFallback: {

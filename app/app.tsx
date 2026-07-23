@@ -1311,6 +1311,14 @@ function PhotoDeck({
         />
       </ScrollView>
 
+      {/* Legibility scrim: the control labels sit on raw photo pixels and a
+          bright sky washes them out; same treatment EmptyState already uses. */}
+      <LinearGradient
+        colors={['transparent', 'rgba(16, 14, 12, 0.6)']}
+        style={styles.bottomScrim}
+        pointerEvents="none"
+      />
+
       {/* Prev/Next: their own row, nudged up above the labelled action
           buttons, spread wider toward the edges, and a touch bigger. Bare
           arrows on purpose -- direction reads instantly, and the three

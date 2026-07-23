@@ -44,6 +44,17 @@ export const tributeQuestions: string[] = [
 ];
 
 // Fill {name}; falls back to a gentle generic if the memorial has no name yet.
+// The fallback must handle the possessive too: a bare swap turned
+// "{name}’s love story" into "them’s love story" (caught live 2026-07-24), so
+// possessive templates fall back to "their" and plain ones to "them".
 export function fillName(text: string, name?: string): string {
-  return text.split('{name}').join(name?.trim() || 'them');
+  const n = name?.trim();
+  if (n) return text.split('{name}').join(n);
+  return text
+    .split('{name}’s')
+    .join('their')
+    .split("{name}'s")
+    .join('their')
+    .split('{name}')
+    .join('them');
 }
