@@ -625,7 +625,7 @@ export default function SwipeScreen() {
       <CoachMark
         visible={tourStep === 'like'}
         text="Tap the heart to favourite a photo that moves you. Your favourites help the family choose what goes into the tribute film."
-        anchor={{ x: bandLeftApp + (bandApp * 3) / 4, y: height - 50 }}
+        anchor={{ x: bandLeftApp + bandApp / 2, y: height - 50 }}
         placement="above"
         buttonLabel="Got it"
         onNext={advanceTour}
@@ -635,7 +635,7 @@ export default function SwipeScreen() {
       <CoachMark
         visible={tourStep === 'details'}
         text="If you know when or where this was taken, add it here. Even just the year helps — it enriches the memorial and lets us put the photos in the right order."
-        anchor={{ x: 78, y: height - 109 }}
+        anchor={{ x: bandLeftApp + (bandApp * 5) / 6, y: height - 50 }}
         placement="above"
         buttonLabel="Got it"
         onNext={advanceTour}
@@ -1039,38 +1039,37 @@ function PhotoDeck({
         />
       </ScrollView>
 
-      {/* Details chip: sits above the controls, left-aligned. Shows the
-          photo's saved date/location when it has any (so it doubles as a
-          caption), otherwise invites adding them. Opens the DetailsSheet for
-          the current photo. */}
-      {currentPhoto && (
-        <View style={styles.detailsChipWrap} pointerEvents="box-none">
+      {/* Prev/Next: their own row, nudged up above the labelled action
+          buttons, spread wider toward the edges, and a touch bigger. Bare
+          arrows on purpose -- direction reads instantly, and the three
+          labelled buttons below are the primary action family. */}
+      <View style={styles.navRowUp} pointerEvents="box-none">
+        <View style={quarterCenterStyle(bandLeft + band * 0.3)}>
           <PressableScale
-            onPress={() => onOpenDetails(currentPhoto)}
-            scaleTo={0.96}
-            hitSlop={8}
-            style={[styles.detailsChip, glassSurface, glassBlur]}
+            onPress={() => goTo(index - 1)}
+            scaleTo={0.9}
+            hitSlop={10}
+            style={[styles.navButtonBig, glassSurface, glassBlur, styles.navButtonContrast, index === 0 && styles.navButtonDisabled]}
           >
-            <DetailsIcon />
-            <Text style={styles.detailsChipText} numberOfLines={1}>
-              {formatPhotoDetails(currentPhoto) ?? 'Add details'}
-            </Text>
+            <NavChevron direction="left" />
           </PressableScale>
         </View>
-      )}
+        <View style={quarterCenterStyle(bandLeft + band * 0.7)}>
+          <PressableScale
+            onPress={() => goTo(index + 1)}
+            scaleTo={0.9}
+            hitSlop={10}
+            style={[styles.navButtonBig, glassSurface, glassBlur, styles.navButtonContrast, index === lastIndex && styles.navButtonDisabled]}
+          >
+            <NavChevron direction="right" />
+          </PressableScale>
+        </View>
+      </View>
 
-      {/* Fixed overlay: unlike the photos themselves, none of this scrolls
-          away mid-swipe -- it all reads off `currentPhoto`/`index` instead
-          of living inside each per-slide component. A single flex row (not
-          three independently-absolute-positioned pieces) so a long comment
-          count can never overlap the centered nav buttons. */}
-      {/* Same alignment grid as the header, but on wide (desktop) viewports
-          the three controls cluster in a centered band instead of spreading
-          across the full window — a heart 1400px from its comment button
-          isn't a usable row. band == width on phones, so nothing changes
-          there. */}
+      {/* Three labelled glass buttons, evenly spread: Comment (left),
+          Favourites (centre), Details (right). All read off `currentPhoto`. */}
       <View style={styles.controlsRow} pointerEvents="box-none">
-        <View style={[styles.commentPillWrap, quarterCenterStyle(bandLeft + band / 4)]}>
+        <View style={[styles.controlSlot, quarterCenterStyle(bandLeft + band / 6)]}>
           {currentPhoto && (
             <View style={styles.controlColumn}>
               <Animated.View style={[styles.commentGlow, commentGlowStyle]} pointerEvents="none">
@@ -1096,26 +1095,7 @@ function PhotoDeck({
           )}
         </View>
 
-        <View style={[styles.navRow, quarterCenterStyle(bandLeft + band / 2)]} pointerEvents="box-none">
-          <PressableScale
-            onPress={() => goTo(index - 1)}
-            scaleTo={0.9}
-            hitSlop={10}
-            style={[styles.navButton, glassSurface, glassBlur, styles.navButtonContrast, index === 0 && styles.navButtonDisabled]}
-          >
-            <NavChevron direction="left" />
-          </PressableScale>
-          <PressableScale
-            onPress={() => goTo(index + 1)}
-            scaleTo={0.9}
-            hitSlop={10}
-            style={[styles.navButton, glassSurface, glassBlur, styles.navButtonContrast, index === lastIndex && styles.navButtonDisabled]}
-          >
-            <NavChevron direction="right" />
-          </PressableScale>
-        </View>
-
-        <View style={[styles.heartFixed, quarterCenterStyle(bandLeft + (band * 3) / 4)]} pointerEvents="box-none">
+        <View style={[styles.controlSlot, quarterCenterStyle(bandLeft + band / 2)]} pointerEvents="box-none">
           {currentPhoto && (
             <View style={styles.controlColumn}>
               <Animated.View style={[styles.glowPulse, glowStyle]} pointerEvents="none">
@@ -1134,6 +1114,23 @@ function PhotoDeck({
                 </View>
               )}
               <Text style={styles.controlLabel}>Favourites</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={[styles.controlSlot, quarterCenterStyle(bandLeft + (band * 5) / 6)]} pointerEvents="box-none">
+          {currentPhoto && (
+            <View style={styles.controlColumn}>
+              <PressableScale
+                onPress={() => onOpenDetails(currentPhoto)}
+                scaleTo={0.96}
+                hitSlop={12}
+              >
+                <View style={[styles.glassCircle, glassSurface, glassBlur, styles.navButtonContrast]}>
+                  <DetailsIcon />
+                </View>
+              </PressableScale>
+              <Text style={styles.controlLabel}>Details</Text>
             </View>
           )}
         </View>
@@ -1909,6 +1906,28 @@ const styles = StyleSheet.create({
     // glass buttons have room without crowding the nav arrows.
     bottom: 26,
     height: 48,
+  },
+  // Generic positioned slot for each labelled control (comment/favourites/
+  // details) -- centres its column on the x passed via quarterCenterStyle.
+  controlSlot: {
+    justifyContent: 'center',
+  },
+  // Prev/Next row, nudged up above the labelled buttons.
+  navRowUp: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 104,
+    height: 54,
+  },
+  // Slightly bigger than the labelled action buttons (48) so the arrows read
+  // as the distinct navigation layer.
+  navButtonBig: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   // Details chip sits just above the controls row, left-aligned.
   detailsChipWrap: {
