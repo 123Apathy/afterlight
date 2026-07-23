@@ -171,6 +171,10 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
         <>
           {!!projectName && <Text style={styles.contextLine}>{projectName}</Text>}
 
+          {/* Order (top -> bottom): the finished film first when it exists
+              (the payoff), then favourites, share with family, share
+              memories. "Add photos" is no longer a full card -- it's the
+              small pill down near the bottom (see uploadPill below). */}
           <View style={styles.cards}>
             {!!project?.videoUrl && (
               <ActionCard
@@ -181,19 +185,19 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
                 highlight
               />
             )}
-            {showButton('addPhotos') && (
+            {showButton('seeFavourites') && (
               <ActionCard
-                icon={<IconAdd />}
-                title={uploading ? 'Adding photos…' : 'Add photos'}
-                subtitle="Choose pictures from this phone"
-                onPress={handleUpload}
+                icon={<IconHeart />}
+                title="See your favourites"
+                subtitle="The photos your family loved the most"
+                onPress={handleSeeFavourites}
               />
             )}
             {showButton('inviteFamily') && (
               <View>
                 <ActionCard
                   icon={<IconWhatsApp />}
-                  title="Invite family"
+                  title="Share with family"
                   subtitle="Opens WhatsApp with a message ready to send"
                   onPress={handleWhatsAppShare}
                 />
@@ -201,14 +205,6 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
                   <Text style={styles.copyLinkText}>{copied ? 'Copied' : 'Copy link instead'}</Text>
                 </PressableScale>
               </View>
-            )}
-            {showButton('seeFavourites') && (
-              <ActionCard
-                icon={<IconHeart />}
-                title="See everyone's favourites"
-                subtitle="The photos your family loved the most"
-                onPress={handleSeeFavourites}
-              />
             )}
             {showButton('shareMemories') && (
               <ActionCard
@@ -223,10 +219,23 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
             )}
           </View>
 
-          {!!projectId && (
-            <PressableScale onPress={clearProject} style={styles.switchLink} scaleTo={0.98}>
-              <Text style={styles.switchText}>Switch to a different memorial</Text>
-            </PressableScale>
+          {(showButton('addPhotos') || !!projectId) && (
+            <View style={styles.bottomActions}>
+              {showButton('addPhotos') && (
+                <PressableScale onPress={handleUpload} style={styles.uploadPill} scaleTo={0.96}>
+                  <View style={styles.uploadPlus}>
+                    <View style={styles.uploadPlusBar} />
+                    <View style={[styles.uploadPlusBar, { transform: [{ rotate: '90deg' }] }]} />
+                  </View>
+                  <Text style={styles.uploadPillText}>{uploading ? 'Adding photos…' : 'Add photos'}</Text>
+                </PressableScale>
+              )}
+              {!!projectId && (
+                <PressableScale onPress={clearProject} style={styles.switchLink} scaleTo={0.98}>
+                  <Text style={styles.switchText}>Switch to a different memorial</Text>
+                </PressableScale>
+              )}
+            </View>
           )}
         </>
       )}
@@ -534,9 +543,44 @@ const styles = StyleSheet.create({
     color: colors.textFaintest,
     marginLeft: 4,
   },
+  // Groups the small "Add photos" pill + the switch-memorial link together
+  // below the main action cards.
+  bottomActions: {
+    marginTop: 24,
+    alignItems: 'center',
+    gap: 6,
+  },
+  // Small glass pill, same shape/treatment as the header Close button, since
+  // "Add photos" is now a secondary action rather than a primary card.
+  uploadPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    height: 44,
+    paddingHorizontal: 20,
+    borderRadius: 22,
+    backgroundColor: colors.glassMedium,
+  },
+  uploadPlus: {
+    width: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uploadPlusBar: {
+    position: 'absolute',
+    width: 15,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: colors.white,
+  },
+  uploadPillText: {
+    fontFamily: 'Poppins_500Medium',
+    fontSize: 15,
+    color: colors.white,
+  },
   switchLink: {
-    marginTop: 28,
-    height: 48,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },

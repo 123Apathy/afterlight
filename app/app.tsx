@@ -880,7 +880,7 @@ function PhotoDeck({
       <View style={styles.controlsRow} pointerEvents="box-none">
         <View style={[styles.commentPillWrap, quarterCenterStyle(bandLeft + band / 4)]}>
           {currentPhoto && (
-            <View style={styles.commentPillInner}>
+            <View style={styles.controlColumn}>
               <Animated.View style={[styles.commentGlow, commentGlowStyle]} pointerEvents="none">
                 <RadialGlow color={colors.goldWarm} />
               </Animated.View>
@@ -890,11 +890,16 @@ function PhotoDeck({
                 hitSlop={12}
                 style={commentPulseStyle}
               >
-                <CommentIcon active={currentPhoto.comments.length > 0} />
+                <View style={[styles.glassCircle, glassSurface, glassBlur, styles.navButtonContrast]}>
+                  <CommentIcon active={currentPhoto.comments.length > 0} />
+                </View>
               </PressableScale>
               {currentPhoto.comments.length > 0 && (
-                <SoftCount value={currentPhoto.comments.length} style={styles.commentCount} />
+                <View style={styles.controlBadge} pointerEvents="none">
+                  <SoftCount value={currentPhoto.comments.length} style={styles.controlBadgeText} />
+                </View>
               )}
+              <Text style={styles.controlLabel}>Comment</Text>
             </View>
           )}
         </View>
@@ -920,25 +925,23 @@ function PhotoDeck({
 
         <View style={[styles.heartFixed, quarterCenterStyle(bandLeft + (band * 3) / 4)]} pointerEvents="box-none">
           {currentPhoto && (
-            <View style={styles.heartFixedInner}>
+            <View style={styles.controlColumn}>
               <Animated.View style={[styles.glowPulse, glowStyle]} pointerEvents="none">
                 <RadialGlow color={colors.heart} />
               </Animated.View>
               <PressableScale onPress={handleHeartPress} scaleTo={0.82} hitSlop={16}>
-                <Animated.Text style={[styles.heartIcon, favorited && styles.heartIconActive, heartStyle]}>
-                  {favorited ? '♥' : '♡'}
-                </Animated.Text>
+                <View style={[styles.glassCircle, glassSurface, glassBlur, styles.navButtonContrast]}>
+                  <Animated.Text style={[styles.heartIconGlass, favorited && styles.heartIconActive, heartStyle]}>
+                    {favorited ? '♥' : '♡'}
+                  </Animated.Text>
+                </View>
               </PressableScale>
-              {count > 0 ? (
-                <SoftCount value={count} style={styles.heartFixedCount} />
-              ) : (
-                index === 0 &&
-                !favorited && (
-                  <Text style={styles.heartHint}>
-                    tap to{'\n'}favourite
-                  </Text>
-                )
+              {count > 0 && (
+                <View style={styles.controlBadge} pointerEvents="none">
+                  <SoftCount value={count} style={styles.controlBadgeText} />
+                </View>
               )}
+              <Text style={styles.controlLabel}>Favourites</Text>
             </View>
           )}
         </View>
@@ -1672,8 +1675,71 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: 34,
-    height: 56,
+    // Lower + taller than before so the new labels under the comment/heart
+    // glass buttons have room without crowding the nav arrows.
+    bottom: 26,
+    height: 48,
+  },
+  // Shared column for the comment + heart controls: a fixed-height box that
+  // vertically centers the glass button so its center lines up with the nav
+  // arrows' centers (same trick the old count used), while the label and
+  // count badge float via absolute positioning and don't shift that center.
+  controlColumn: {
+    position: 'relative',
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Frosted glass circle for the comment + heart icons -- same treatment and
+  // size as the nav arrows (glassSurface + glassBlur + navButtonContrast) so
+  // all three controls read as one button family.
+  glassCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Heart glyph sized to sit inside the 48px glass circle (the standalone
+  // heartIcon is 42px, which filled the circle edge-to-edge).
+  heartIconGlass: {
+    fontSize: 30,
+    lineHeight: 34,
+    color: 'rgba(255, 255, 255, 0.85)',
+    zIndex: 2,
+  },
+  controlLabel: {
+    position: 'absolute',
+    top: 50,
+    left: -16,
+    right: -16,
+    textAlign: 'center',
+    fontFamily: 'Poppins_500Medium',
+    fontSize: 10,
+    letterSpacing: 0.3,
+    color: 'rgba(255, 255, 255, 0.82)',
+  },
+  // Count moved off the "below the icon" slot (the label lives there now) to
+  // a small badge on the button's top-right corner.
+  controlBadge: {
+    position: 'absolute',
+    top: -3,
+    right: -5,
+    minWidth: 19,
+    height: 19,
+    paddingHorizontal: 4,
+    borderRadius: 10,
+    backgroundColor: 'rgba(20, 16, 14, 0.82)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.28)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  controlBadgeText: {
+    fontFamily: 'Poppins_600SemiBold',
+    fontSize: 11,
+    lineHeight: 15,
+    color: 'rgba(255, 255, 255, 0.95)',
   },
   navRow: {
     flexDirection: 'row',
