@@ -520,7 +520,7 @@ export default function SwipeScreen() {
               value={nameDraft}
               onChangeText={setNameDraft}
               placeholder="Your name"
-              placeholderTextColor={colors.textFaintest}
+              placeholderTextColor="rgba(255,255,255,0.6)"
               style={styles.gateInput}
               onSubmitEditing={() => setRaterName(nameDraft.trim())}
             />
@@ -614,7 +614,7 @@ export default function SwipeScreen() {
       />
       <CoachMark
         visible={tourStep === 'menu'}
-        text="Everything else lives in the menu — invite family, see everyone's favourites, and share your own memories."
+        text="Everything else lives in the menu — invite family with a share link, see everyone's favourites, and share your own memories."
         anchor={{ x: width - 30, y: 26 }}
         placement="below"
         buttonLabel="Next"
@@ -1692,7 +1692,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_400Regular',
     fontSize: 15,
     lineHeight: 26,
-    color: colors.textFainter,
+    color: colors.white,
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 12,
     textAlign: 'center',
     maxWidth: 360,
     marginVertical: 4,
