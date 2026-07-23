@@ -399,9 +399,10 @@ export default function SwipeScreen() {
     const p = brandGrow.value;
     return {
       transform: [
-        { translateX: p * (width / 2 - 40) },
-        { translateY: p * (height * 0.26 - 34) },
-        { scale: 1 + p * 0.5 },
+        { translateX: p * (width / 2 - 29) },
+        // Lands the ring centred in the gap between the header and the title.
+        { translateY: p * (height * 0.214 - 33) },
+        { scale: 1 + p * 1.0 },
       ],
     };
   });
@@ -411,8 +412,7 @@ export default function SwipeScreen() {
   // bitmap-scales, softening it), we crossfade. The small 24px header wordmark
   // fades out while a second copy, rendered crisply at its final size and
   // centred in the left half of the page, fades in. Both ends stay sharp.
-  const WORD_W0 = 74; // rendered width of "Everlit" at 24px
-  const endWordSize = (24 * (width / 4 + 7)) / WORD_W0; // final crisp size
+  const endWordSize = 30; // crisp full-size wordmark on the closing slide
   const headerWordFade = useAnimatedStyle(() => ({ opacity: 1 - brandGrow.value }));
   const endWordFade = useAnimatedStyle(() => ({ opacity: brandGrow.value }));
 
@@ -826,7 +826,7 @@ export default function SwipeScreen() {
               inset). On the closing slide it fades out as the crisp full-size
               copy below fades in. */}
           <Animated.View
-            style={[styles.centerContent, { position: 'absolute', left: 69, top: 0, bottom: 0 }, headerWordFade]}
+            style={[styles.centerContent, { position: 'absolute', left: 47, top: 0, bottom: 0 }, headerWordFade]}
           >
             <PressableScale onPress={goHome} scaleTo={0.96} hitSlop={8}>
               <Text style={styles.brandText}>Everlit</Text>
@@ -1895,30 +1895,30 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   logo: {
-    width: 42,
-    height: 42,
-    borderRadius: 9,
+    width: 20,
+    height: 20,
+    borderRadius: 5,
   },
   // Holds the plain flame and the (larger) ringed icon on a shared centre so
   // the crossfade lands the inner flame in the same spot.
   flameBox: {
-    width: 42,
-    height: 42,
+    width: 20,
+    height: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // The ring icon's flame sits at ~40% of its height, so at 97px its inner
-  // flame reads about the same size as the 42px plain flame it fades over.
+  // The ring icon's flame sits at ~40% of its height, so at 46px its inner
+  // flame reads about the same size as the 20px plain flame it fades over.
   flameRing: {
     position: 'absolute',
-    width: 97,
-    height: 97,
-    left: (42 - 97) / 2,
-    top: (42 - 97) / 2,
+    width: 46,
+    height: 46,
+    left: (20 - 46) / 2,
+    top: (20 - 46) / 2,
   },
   brandText: {
     fontFamily: 'PlayfairDisplay_600SemiBold',
-    fontSize: 24,
+    fontSize: 21,
     letterSpacing: 0.2,
     color: colors.white,
   },
