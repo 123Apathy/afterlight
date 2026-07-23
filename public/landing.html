@@ -1844,6 +1844,41 @@
         border-radius: 8px;
       }
     }
+    /* Site footer: quiet close to the page, echoes the app's dim gold accents. */
+    .site-footer {
+      text-align: center;
+      padding: 56px 24px 48px;
+      background: rgb(18, 14, 12);
+    }
+    .site-footer-brand {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 19px;
+      color: rgba(255, 255, 255, 0.9);
+      margin-bottom: 6px;
+    }
+    .site-footer-line {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.45);
+      margin-bottom: 16px;
+    }
+    .site-footer-links {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.45);
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 14px;
+    }
+    .site-footer-links a {
+      color: #C49A6C;
+      text-decoration: none;
+    }
+    .site-footer-links a:hover { text-decoration: underline; }
+    .site-footer-copy {
+      font-size: 11.5px;
+      letter-spacing: 0.4px;
+      color: rgba(255, 255, 255, 0.3);
+    }
   </style>
 </head>
 <body>
@@ -2189,7 +2224,7 @@
               </div>
               <div class="card-list-item">
                 <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-                <p>Yours to keep &mdash; film and gallery, forever</p>
+                <p>Yours to keep, film and gallery, forever</p>
               </div>
             </div>
           </div>
@@ -2218,6 +2253,17 @@
       </div>
     </div>
   </section>
+
+  <footer class="site-footer">
+    <p class="site-footer-brand">Everlit</p>
+    <p class="site-footer-line">Made with care in South Africa.</p>
+    <p class="site-footer-links">
+      <a href="/terms">Terms &amp; Conditions</a>
+      <span aria-hidden="true">·</span>
+      <a href="https://wa.me/27626607269">WhatsApp us</a>
+    </p>
+    <p class="site-footer-copy">&copy; 2026 Afterlight Memorial Films</p>
+  </footer>
 
   <script>
     // Liquid-light cursor: skip entirely on touch (no cursor to react to) and

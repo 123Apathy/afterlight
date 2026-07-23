@@ -13,7 +13,7 @@ const PLACEHOLDER = require('../assets/images/landing-sky.jpg');
 
 const seeds: Seed[] = [
   { src: PLACEHOLDER, favouritedBy: ['Deon', 'Mom'],
-    comments: [{ author: 'Deon', text: 'A favourite moment — summer at the farm.' }] },
+    comments: [{ author: 'Deon', text: 'A favourite moment, summer at the farm.' }] },
   { src: PLACEHOLDER, favouritedBy: ['Keegan'] },
   { src: PLACEHOLDER },
   { src: PLACEHOLDER, favouritedBy: ['Deon', 'Mom', 'Keegan'],

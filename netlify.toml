@@ -46,6 +46,13 @@
   status = 200
   force = true
 
+# Extensionless /terms serves the static terms page. Placed before the SPA
+# fallback; force not needed because no file exists at the literal path /terms.
+[[redirects]]
+  from = "/terms"
+  to = "/terms.html"
+  status = 200
+
 # SPA fallback: anything else that isn't a static asset resolves client-side.
 [[redirects]]
   from = "/*"

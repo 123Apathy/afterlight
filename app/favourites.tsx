@@ -70,7 +70,7 @@ export default function FavouritesScreen() {
               here for the whole family to see.
             </Text>
           ) : (
-            hearted.map((photo, index) => {
+            hearted.map((photo) => {
               const raters = photo.ratings.map((r) => r.rater);
               return (
                 <View key={photo.id} style={styles.card}>
@@ -80,9 +80,6 @@ export default function FavouritesScreen() {
                       style={styles.cardImage}
                       resizeMode="cover"
                     />
-                    <View style={styles.rankBadge}>
-                      <Text style={styles.rankBadgeText}>{String(index + 1).padStart(2, '0')}</Text>
-                    </View>
                   </View>
                   <View style={styles.cardBody}>
                     <View style={styles.heartRow}>
@@ -176,29 +173,9 @@ const styles = StyleSheet.create({
   },
   cardImage: {
     width: '100%',
-    aspectRatio: 4 / 3,
+    height: 340,
     backgroundColor: colors.ink,
     borderRadius: 16,
-  },
-  rankBadge: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    minWidth: 34,
-    paddingHorizontal: 8,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: 'rgba(20, 16, 14, 0.72)',
-    borderWidth: 1,
-    borderColor: 'rgba(212, 169, 118, 0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rankBadgeText: {
-    fontFamily: 'Poppins_500Medium',
-    fontSize: 12,
-    letterSpacing: 0.5,
-    color: colors.goldWarm,
   },
   cardBody: {
     padding: 18,

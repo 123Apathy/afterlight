@@ -92,7 +92,7 @@ export default function TributeScreen() {
       >
         {phase === 'intro' && (
           <ScrollView contentContainerStyle={styles.scrollCenter}>
-            <Text style={styles.overline}>{fillName(tributeCopy.overline, name).toUpperCase()}</Text>
+            <Text style={styles.overline}>{(name?.trim() ? fillName(tributeCopy.overline, name) : 'In loving memory').toUpperCase()}</Text>
             <Ornament />
             <Text style={styles.title}>{tributeCopy.introTitle}</Text>
             <Text style={styles.body}>{fillName(tributeCopy.introBody, name)}</Text>
@@ -171,7 +171,7 @@ export default function TributeScreen() {
 
         {phase === 'thanks' && (
           <ScrollView contentContainerStyle={styles.scrollCenter}>
-            <Text style={styles.overline}>{fillName(tributeCopy.overline, name).toUpperCase()}</Text>
+            <Text style={styles.overline}>{(name?.trim() ? fillName(tributeCopy.overline, name) : 'In loving memory').toUpperCase()}</Text>
             <Ornament />
             <Text style={styles.title}>{tributeCopy.thanksTitle}</Text>
             <Text style={styles.body}>{fillName(tributeCopy.thanksBody, name)}</Text>

@@ -694,7 +694,7 @@ export default function SwipeScreen() {
           onOpenDetails={(photo) => setDetailsPhotoId(photo.id)}
           onIndexChange={setLiveIndex}
           reduceMotion={reduceMotion}
-          projectName={projectDetails?.name || 'their'}
+          projectName={projectDetails?.name || ''}
         />
       )}
 
@@ -1563,7 +1563,7 @@ function formatPhotoDetails(photo: Photo): string | null {
 // Small info glyph for the details chip: a circle with an "i". Web-only inline
 // SVG (same escape hatch as CommentIcon/NavChevron); native falls back to a
 // bordered circle.
-function DetailsIcon({ active }: { active: boolean }) {
+function DetailsIcon({ active = false }: { active?: boolean }) {
   const color = active ? colors.detail : 'rgba(255, 255, 255, 0.85)';
   if (Platform.OS === 'web') {
     return React.createElement(
