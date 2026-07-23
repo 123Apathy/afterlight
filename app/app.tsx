@@ -1960,30 +1960,35 @@ const styles = StyleSheet.create({
   controlSlot: {
     justifyContent: 'center',
   },
-  // Prev/Next row, nudged up above the labelled buttons.
+  // Prev/Next row. Its TOP edge stays where the 62px version sat (top =
+  // screen - (bottom + height) = screen - 172); the buttons grew 30% larger
+  // downward, so bottom dropped from 110 to 92 while 92 + 80 == 172 holds the
+  // top steady.
   navRowUp: {
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: 110,
-    height: 62,
+    bottom: 92,
+    height: 80,
   },
-  // Biggest touch target of all (older users navigate constantly), but paired
-  // with the lighter navButtonLight fill so it recedes visually -- generous
-  // to tap without stealing focus from Favourites, the emotional primary.
+  // Biggest touch target of all (older users navigate constantly). 30% larger
+  // than before (62 -> 80). Keeps the lighter navButtonLight fill so it still
+  // recedes a touch versus Favourites, but its border now matches the bottom
+  // three (see navButtonLight).
   navButtonBig: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Lighter than navButtonContrast: the arrows are physically the largest, so
-  // a softer fill keeps them from out-shouting the heart.
+  // Softer fill than navButtonContrast so the (physically largest) arrows
+  // don't out-shout the heart -- but the border now matches the bottom three
+  // buttons exactly (2px, rgba .36) per request.
   navButtonLight: {
     backgroundColor: 'rgba(255, 255, 255, 0.10)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.22)',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.36)',
   },
   // Details chip sits just above the controls row, left-aligned.
   detailsChipWrap: {
