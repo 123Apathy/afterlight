@@ -1991,6 +1991,45 @@
       color: var(--accent);
     }
 
+    /* Cinematic film grain: a rendered 128px noise tile (public/grain.png)
+       stepped through discrete offsets like projected film. Blend-overlay at
+       low opacity so it reads as texture on the video, not static. */
+    .film-grain {
+      position: absolute;
+      inset: 0;
+      z-index: 6;
+      background: url('/grain.png') repeat;
+      opacity: 0.07;
+      mix-blend-mode: overlay;
+      pointer-events: none;
+      animation: grainShift 0.8s steps(1) infinite;
+    }
+    @keyframes grainShift {
+      0% { background-position: 0 0; }
+      12.5% { background-position: -32px 46px; }
+      25% { background-position: 54px -20px; }
+      37.5% { background-position: -70px -34px; }
+      50% { background-position: 28px 62px; }
+      62.5% { background-position: -44px 10px; }
+      75% { background-position: 66px -52px; }
+      87.5% { background-position: -16px -64px; }
+      100% { background-position: 0 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .film-grain { animation: none; }
+    }
+    /* Static, fainter grain on the closing band -- same tile, no motion. */
+    .cta-band { position: relative; }
+    .cta-band::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url('/grain.png') repeat;
+      opacity: 0.05;
+      mix-blend-mode: overlay;
+      pointer-events: none;
+    }
+
     /* Gold streak divider under section headings -- the same visual language
        as the app's StreakDivider (gates, favourites, film screens), revealed
        by scaling out from centre on first scroll-in. */
@@ -2158,6 +2197,9 @@
            blocks the nav or CTA; auto-skipped on touch devices and under
            prefers-reduced-motion. -->
       <canvas id="fluid-canvas" class="hero-fluid-canvas"></canvas>
+
+      <!-- Film grain over the video + fluid light, below the hero content. -->
+      <div class="film-grain" aria-hidden="true"></div>
 
       <!-- Navbar -->
       <nav class="navbar">
