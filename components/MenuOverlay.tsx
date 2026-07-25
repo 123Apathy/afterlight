@@ -10,6 +10,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { showToast } from './Toast';
 import { colors, images } from '../constants/theme';
 import { DEMO } from '../constants/demo';
 import { api, inviteUrl, type ButtonKey, type Project } from '../lib/api';
@@ -72,7 +73,7 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
   // clipboard is the fallback for anyone who wants a different app instead.
   const handleWhatsAppShare = () => {
     if (!project) {
-      window.alert("We couldn't get the link just now. Please close this, check your internet, and try again.");
+      showToast("We couldn't get the link just now. Please close this, check your internet, and try again.");
       return;
     }
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -82,7 +83,7 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
 
   const handleCopyLink = async () => {
     if (!project) {
-      window.alert("We couldn't get the link just now. Please close this, check your internet, and try again.");
+      showToast("We couldn't get the link just now. Please close this, check your internet, and try again.");
       return;
     }
     const message = inviteMessage(project);
@@ -115,7 +116,7 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
         }))
       );
     } catch {
-      window.alert('Those photos were not added. Please check your internet and try again.');
+      showToast('Those photos were not added. Please check your internet and try again.');
     } finally {
       setUploading(false);
     }
@@ -137,7 +138,7 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
       ]);
       await api.setCoverPhoto(projectId, uploaded.id);
     } catch {
-      window.alert("That photo didn't upload. Please check your connection and try again.");
+      showToast("That photo didn't upload. Please check your connection and try again.");
     } finally {
       setChangingCover(false);
     }

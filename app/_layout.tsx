@@ -11,6 +11,7 @@ import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import ToastHost from '../components/Toast';
 import { colors } from '../constants/theme';
 
 // Windows/Linux Chromium ignores -webkit-font-smoothing and renders text with
@@ -58,6 +59,7 @@ export default function RootLayout() {
       <StatusBar style="light" />
       <View style={styles.frame}>
         <Stack screenOptions={{ headerShown: false }} />
+        <ToastHost />
       </View>
     </GestureHandlerRootView>
   );

@@ -13,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import PressableScale from '../components/PressableScale';
 import GoldButton from '../components/GoldButton';
 import BackdropVideo from '../components/BackdropVideo';
+import { showToast } from '../components/Toast';
 import { colors } from '../constants/theme';
 import { fillName, tributeCopy, tributeQuestions } from '../constants/tribute';
 import { api } from '../lib/api';
@@ -26,9 +27,26 @@ export default function TributeScreen() {
   const { projectId, projectName } = useActiveProject();
   const [rater, setRater] = useLocalStorage('everlit.rater', '');
   const [nameDraft, setNameDraft] = useState('');
+  const [nameHint, setNameHint] = useState(false);
   const [phase, setPhase] = useState<Phase>('intro');
   const [index, setIndex] = useState(0);
-  const [answers, setAnswers] = useState<string[]>(() => tributeQuestions.map(() => ''));
+  // Answers live in localStorage (per memorial), not component state: 25
+  // questions of someone's memories must survive a failed submit, a closed
+  // tab, or a dead connection. Cleared only after the server confirms.
+  const [draftRaw, setDraftRaw] = useLocalStorage(
+    `everlit.tribute.draft.${projectId || 'unknown'}`,
+    '[]'
+  );
+  const answers = useMemo<string[]>(() => {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(draftRaw);
+    } catch {
+      parsed = [];
+    }
+    const arr = Array.isArray(parsed) ? parsed : [];
+    return tributeQuestions.map((_, i) => (typeof arr[i] === 'string' ? arr[i] : ''));
+  }, [draftRaw]);
 
   const name = projectName;
   const questions = useMemo(() => tributeQuestions.map((q) => fillName(q, name)), [name]);
@@ -41,13 +59,17 @@ export default function TributeScreen() {
 
   const begin = () => {
     const who = (rater || nameDraft).trim();
-    if (!who) return; // name required so answers are attributed
+    if (!who) {
+      // Name required so answers are attributed; say so instead of a dead tap.
+      setNameHint(true);
+      return;
+    }
     if (!rater) setRater(who);
     setPhase('questions');
   };
 
   const setAnswer = (text: string) =>
-    setAnswers((prev) => prev.map((a, i) => (i === index ? text : a)));
+    setDraftRaw(JSON.stringify(answers.map((a, i) => (i === index ? text : a))));
 
   const advance = () => {
     if (index < total - 1) {
@@ -65,12 +87,12 @@ export default function TributeScreen() {
     if (!projectId || payload.length === 0) return;
     try {
       await api.submitTribute(projectId, (rater || nameDraft).trim(), payload);
+      // Confirmed on the server; only now is the local draft safe to clear.
+      setDraftRaw('[]');
     } catch {
-      if (typeof window !== 'undefined') {
-        window.alert(
-          'Your answers may not have saved. Please check your connection, then reopen this and submit again.'
-        );
-      }
+      showToast(
+        "Your answers didn't reach us, but they're saved on this device. Check your connection, then open this again and tap Finish."
+      );
     }
   };
 
@@ -100,11 +122,19 @@ export default function TributeScreen() {
             {!rater && (
               <TextInput
                 value={nameDraft}
-                onChangeText={setNameDraft}
+                onChangeText={(text) => {
+                  setNameDraft(text);
+                  if (nameHint) setNameHint(false);
+                }}
                 placeholder="Your name"
                 placeholderTextColor={colors.textFaintest}
                 style={styles.nameInput}
               />
+            )}
+            {nameHint && (
+              <Text style={styles.nameHint}>
+                Add your name first, so your memories are attributed to you.
+              </Text>
             )}
 
             <GoldButton label={tributeCopy.introCta} onPress={begin} style={styles.cta} pill textStyle={styles.ctaText} />
@@ -266,6 +296,14 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_400Regular',
     fontSize: 15,
     marginTop: 28,
+  },
+  nameHint: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 13,
+    color: colors.goldWarm,
+    marginTop: 12,
+    textAlign: 'center',
+    maxWidth: 360,
   },
   cta: {
     width: '100%',

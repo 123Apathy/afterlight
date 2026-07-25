@@ -28,6 +28,7 @@ import PhotoGrid from '../components/PhotoGrid';
 import PressableScale from '../components/PressableScale';
 import GoldButton from '../components/GoldButton';
 import BackdropVideo from '../components/BackdropVideo';
+import { showToast } from '../components/Toast';
 import { absoluteFill, colors, copy, images, stageWidth, CONTROLS_BAND_MAX } from '../constants/theme';
 import { DEMO, DEMO_PHOTOS } from '../constants/demo';
 
@@ -210,9 +211,7 @@ export default function SwipeScreen() {
       setNewProjectName('');
       setPickingCover(created);
     } catch {
-      if (typeof window !== 'undefined') {
-        window.alert("Couldn't create the project. Check your connection and try again.");
-      }
+      showToast("Couldn't create the project. Check your connection and try again.");
     } finally {
       setCreatingProject(false);
     }
@@ -231,9 +230,7 @@ export default function SwipeScreen() {
       await api.setCoverPhoto(pickingCover.id, uploaded.id);
       setPickingCover(null);
     } catch {
-      if (typeof window !== 'undefined') {
-        window.alert("That photo didn't upload — check your connection and try again.");
-      }
+      showToast("That photo didn't upload. Check your connection and try again.");
     } finally {
       setUploadingCover(false);
     }
@@ -261,9 +258,7 @@ export default function SwipeScreen() {
         await api.favoritePhoto(photo.id, raterName);
       }
     } catch {
-      if (typeof window !== 'undefined') {
-        window.alert("That didn't save — check your connection and try again.");
-      }
+      showToast("That didn't save. Check your connection and try again.");
       refresh();
     }
   };
@@ -285,9 +280,7 @@ export default function SwipeScreen() {
     try {
       await api.addComment(photo.id, raterName, text);
     } catch {
-      if (typeof window !== 'undefined') {
-        window.alert("That comment didn't save — check your connection and try again.");
-      }
+      showToast("That comment didn't save. Check your connection and try again.");
       refresh();
     }
   };
@@ -303,9 +296,7 @@ export default function SwipeScreen() {
     try {
       await api.updatePhotoDetails(photo.id, details);
     } catch {
-      if (typeof window !== 'undefined') {
-        window.alert("Those details didn't save — check your connection and try again.");
-      }
+      showToast("Those details didn't save. Check your connection and try again.");
       refresh();
     }
   };
@@ -475,9 +466,7 @@ export default function SwipeScreen() {
     try {
       await api.toggleCommentReaction(commentId, raterName, emoji);
     } catch {
-      if (typeof window !== 'undefined') {
-        window.alert("That reaction didn't save — check your connection and try again.");
-      }
+      showToast("That reaction didn't save. Check your connection and try again.");
       refresh();
     }
   };
