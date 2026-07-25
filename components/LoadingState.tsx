@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -110,13 +111,15 @@ export default function LoadingState({
     opacity: 0.5 + breath.value * 0.4,
     transform: [{ scale: 0.88 + breath.value * 0.24 }],
   }));
-  // Gold shows when the glow is low; charcoal takes over as it peaks.
+  // Gold shows when the glow is low; charcoal takes over as it peaks. Capped
+  // at 0.8 so a sliver of gold always keeps the ring's edge readable against
+  // the (now lighter) sky backdrop instead of smudging into the glow.
   const goldStyle = useAnimatedStyle(() => ({
-    opacity: 1 - breath.value,
+    opacity: 1 - breath.value * 0.8,
     transform: [{ scale: 0.98 + breath.value * 0.05 }],
   }));
   const charcoalStyle = useAnimatedStyle(() => ({
-    opacity: breath.value,
+    opacity: breath.value * 0.8,
     transform: [{ scale: 0.98 + breath.value * 0.05 }],
   }));
   // The line doesn't just blink: the outgoing line settles downward as it
@@ -128,6 +131,18 @@ export default function LoadingState({
 
   return (
     <View style={styles.pageContent}>
+      {/* The afterglow sky, heavily dimmed: a still image (not video) on
+          purpose, so the wait never competes with the actual loading work.
+          The scrim keeps the emblem and phrase owning the contrast. */}
+      <Image source={images.landingSky} style={styles.bgImage} resizeMode="cover" blurRadius={3} />
+      <LinearGradient
+        colors={['rgba(20, 16, 14, 0.92)', 'rgba(24, 19, 16, 0.78)', 'rgba(20, 16, 14, 0.95)']}
+        locations={[0, 0.5, 1]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={styles.bgScrim}
+        pointerEvents="none"
+      />
       {/* Embers rising through the wait: the screen breathes, not spins. */}
       <Atmosphere />
       <View style={styles.loadingWrap}>
@@ -165,6 +180,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.dark,
     overflow: 'hidden',
+  },
+  bgImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+  },
+  bgScrim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   loadingWrap: {
     flex: 1,
