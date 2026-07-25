@@ -38,12 +38,19 @@
 
     html {
       scroll-behavior: smooth;
+      /* The navbar is position:fixed at the top (57px tall on desktop, 45px
+         on mobile). Without this every "Why Everlit" / "How it works" /
+         "Contact" jump parked its own heading underneath the bar. */
+      scroll-padding-top: 76px;
     }
 
     /* Keyboard-only focus ring (mouse clicks don't trigger :focus-visible).
-       Gold to match the palette; visible against every section's dark bg. */
+       Gold to match the palette; visible against every section's dark bg.
+       summary is included because <details> in the FAQ is focusable but is
+       neither an anchor nor a button, so it fell back to the UA default. */
     a:focus-visible,
-    button:focus-visible {
+    button:focus-visible,
+    summary:focus-visible {
       outline: 2px solid var(--accent);
       outline-offset: 3px;
       border-radius: 4px;
@@ -1814,26 +1821,29 @@
         padding-bottom: 0;
       }
 
-      /* Shrunk (~0.68x) so it fits in the left half with equal breathing
-         room on both sides of it -- measured the overflow past the
-         midline, not eyeballed. Real font-size/padding/icon-size (not a
-         transform) specifically because .phone-mock's height below is
-         tied to .hero-right's actual rendered height, which a transform
-         wouldn't shrink. */
+      /* The page's only conversion action, on the device almost every
+         visitor uses. It was previously shrunk to 9.5px text on a ~26px
+         pill so it would fit beside .phone-mock -- a decoration sizing
+         the action. Now the button keeps a real, tappable size (44px
+         tall: 36px icon + 4px padding either side) and the mock gives up
+         the space instead. */
       .hero-btn-text {
-        font-size: 9.5px;
-        padding-left: 18px;
-        padding-right: 4px;
+        font-size: 15px;
+        padding-left: 20px;
+        padding-right: 8px;
+        /* One line: "Create a / memorial" wrapping inside a pill next to a
+           round arrow reads as a squeezed button rather than a confident one. */
+        white-space: nowrap;
       }
 
       .hero-btn-icon {
-        width: 22px;
-        height: 22px;
+        width: 36px;
+        height: 36px;
       }
 
       .hero-btn {
-        gap: 4px;
-        padding: 2px 2px 2px 0;
+        gap: 6px;
+        padding: 4px 4px 4px 0;
       }
 
       /* On mobile, pin the phone's TOP to the hero heading's top and its BOTTOM
@@ -1846,9 +1856,12 @@
         left: auto;
         top: 82px;
         transform: none;
-        height: 306px;
+        /* 306px -> 196px: the mock is proof-of-product on a page whose job
+           is one tap, so it yields the width the CTA needs to stay one line.
+           width:auto keeps its aspect, so this frees horizontal room too. */
+        height: 196px;
         width: auto;
-        right: 16px;
+        right: 8px;
       }
 
       .navbar-links {
