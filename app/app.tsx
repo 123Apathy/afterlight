@@ -29,7 +29,7 @@ import PhotoGrid from '../components/PhotoGrid';
 import PressableScale from '../components/PressableScale';
 import GoldButton from '../components/GoldButton';
 import BackdropVideo from '../components/BackdropVideo';
-import Atmosphere from '../components/Atmosphere';
+import HorizonGlow from '../components/HorizonGlow';
 import { showToast } from '../components/Toast';
 import { absoluteFill, colors, copy, images, stageWidth, CONTROLS_BAND_MAX } from '../constants/theme';
 import { DEMO, DEMO_PHOTOS } from '../constants/demo';
@@ -1087,23 +1087,6 @@ function EmptyState({ onUpload }: { onUpload: () => void }) {
 // depth behind the copy — not a bright flame fighting white text. Scrim is
 // darkest top & bottom (text zones), lets the glow through the middle where
 // the hero mark sits.
-function HorizonGlow() {
-  return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <BackdropVideo />
-      <LinearGradient
-        colors={['rgba(20, 16, 14, 0.92)', 'rgba(24, 19, 16, 0.62)', 'rgba(20, 16, 14, 0.95)']}
-        locations={[0, 0.5, 1]}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-      {/* Film grain + rising embers, the same atmosphere the landing uses. */}
-      <Atmosphere />
-    </View>
-  );
-}
-
 function ErrorState({ onRetry }: { onRetry: () => void }) {
   return (
     <View style={styles.pageContent}>
