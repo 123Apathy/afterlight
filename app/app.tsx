@@ -354,22 +354,39 @@ export default function SwipeScreen() {
     arrowsStartIndex.current = null;
   }, [tourStep, liveIndex]);
 
+  // One shared guard for EVERY tour control (Next, Back, Skip, Begin). Two
+  // jobs: absorbs stray double-taps from older users, and blocks web
+  // tap-through, where the click that presses a control on one card ALSO
+  // activates whatever control the next card mounts at the same coordinates
+  // (observed live: Back on step 1 -> welcome mounts -> the same click hit
+  // welcome's "Skip for now" and silently closed the tour).
+  const lastAdvanceRef = useRef(0);
+  const tourGuard = () => {
+    const now = Date.now();
+    if (now - lastAdvanceRef.current < 600) return false;
+    lastAdvanceRef.current = now;
+    return true;
+  };
+
   // Ends the tour from anywhere: the Skip link on every card, and the final
   // Begin button, both land here.
   const finishTour = () => {
+    if (!tourGuard()) return;
     arrowsStartIndex.current = null;
     setTourDone('true');
     setTourStep(null);
   };
 
-  // The "read + tap Next" slides. Debounced so a stray double-tap (older users
-  // especially) can't skip a step. The interactive steps in between (arrows,
+  // Guarded step jump for the Back links.
+  const goTourStep = (step: TourStep) => {
+    if (!tourGuard()) return;
+    setTourStep(step);
+  };
+
+  // The "read + tap Next" slides. The interactive steps in between (arrows,
   // grid, gridInfo) advance from the effects above, not here.
-  const lastAdvanceRef = useRef(0);
   const advanceTour = () => {
-    const now = Date.now();
-    if (now - lastAdvanceRef.current < 600) return;
-    lastAdvanceRef.current = now;
+    if (!tourGuard()) return;
     setTourStep((s) => {
       if (s === 'welcome') return 'arrows';
       if (s === 'favourites') return 'comments';
@@ -773,7 +790,7 @@ export default function SwipeScreen() {
             finishTour();
           } else {
             // Soft skip: closes now, offers itself again next visit.
-            setTourStep(null);
+            if (tourGuard()) setTourStep(null);
           }
         }}
         skipLabel="Skip for now"
@@ -793,6 +810,7 @@ export default function SwipeScreen() {
         stepIndex={1}
         stepCount={6}
         onSkip={finishTour}
+        onBack={() => goTourStep('welcome')}
         screenWidth={width}
         screenHeight={height}
       />
@@ -805,6 +823,7 @@ export default function SwipeScreen() {
         buttonLabel="Next"
         onNext={advanceTour}
         onSkip={finishTour}
+        onBack={() => goTourStep('arrows')}
         stepIndex={2}
         stepCount={6}
         screenWidth={width}
@@ -819,6 +838,7 @@ export default function SwipeScreen() {
         buttonLabel="Next"
         onNext={advanceTour}
         onSkip={finishTour}
+        onBack={() => goTourStep('favourites')}
         stepIndex={3}
         stepCount={6}
         screenWidth={width}
@@ -833,6 +853,7 @@ export default function SwipeScreen() {
         buttonLabel="Next"
         onNext={advanceTour}
         onSkip={finishTour}
+        onBack={() => goTourStep('comments')}
         stepIndex={4}
         stepCount={6}
         screenWidth={width}
@@ -848,6 +869,7 @@ export default function SwipeScreen() {
         stepIndex={5}
         stepCount={6}
         onSkip={finishTour}
+        onBack={() => goTourStep('details')}
         screenWidth={width}
         screenHeight={height}
       />
@@ -873,6 +895,7 @@ export default function SwipeScreen() {
         buttonLabel="Next"
         onNext={advanceTour}
         onSkip={finishTour}
+        onBack={() => goTourStep('grid')}
         stepIndex={6}
         stepCount={6}
         screenWidth={width}
@@ -884,6 +907,7 @@ export default function SwipeScreen() {
         text="Take all the time you need. This space is yours."
         buttonLabel="Begin"
         onNext={finishTour}
+        onBack={() => goTourStep('menu')}
         screenWidth={width}
         screenHeight={height}
       />

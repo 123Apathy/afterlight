@@ -25,6 +25,8 @@ type CoachMarkProps = {
   // Every step offers a way out; skipping ends the whole tour.
   onSkip?: () => void;
   skipLabel?: string;
+  // Returns to the previous step (numbered steps only).
+  onBack?: () => void;
   // Interactive step: the user advances by tapping the real element the
   // highlight points at, not a Next button.
   interactive?: boolean;
@@ -59,6 +61,7 @@ export default function CoachMark({
   onNext,
   onSkip,
   skipLabel = 'Skip the tour',
+  onBack,
   interactive = false,
   box,
   pulseNode,
@@ -265,23 +268,45 @@ export default function CoachMark({
               <Text style={styles.buttonText}>{buttonLabel}</Text>
             </PressableScale>
           )}
-          {(!!onSkip || (!!checkboxLabel && !!onToggleCheckbox)) && (
-            <View style={[styles.footerRow, !(checkboxLabel && onToggleCheckbox) && styles.footerRowCentered]}>
+          {interactive && (
+            // Sits where the Next button would: every card visibly answers
+            // "how do I continue", but here the answer is doing the real thing.
+            <Text style={styles.tryHint}>Try it now to continue</Text>
+          )}
+          {!!checkboxLabel && !!onToggleCheckbox ? (
+            // Welcome layout: Skip on the left, the tick on the right.
+            <View style={styles.footerRow}>
               {!!onSkip && (
                 <PressableScale onPress={onSkip} scaleTo={0.98} style={styles.skip} hitSlop={8}>
                   <Text style={styles.skipText}>{skipLabel}</Text>
                 </PressableScale>
               )}
-              {!!checkboxLabel && !!onToggleCheckbox && (
-                <PressableScale onPress={onToggleCheckbox} scaleTo={0.98} style={styles.checkRow} hitSlop={6}>
-                  <View style={[styles.checkBox, checkboxChecked && styles.checkBoxChecked]}>
-                    {checkboxChecked && <Text style={styles.checkMark}>✓</Text>}
-                  </View>
-                  <Text style={styles.checkLabel}>{checkboxLabel}</Text>
+              <PressableScale onPress={onToggleCheckbox} scaleTo={0.98} style={styles.checkRow} hitSlop={6}>
+                <View style={[styles.checkBox, checkboxChecked && styles.checkBoxChecked]}>
+                  {checkboxChecked && <Text style={styles.checkMark}>✓</Text>}
+                </View>
+                <Text style={styles.checkLabel}>{checkboxLabel}</Text>
+              </PressableScale>
+            </View>
+          ) : !!onSkip || !!onBack ? (
+            // Step layout: quiet corner pair, Back bottom-left, Skip bottom-right.
+            <View style={styles.footerRow}>
+              {onBack ? (
+                <PressableScale onPress={onBack} scaleTo={0.98} style={styles.corner} hitSlop={10}>
+                  <Text style={styles.cornerText}>‹ Back</Text>
                 </PressableScale>
+              ) : (
+                <View />
+              )}
+              {onSkip ? (
+                <PressableScale onPress={onSkip} scaleTo={0.98} style={styles.corner} hitSlop={10}>
+                  <Text style={[styles.cornerText, styles.cornerTextUnderline]}>{skipLabel}</Text>
+                </PressableScale>
+              ) : (
+                <View />
               )}
             </View>
-          )}
+          ) : null}
         </Animated.View>
       </View>
     </View>
@@ -426,6 +451,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // The interactive-step stand-in for the Next button.
+  tryHint: {
+    fontFamily: 'Poppins_500Medium',
+    fontSize: 13.5,
+    letterSpacing: 0.4,
+    color: 'rgba(212, 169, 118, 0.95)',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
   buttonText: {
     fontFamily: 'Poppins_600SemiBold',
     fontSize: 17,
@@ -441,6 +475,20 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_400Regular',
     fontSize: 14,
     color: colors.textFainter,
+    textDecorationLine: 'underline',
+  },
+  // Small corner controls on numbered steps (Back left, Skip right): quiet,
+  // out of the reading path, but still a comfortable 40px tap height.
+  corner: {
+    height: 40,
+    justifyContent: 'center',
+  },
+  cornerText: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 12.5,
+    color: 'rgba(255, 255, 255, 0.55)',
+  },
+  cornerTextUnderline: {
     textDecorationLine: 'underline',
   },
 });
