@@ -115,25 +115,32 @@ export default function PhotoGrid({ photos, width, onSelect, onOpenComments }: P
                 </PressableScale>
                 {(count > 0 || comments > 0) && (
                   <View style={styles.badgeRow} pointerEvents="box-none">
+                    {/* PressableScale, not Pressable: the badges are 28 high,
+                        and only PressableScale carries the web hitSlop
+                        polyfill that lifts them to a 44 tap target. It also
+                        gives them the press feedback every other control in
+                        the app has and these two never did. */}
                     {count > 0 && (
-                      <Pressable
+                      <PressableScale
                         style={styles.badge}
                         onPress={() => setPopup({ type: 'likes', photo })}
                         hitSlop={8}
+                        scaleTo={0.92}
                       >
                         <Text style={styles.heart}>♥</Text>
                         <Text style={styles.badgeText}>{count}</Text>
-                      </Pressable>
+                      </PressableScale>
                     )}
                     {comments > 0 && (
-                      <Pressable
+                      <PressableScale
                         style={styles.badge}
                         onPress={() => setPopup({ type: 'comments', photo })}
                         hitSlop={8}
+                        scaleTo={0.92}
                       >
                         <CommentGlyph />
                         <Text style={styles.badgeText}>{comments}</Text>
-                      </Pressable>
+                      </PressableScale>
                     )}
                   </View>
                 )}
