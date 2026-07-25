@@ -948,9 +948,9 @@ function StreakDivider() {
   );
 }
 
-// The empty state is a preview of the real swipe screen — same chrome
-// (counter, scrims, heart row) with the first-photo invitation where the
-// photo will be. The screen never looks unfinished, just unfilled.
+// The empty state is its own quiet invitation screen: backdrop, the first-photo
+// prompt, and the upload button. Deliberately none of the deck chrome (counter,
+// heart, favourite hint) -- there is nothing to count or favourite yet.
 function EmptyState({ onUpload }: { onUpload: () => void }) {
   return (
     <View style={styles.pageContent}>
@@ -961,12 +961,6 @@ function EmptyState({ onUpload }: { onUpload: () => void }) {
         style={styles.bottomScrim}
         pointerEvents="none"
       />
-
-      <View style={styles.counter}>
-        <Text style={styles.counterText}>00</Text>
-        <Text style={styles.counterSeparator}>/</Text>
-        <Text style={styles.counterText}>00</Text>
-      </View>
 
       <View style={styles.emptyState}>
         <View style={styles.heroMark}>
@@ -980,16 +974,6 @@ function EmptyState({ onUpload }: { onUpload: () => void }) {
           Add the photos you have, everyone you invite swipes through them and keeps their favourites.
         </Text>
         <GoldButton label="Upload photos" onPress={onUpload} style={styles.emptyButton} pill textStyle={styles.emptyButtonText} />
-      </View>
-
-      <View style={styles.heartRow} pointerEvents="none">
-        <View>
-          <Text style={styles.heartCountLabel}>Tap ♡ to favourite</Text>
-          <Text style={styles.heartRaters}>favourites and comments gather here</Text>
-        </View>
-        <View style={styles.heartButtonContainer}>
-          <Text style={[styles.heartIcon, styles.heartIconGhost]}>♡</Text>
-        </View>
       </View>
     </View>
   );
@@ -2140,9 +2124,6 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: 14,
   },
-  heartIconGhost: {
-    color: 'rgba(255, 255, 255, 0.35)',
-  },
   pageContent: {
     flex: 1,
     backgroundColor: colors.dark,
@@ -2210,14 +2191,6 @@ const styles = StyleSheet.create({
     right: 0,
     height: 200,
   },
-  counter: {
-    position: 'absolute',
-    top: 32,
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 6,
-  },
   counterText: {
     fontFamily: 'Courier New',
     // Bumped up from 12 for older eyes, but not so large it dominates.
@@ -2231,15 +2204,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     letterSpacing: 1,
     color: 'rgba(255, 255, 255, 0.5)',
-  },
-  heartRow: {
-    position: 'absolute',
-    left: 24,
-    right: 24,
-    bottom: 96,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
   },
   controlsRow: {
     position: 'absolute',
@@ -2398,18 +2362,6 @@ const styles = StyleSheet.create({
   navButtonDisabled: {
     opacity: 0.35,
   },
-  heartCountLabel: {
-    fontFamily: 'Poppins_400Regular',
-    fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.88)',
-    lineHeight: 20,
-  },
-  heartRaters: {
-    fontFamily: 'Poppins_400Regular',
-    fontSize: 13,
-    color: colors.goldWarm,
-    marginTop: 4,
-  },
   commentIconFallback: {
     width: 24,
     height: 15,
@@ -2425,23 +2377,10 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
   },
-  heartButtonContainer: {
-    position: 'relative',
-    width: 56,
-    height: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   glowPulse: {
     position: 'absolute',
     width: 56,
     height: 56,
-  },
-  heartIcon: {
-    fontSize: 42,
-    lineHeight: 46,
-    color: 'rgba(255, 255, 255, 0.85)',
-    zIndex: 2,
   },
   heartIconActive: {
     color: colors.heart,
