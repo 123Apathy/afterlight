@@ -2099,14 +2099,21 @@ const styles = StyleSheet.create({
     height: 52,
   },
   // Subtle, respectful consent line under the gate's primary button.
+  // Carries the only Terms link on the gate, and sat at 11.5px / 0.42 white
+  // (~4.1:1) over a *moving* candle video, so its real contrast was worse than
+  // the static figure. 13px at 0.62 clears AA against the gate's darkest band
+  // with the shadow doing the rest.
   gateTerms: {
     marginTop: 16,
     maxWidth: 320,
     textAlign: 'center',
     fontFamily: 'Poppins_400Regular',
-    fontSize: 11.5,
-    lineHeight: 17,
-    color: 'rgba(255, 255, 255, 0.42)',
+    fontSize: 13,
+    lineHeight: 20,
+    color: 'rgba(255, 255, 255, 0.62)',
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 12,
   },
   gateTermsLink: {
     color: colors.goldWarm,
@@ -2373,16 +2380,26 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.85)',
     zIndex: 2,
   },
+  // These three name the deck's primary actions, so they were the smallest
+  // type in the product labelling the most important controls, and at 0.82
+  // white over a bright photo they computed to ~4.01:1, under AA. 12px with
+  // the tracking removed to buy the width back, a fully opaque fill, and a
+  // shadow so they hold up over a bright sky rather than relying on the
+  // band's scrim alone. (The counter beside them is 17px "for older eyes";
+  // 10px labels contradicted that.)
   controlLabel: {
     position: 'absolute',
     top: 60,
-    left: -16,
-    right: -16,
+    left: -18,
+    right: -18,
     textAlign: 'center',
     fontFamily: 'Poppins_500Medium',
-    fontSize: 10,
-    letterSpacing: 0.3,
-    color: 'rgba(255, 255, 255, 0.82)',
+    fontSize: 12,
+    letterSpacing: 0,
+    color: colors.white,
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 12,
   },
   // Count moved off the "below the icon" slot (the label lives there now) to
   // a small badge on the button's top-right corner.

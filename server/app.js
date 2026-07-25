@@ -77,7 +77,7 @@ const ALLOWED_IMAGE_MIME = new Map([
 ]);
 
 const KANBAN_TEMPLATE = [
-  { column: 'todo', title: 'Choose & confirm venue', description: 'Church, funeral home, or outdoor site — check availability and capacity.' },
+  { column: 'todo', title: 'Choose & confirm venue', description: 'Church, funeral home, or outdoor site. Check availability and capacity.' },
   { column: 'todo', title: 'Select officiant / celebrant', description: 'Confirm who will lead the service.' },
   { column: 'todo', title: 'Write the obituary', description: 'Draft and approve wording, then submit to publications.' },
   { column: 'todo', title: 'Choose casket/urn or cremation option', description: '' },
@@ -483,7 +483,7 @@ app.post('/api/projects/:projectId/photos', rateLimit(10), requireInvite(project
     const { projectId } = req.params;
     const rejected = (req.files || []).find((f) => !ALLOWED_IMAGE_MIME.has(f.mimetype));
     if (rejected) {
-      return res.status(400).json({ error: `unsupported file type: ${rejected.mimetype || 'unknown'} — photos only` });
+      return res.status(400).json({ error: `unsupported file type: ${rejected.mimetype || 'unknown'} (photos only)` });
     }
     const created = [];
     for (const file of req.files || []) {
@@ -535,7 +535,7 @@ app.post('/api/projects/:projectId/photos/upload-urls', rateLimit(10), requireIn
     }
     const bad = files.find((f) => !f || typeof f.type !== 'string' || !ALLOWED_IMAGE_MIME.has(f.type));
     if (bad) {
-      return res.status(400).json({ error: `unsupported file type: ${(bad && bad.type) || 'unknown'} — photos only` });
+      return res.status(400).json({ error: `unsupported file type: ${(bad && bad.type) || 'unknown'} (photos only)` });
     }
     const urls = await Promise.all(
       files.map(async (f) => {
@@ -727,7 +727,7 @@ app.post('/api/projects/:projectId/tribute', rateLimit(10), requireInvite(projec
       const origin = `https://${req.get('host')}`;
       const answered = answers.filter((a) => a && String(a.answer || '').trim()).length;
       await notify(
-        `📝 Everlit — ${respondent.trim()} shared memories for "${proj.name}" (${answered} answers).\nResults: ${origin}/api/report/${proj.invite_code}`
+        `📝 Everlit: ${respondent.trim()} shared memories for "${proj.name}" (${answered} answers).\nResults: ${origin}/api/report/${proj.invite_code}`
       );
     }
 
@@ -1086,7 +1086,7 @@ app.get('/api/report/:inviteCode', async (req, res, next) => {
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>${esc(projectRow.name)} — Everlit results</title>
+<title>${esc(projectRow.name)}: Everlit results</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet" />
@@ -1211,7 +1211,8 @@ app.get('/', (req, res, next) => {
 app.use(express.static(distDir));
 
 // Invite links: inject project-specific preview meta so a shared /join/<code>
-// link previews as "You're invited — <name>" instead of the generic app title.
+// link previews as "<sender> invited you to honour <name>" instead of the
+// generic app title.
 // The SPA still boots and joins the project as normal.
 app.get('/join/:code', async (req, res, next) => {
   try {
@@ -1646,7 +1647,7 @@ app.get('/admin/:secret', async (req, res, next) => {
     (comments || []).forEach((c) => bump(photoProject.get(c.photo_id), 'comments', c.created_at));
 
     const ago = (iso) => {
-      if (!iso) return '—';
+      if (!iso) return 'None yet';
       const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
       if (s < 3600) return `${Math.round(s / 60)}m ago`;
       if (s < 86400) return `${Math.round(s / 3600)}h ago`;
@@ -1725,7 +1726,7 @@ app.get('/admin/:secret', async (req, res, next) => {
       .join('');
 
     res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" />
-<title>Everlit — dashboard</title><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Everlit dashboard</title><meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet" />
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }

@@ -128,7 +128,7 @@ export default function TributeScreen() {
                 }}
                 accessibilityLabel="Your name"
                 placeholder="Your name"
-                placeholderTextColor={colors.textFaintest}
+                placeholderTextColor={colors.textFainter}
                 style={styles.nameInput}
               />
             )}
@@ -175,7 +175,7 @@ export default function TributeScreen() {
                 onChangeText={setAnswer}
                 accessibilityLabel="Your answer"
                 placeholder="Write as much or as little as you like…"
-                placeholderTextColor={colors.textFaintest}
+                placeholderTextColor={colors.textFainter}
                 style={styles.answerInput}
                 multiline
                 textAlignVertical="top"

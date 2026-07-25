@@ -175,7 +175,7 @@ export default function CommentSheet({ photo, onClose, onSubmit, onReact, raterN
           onChangeText={setDraft}
           accessibilityLabel="Add a comment"
           placeholder="Add a comment…"
-          placeholderTextColor={colors.textFaintest}
+          placeholderTextColor={colors.textFainter}
           style={styles.input}
           onSubmitEditing={send}
           returnKeyType="send"

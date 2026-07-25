@@ -87,7 +87,7 @@ export default function DetailsSheet({ photo, onClose, onSave, autoCloseOnSave =
           onChangeText={setPhotoDate}
           accessibilityLabel="When was this taken"
           placeholder="Even just the year, like 1998"
-          placeholderTextColor={colors.textFaintest}
+          placeholderTextColor={colors.textFainter}
           style={styles.input}
           returnKeyType="next"
         />
@@ -98,7 +98,7 @@ export default function DetailsSheet({ photo, onClose, onSave, autoCloseOnSave =
           onChangeText={setLocation}
           accessibilityLabel="Where was this"
           placeholder="A place, town, or home"
-          placeholderTextColor={colors.textFaintest}
+          placeholderTextColor={colors.textFainter}
           style={styles.input}
           onSubmitEditing={save}
           returnKeyType="done"

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
-import Animated, { FadeInDown, FadeOut } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, FadeOut, useReducedMotion } from 'react-native-reanimated';
 import { colors } from '../constants/theme';
 
 // One quiet in-theme notice at a time, bottom-centre, replacing the native
@@ -14,10 +14,14 @@ export function showToast(message: string) {
   if (push) push(message);
 }
 
-const TOAST_MS = 4200;
+// 7000, not 4200: a toast is often two lines of 14px copy carrying a real
+// failure, and this product's readers are mostly elderly. It stays tappable to
+// dismiss early.
+const TOAST_MS = 7000;
 
 export default function ToastHost() {
   const [message, setMessage] = useState<string | null>(null);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     push = setMessage;
@@ -35,7 +39,9 @@ export default function ToastHost() {
   if (!message) return null;
   return (
     <Animated.View
-      entering={FadeInDown.duration(220)}
+      // Every other animated component in the tree honours reduced motion;
+      // this one never did. Reduced keeps the fade but drops the slide.
+      entering={reduceMotion ? FadeIn.duration(220) : FadeInDown.duration(220)}
       exiting={FadeOut.duration(180)}
       style={styles.wrap}
       pointerEvents="box-none"
