@@ -1651,6 +1651,19 @@ app.get('/api/admin/projects/:projectId/film-export', requireAdmin, async (req, 
       : { data: [], error: null };
     assertOk(ratingsError);
 
+    // The family's own words about each photo. These are what the film's
+    // per-photo captions are written from: "Granny and Romeo, true best
+    // friends" is a caption nobody could have generated, and several of them
+    // carry a year the photo record itself never got.
+    const { data: comments, error: commentsError } = photoIds.length
+      ? await supabase
+          .from('afterlight_comments')
+          .select('photo_id, author, body, created_at')
+          .in('photo_id', photoIds)
+          .order('created_at', { ascending: true })
+      : { data: [], error: null };
+    assertOk(commentsError);
+
     const { data: tributes, error: tributesError } = await supabase
       .from('afterlight_tribute_responses')
       .select('respondent, answers, created_at')
@@ -1672,6 +1685,9 @@ app.get('/api/admin/projects/:projectId/film-export', requireAdmin, async (req, 
           location: photo.location ?? null,
           originalName: photo.original_name,
           createdAt: photo.created_at,
+          comments: (comments || [])
+            .filter((c) => c.photo_id === photo.id)
+            .map((c) => ({ author: c.author, text: c.body, createdAt: c.created_at })),
         };
       })
     );
