@@ -1,6 +1,6 @@
 import 'react-native-gesture-handler';
 import { useFonts } from '@expo-google-fonts/poppins';
-import { Poppins_300Light, Poppins_400Regular, Poppins_500Medium } from '@expo-google-fonts/poppins';
+import { Poppins_300Light, Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold } from '@expo-google-fonts/poppins';
 import {
   PlayfairDisplay_500Medium,
   PlayfairDisplay_600SemiBold,
@@ -50,6 +50,7 @@ export default function RootLayout() {
     Poppins_300Light,
     Poppins_400Regular,
     Poppins_500Medium,
+    Poppins_600SemiBold,
     PlayfairDisplay_500Medium,
     PlayfairDisplay_600SemiBold,
     PlayfairDisplay_500Medium_Italic,
