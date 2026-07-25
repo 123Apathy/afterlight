@@ -46,6 +46,16 @@ one static HTML file and stays that way.
   inset highlight; ::before gradient ring via same mask-composite trick
   (bright top/bottom edges, transparent middle). Could suit app gate cards or
   a future footer, gold-tinted.
+- **Drifting dot strip** (Stark/EngineTech footer): a 120px band containing a
+  200%-wide layer with THREE stacked radial-gradient dot patterns (different
+  dot sizes ~1-1.5px, different background-sizes ~72/110/160px so the layers
+  never visibly repeat together), animated translate3d(0..-50%) over ~18s,
+  linear, infinite. Pure CSS, one div, aria-hidden. For Everlit: recolour
+  from white to faint golds (e.g. rgba(212,169,118,0.35/0.25/0.3)) and it
+  becomes ember dust drifting in candlelight -- candidate for a quiet band
+  above the site footer or behind the app loading screen. Skip the rest of
+  that footer (11vw wordmark row would compete with our hero wordmark and
+  the CTA band's big-type close; zig-zag clip-path mark is off-brand).
 - **@property animated gradient blobs** (FAQ CTA): five radial-gradients whose
   centre/size custom-properties animate via @property interpolation, pure
   CSS. Their palette is wrong for us; recolour to ember golds at low opacity
