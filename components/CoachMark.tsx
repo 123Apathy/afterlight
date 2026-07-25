@@ -301,18 +301,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Nearly solid (not glass): this text must be effortlessly readable over any
-  // photo for an 80-year-old, so the card owns its contrast outright.
+  // Nearly solid with just a whisper of the photo behind it, warm-rimmed and
+  // carrying a faint candlelight glow; the text still owns its contrast.
   card: {
     width: '100%',
-    backgroundColor: 'rgba(26, 21, 19, 0.96)',
+    backgroundColor: 'rgba(26, 21, 19, 0.9)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.14)',
+    borderColor: 'rgba(212, 169, 118, 0.28)',
     borderRadius: 24,
     paddingHorizontal: 26,
     paddingTop: 22,
     paddingBottom: 14,
     zIndex: 2,
+    boxShadow: '0 0 22px rgba(212, 169, 118, 0.16), 0 0 56px rgba(212, 169, 118, 0.09)',
   },
   progress: {
     fontFamily: 'Poppins_500Medium',
