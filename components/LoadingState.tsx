@@ -23,7 +23,7 @@ const LOADING_PHRASES: [string, string][] = [
   ['Every memory', 'keeps them close.'],
   ['Their light', 'stays with us.'],
   ['You are not', 'alone in this.'],
-  ['Grief is love', 'with a home here.'],
+  ['Grief is love', 'without a home.'],
   ['We remember them,', 'together.'],
 ];
 
