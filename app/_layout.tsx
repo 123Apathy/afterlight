@@ -34,6 +34,13 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
       will-change: transform;
       transform: translateZ(0);
     }
+    /* Keyboard-only focus ring, app-wide (mouse/touch don't trigger
+       :focus-visible). Same gold treatment the landing page uses. */
+    :focus-visible {
+      outline: 2px solid #D4A976;
+      outline-offset: 3px;
+      border-radius: 4px;
+    }
   `;
   document.head.appendChild(style);
 }

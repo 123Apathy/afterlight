@@ -57,6 +57,8 @@ export default function SwipeScreen() {
   const { projectId, setProject, known } = useActiveProject();
   const [raterName, setRaterName] = useLocalStorage('everlit.rater', '');
   const [nameDraft, setNameDraft] = useState('');
+  // Gentle hint when Enter is tapped with no name (mirrors tribute's fix).
+  const [nameGateHint, setNameGateHint] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [creatingProject, setCreatingProject] = useState(false);
   // Set only right after THIS session creates a new project (never on a
@@ -621,17 +623,31 @@ export default function SwipeScreen() {
             </Text>
             <TextInput
               value={nameDraft}
-              onChangeText={setNameDraft}
+              onChangeText={(text) => {
+                setNameDraft(text);
+                if (nameGateHint) setNameGateHint(false);
+              }}
               placeholder="Your name"
               placeholderTextColor="rgba(255,255,255,0.6)"
               style={styles.gateInput}
-              onSubmitEditing={() => setRaterName(nameDraft.trim())}
+              onSubmitEditing={() => {
+                if (nameDraft.trim()) setRaterName(nameDraft.trim());
+                else setNameGateHint(true);
+              }}
             />
             <GoldButton
               label="Enter"
-              onPress={() => nameDraft.trim() && setRaterName(nameDraft.trim())}
+              onPress={() => {
+                if (nameDraft.trim()) setRaterName(nameDraft.trim());
+                else setNameGateHint(true);
+              }}
               style={styles.gateButton}
             />
+            {nameGateHint && (
+              <Text style={styles.gateNameHint}>
+                Add your name first, so your favourites carry a little of you with them.
+              </Text>
+            )}
             <Text style={styles.gateTerms}>
               By entering, you agree to our{' '}
               <Text
@@ -2044,6 +2060,13 @@ const styles = StyleSheet.create({
   gateTermsLink: {
     color: colors.goldWarm,
     textDecorationLine: 'underline',
+  },
+  gateNameHint: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 13,
+    color: colors.goldWarm,
+    textAlign: 'center',
+    maxWidth: 360,
   },
   switchLink: {
     marginTop: 4,
