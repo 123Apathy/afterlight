@@ -1913,7 +1913,8 @@
       font-weight: 500;
       font-size: clamp(1.6rem, 3.4vw, 2.4rem);
       color: var(--primary);
-      margin: 14px 0 clamp(28px, 4vw, 44px);
+      /* Bottom spacing now lives on the streak divider below the title. */
+      margin: 14px 0 0;
     }
     .faq-list {
       text-align: left;
@@ -1988,6 +1989,23 @@
     .cta-band-title em {
       font-style: italic;
       color: var(--accent);
+    }
+
+    /* Gold streak divider under section headings -- the same visual language
+       as the app's StreakDivider (gates, favourites, film screens), revealed
+       by scaling out from centre on first scroll-in. */
+    .streak-divider {
+      width: clamp(120px, 16vw, 170px);
+      height: 1.5px;
+      border-radius: 1px;
+      margin: 18px auto 0;
+      background: linear-gradient(90deg, rgba(196, 154, 108, 0), rgba(212, 169, 118, 0.9), rgba(196, 154, 108, 0));
+      transform: scaleX(0);
+      transition: transform 0.8s ease 0.15s;
+    }
+    .streak-divider.revealed { transform: scaleX(1); }
+    @media (prefers-reduced-motion: reduce) {
+      .streak-divider { transform: none; transition: none; }
     }
 
     /* Blur-up reveal: opacity + lift + unblur together (the unblur is what
@@ -2255,6 +2273,7 @@
              break can never split it mid-phrase ("never / in one place"
              was landing wherever the width happened to run out). -->
         <h2 class="about-heading" id="about-heading"><span class="word">The</span> <span class="word">best</span> <span class="word">photos</span> <span class="word">are</span> <span style="white-space:nowrap"><span class="word italic-text">never</span> <span class="word italic-text">in</span> <span class="word italic-text">one</span> <span class="word italic-text">place.</span></span></h2>
+        <div class="streak-divider" aria-hidden="true"></div>
 
         <div class="about-body" id="about-body">When someone we love passes, grief scatters the family, and the memories scatter with it, spread across a hundred phones. Everlit gathers both into one gentle place, so nothing is lost.</div>
       </div>
@@ -2267,6 +2286,7 @@
     <div class="features-inner">
       <div class="features-header">
         <h2 class="features-title" id="features-title"><span class="word">How</span> <span class="word">Everlit</span> <span class="word">works.</span></h2>
+        <div class="streak-divider" aria-hidden="true"></div>
         <p class="features-subtitle" id="features-subtitle"><span class="word">Four</span> <span class="word">gentle</span> <span class="word">steps,</span> <span class="word">one</span> <span class="word">WhatsApp</span> <span class="word">link.</span></p>
       </div>
 
@@ -2473,6 +2493,7 @@
     <div class="faq-wrap">
       <span class="about-tag">Questions</span>
       <h2 class="faq-title">What families ask.</h2>
+      <div class="streak-divider" aria-hidden="true" style="margin-bottom: clamp(28px, 4vw, 44px);"></div>
       <div class="faq-list reveal-group">
         <details class="faq-item blur-up">
           <summary>How does my family add their photos?</summary>
@@ -2499,11 +2520,11 @@
   </section>
 
   <section class="contact-section" id="contact">
-    <div class="contact-wrap">
-      <span class="about-tag">Get in touch</span>
-      <h2 class="contact-title">Talk to Deon.</h2>
-      <p class="contact-lead">Have a question, or ready to begin? Message Deon directly on WhatsApp.</p>
-      <div class="contact-row">
+    <div class="contact-wrap reveal-group">
+      <span class="about-tag blur-up">Get in touch</span>
+      <h2 class="contact-title blur-up">Talk to Deon.</h2>
+      <p class="contact-lead blur-up">Have a question, or ready to begin? Message Deon directly on WhatsApp.</p>
+      <div class="contact-row blur-up">
         <div class="qr-card">
           <img src="/qr-whatsapp.svg" alt="QR code that opens a WhatsApp message to Everlit" width="180" height="180" />
         </div>
@@ -2645,10 +2666,10 @@
     // Initial check
     updateCharReveal();
 
-    // Staggered blur-up reveals: each .reveal-group reveals its .blur-up
-    // children 120ms apart, once, when the group is ~20% visible.
-    document.querySelectorAll('.reveal-group').forEach((group) => {
-      const items = group.querySelectorAll('.blur-up');
+    // Staggered reveals: each .reveal-group reveals its .blur-up children
+    // 120ms apart, once, when the group is ~20% visible; standalone
+    // .streak-divider elements reveal individually the same way.
+    function revealOnScroll(root, items) {
       if (!items.length) return;
       const obs = new IntersectionObserver((entries) => {
         entries.forEach((entry) => {
@@ -2659,7 +2680,13 @@
           obs.disconnect();
         });
       }, { threshold: 0.2 });
-      obs.observe(group);
+      obs.observe(root);
+    }
+    document.querySelectorAll('.reveal-group').forEach((group) => {
+      revealOnScroll(group, group.querySelectorAll('.blur-up'));
+    });
+    document.querySelectorAll('.streak-divider').forEach((streak) => {
+      revealOnScroll(streak, [streak]);
     });
 
     // Cursor spotlight ring on FAQ cards: one mousemove listener writes each
