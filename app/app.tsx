@@ -20,6 +20,7 @@ import Animated, {
 import HamburgerButton from '../components/HamburgerButton';
 import ViewModeButton from '../components/ViewModeButton';
 import MenuOverlay from '../components/MenuOverlay';
+import PhotoScrubber from '../components/PhotoScrubber';
 import LoadingState from '../components/LoadingState';
 import CommentSheet from '../components/CommentSheet';
 import DetailsSheet from '../components/DetailsSheet';
@@ -68,6 +69,8 @@ export default function SwipeScreen() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // The header counter opens a draggable 3D scrubber over the deck (web only).
+  const [scrubberOpen, setScrubberOpen] = useState(false);
   const [commentPhotoId, setCommentPhotoId] = useState<string | null>(null);
   const [detailsPhotoId, setDetailsPhotoId] = useState<string | null>(null);
   const [inputFocused, setInputFocused] = useState(false);
@@ -678,7 +681,7 @@ export default function SwipeScreen() {
           height={height}
           raterName={raterName}
           initialIndex={deckIndex}
-          navEnabled={!commentPhotoId && !detailsPhotoId}
+          navEnabled={!commentPhotoId && !detailsPhotoId && !scrubberOpen}
           onToggleFavorite={toggleFavorite}
           onOpenComments={(photo) => setCommentPhotoId(photo.id)}
           onOpenDetails={(photo) => setDetailsPhotoId(photo.id)}
@@ -892,15 +895,25 @@ export default function SwipeScreen() {
             // Kept mounted through the end-slide transition so it can fade
             // (not pop) out and back. The displayed index is clamped so it never
             // flashes "07 / 06" while fading out on the closing slide.
+            // Pressable (web): opens the drag-to-photo scrubber.
             <Animated.View
               style={[styles.headerCounter, quarterCenterStyle(width / 2), counterStyle]}
-              pointerEvents="none"
+              pointerEvents={Platform.OS === 'web' ? 'box-none' : 'none'}
             >
-              <Text style={styles.counterText}>
-                {String(Math.min(liveIndex, photos.length - 1) + 1).padStart(2, '0')}
-              </Text>
-              <Text style={styles.counterSeparator}>/</Text>
-              <Text style={styles.counterText}>{String(photos.length).padStart(2, '0')}</Text>
+              <PressableScale
+                onPress={() => {
+                  if (Platform.OS === 'web') setScrubberOpen(true);
+                }}
+                scaleTo={0.94}
+                hitSlop={12}
+                style={styles.counterPress}
+              >
+                <Text style={styles.counterText}>
+                  {String(Math.min(liveIndex, photos.length - 1) + 1).padStart(2, '0')}
+                </Text>
+                <Text style={styles.counterSeparator}>/</Text>
+                <Text style={styles.counterText}>{String(photos.length).padStart(2, '0')}</Text>
+              </PressableScale>
             </Animated.View>
           )}
           <View style={[styles.headerActions, { marginLeft: 'auto' }]}>
@@ -914,6 +927,23 @@ export default function SwipeScreen() {
           </View>
         </View>
       </View>
+
+      {scrubberOpen && (
+        <PhotoScrubber
+          photos={photos}
+          index={Math.min(liveIndex, Math.max(0, photos.length - 1))}
+          onPick={(i) => {
+            setScrubberOpen(false);
+            // Same jump mechanism the grid uses: remount the deck at i. The
+            // resetSeq bump forces the remount even when deckIndex is
+            // unchanged (deckIndex only tracks grid/scrubber picks, so after
+            // plain swiping it can equal i while the deck sits elsewhere).
+            setDeckIndex(i);
+            setResetSeq((s) => s + 1);
+          }}
+          onClose={() => setScrubberOpen(false)}
+        />
+      )}
 
       <MenuOverlay
         visible={menuOpen}
@@ -1782,6 +1812,13 @@ const styles = StyleSheet.create({
     transform: [{ translateY: -9 }],
   },
   headerCounter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  // Inner pressable carrying the counter row (the outer Animated.View stays
+  // layout-only so the press target doesn't fight quarterCenterStyle).
+  counterPress: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,

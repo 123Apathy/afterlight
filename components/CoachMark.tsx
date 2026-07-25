@@ -124,7 +124,8 @@ export default function CoachMark({
           <Pressable style={[styles.scrim, styles.scrimLight, { top: hole.top, bottom: undefined, height: hole.height, left: hole.left + hole.width }]} onPress={() => {}} />
         </>
       ) : (
-        <Pressable style={[styles.scrim, styles.scrimLight]} onPress={() => {}} />
+        // Full dark scrim: nothing but the bubble's Next button is reachable.
+        <Pressable style={styles.scrim} onPress={() => {}} />
       )}
 
       {/* Highlight on the target, pulsing: a copy of the target's glyph
@@ -179,7 +180,7 @@ export default function CoachMark({
                   // under-sized spread let the far corner's arc curve back into
                   // view as an undimmed wedge. Sizing off hypot()*2 keeps those
                   // rounded corners far off-screen at ANY aspect ratio.
-                  boxShadow: `0 0 0 ${Math.ceil(Math.hypot(screenWidth, screenHeight) * 2)}px rgba(10, 8, 7, 0.32)`,
+                  boxShadow: `0 0 0 ${Math.ceil(Math.hypot(screenWidth, screenHeight) * 2)}px rgba(10, 8, 7, 0.55)`,
                 },
               ]}
             />
@@ -230,7 +231,7 @@ const BUBBLE_BG = 'rgba(28, 22, 20, 0.86)';
 const styles = StyleSheet.create({
   scrim: {
     ...absoluteFill,
-    backgroundColor: 'rgba(10, 8, 7, 0.55)',
+    backgroundColor: 'rgba(10, 8, 7, 0.72)',
   },
   // Positioned/sized per-instance; backgroundColor stays transparent so only
   // its box-shadow (added inline, web-only) paints.
@@ -238,9 +239,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     backgroundColor: 'transparent',
   },
-  // Lighter dim for interactive steps so the element they must tap stays clear.
+  // Lighter dim for interactive steps so the element they must tap stays
+  // clear -- but still dark enough that the rest of the screen visibly
+  // recedes (keep in sync with holeRounder's box-shadow alpha below).
   scrimLight: {
-    backgroundColor: 'rgba(10, 8, 7, 0.32)',
+    backgroundColor: 'rgba(10, 8, 7, 0.55)',
   },
   ring: {
     position: 'absolute',
