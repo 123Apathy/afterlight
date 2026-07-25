@@ -17,7 +17,7 @@ import { api, inviteUrl, type ButtonKey, type Project } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
 import BackdropVideo from './BackdropVideo';
 import PressableScale from './PressableScale';
-import { glassBlur } from '../lib/glass';
+import { glassBlur, goldLitEdge } from '../lib/glass';
 
 type MenuOverlayProps = {
   visible: boolean;
@@ -317,7 +317,7 @@ type ActionCardProps = {
 
 function ActionCard({ icon, title, subtitle, onPress, highlight }: ActionCardProps) {
   return (
-    <PressableScale onPress={onPress} style={[styles.card, highlight && styles.cardHighlight]} scaleTo={0.98}>
+    <PressableScale onPress={onPress} style={[styles.card, goldLitEdge, highlight && styles.cardHighlight]} scaleTo={0.98}>
       <View style={styles.iconBox}>{icon}</View>
       <View style={styles.cardText}>
         <Text style={styles.cardTitle}>{title}</Text>

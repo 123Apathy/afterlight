@@ -31,7 +31,7 @@ export default function PhotoScrubber({ photos, index, onPick, onClose }: Props)
   const frame = useRef(0);
   const progress = useRef(index);
   const target = useRef(index);
-  const drag = useRef({ active: false, startY: 0, startTarget: 0, moved: 0 });
+  const drag = useRef({ active: false, startY: 0, startTarget: 0, moved: 0, lastY: 0, lastT: 0, vel: 0 });
 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const closingRef = useRef(false);
@@ -122,13 +122,26 @@ export default function PhotoScrubber({ photos, index, onPick, onClose }: Props)
   const clamp = (v: number) => Math.max(0, Math.min(count - 1, v));
 
   const onPointerDown = (e: React.PointerEvent) => {
-    drag.current = { active: true, startY: e.clientY, startTarget: target.current, moved: 0 };
+    drag.current = {
+      active: true, startY: e.clientY, startTarget: target.current, moved: 0,
+      lastY: e.clientY, lastT: performance.now(), vel: 0,
+    };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
   const onPointerMove = (e: React.PointerEvent) => {
     if (!drag.current.active) return;
     const dy = drag.current.startY - e.clientY;
     drag.current.moved = Math.max(drag.current.moved, Math.abs(dy));
+    // Track instantaneous velocity (photos per second) for the flick throw.
+    const now = performance.now();
+    const dt = now - drag.current.lastT;
+    if (dt > 0) {
+      const vNow = ((drag.current.lastY - e.clientY) / spacing) / (dt / 1000);
+      // Light smoothing so one jittery sample can't launch the cylinder.
+      drag.current.vel = drag.current.vel * 0.7 + vNow * 0.3;
+      drag.current.lastY = e.clientY;
+      drag.current.lastT = now;
+    }
     // Rubber-band 0.4 past each end so the edges feel soft, not walled.
     const raw = drag.current.startTarget + dy / spacing;
     target.current = Math.max(-0.4, Math.min(count - 0.6, raw));
@@ -136,7 +149,11 @@ export default function PhotoScrubber({ photos, index, onPick, onClose }: Props)
   const onPointerUp = (e: React.PointerEvent) => {
     if (!drag.current.active) return;
     drag.current.active = false;
-    target.current = clamp(Math.round(target.current));
+    // Flick: throw proportional to release velocity, capped so a hard flick
+    // still lands somewhere the eye followed. Slow release just snaps.
+    const v = drag.current.vel;
+    const throwBy = Math.abs(v) > 1.2 ? Math.max(-4, Math.min(4, Math.round(v * 0.42))) : 0;
+    target.current = clamp(Math.round(target.current) + throwBy);
     if (drag.current.moved < 6) {
       // A tap, not a drag: a tapped photo jumps to it; the backdrop closes.
       // Hit-test the release point rather than e.target -- pointer capture

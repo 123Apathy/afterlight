@@ -29,6 +29,7 @@ import PhotoGrid from '../components/PhotoGrid';
 import PressableScale from '../components/PressableScale';
 import GoldButton from '../components/GoldButton';
 import BackdropVideo from '../components/BackdropVideo';
+import Atmosphere from '../components/Atmosphere';
 import { showToast } from '../components/Toast';
 import { absoluteFill, colors, copy, images, stageWidth, CONTROLS_BAND_MAX } from '../constants/theme';
 import { DEMO, DEMO_PHOTOS } from '../constants/demo';
@@ -1034,6 +1035,8 @@ function HorizonGlow() {
         end={{ x: 0.5, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
+      {/* Film grain + rising embers, the same atmosphere the landing uses. */}
+      <Atmosphere />
     </View>
   );
 }

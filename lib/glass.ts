@@ -18,3 +18,17 @@ export const glassSurface = {
   shadowRadius: 16,
   shadowOffset: { width: 0, height: 8 },
 };
+
+// Gold-lit edge for large surfaces (menu cards, gate cards): a hairline ring
+// whose top and bottom edges catch warm light while the middle stays clear,
+// so a flat card reads as a lit pane rather than a filled rectangle.
+// Web-only (mask-composite has no RN-native equivalent); native keeps the
+// plain border it already has. Technique harvested from a motionsites
+// "liquid glass" reference, recoloured to Everlit's gold.
+export const goldLitEdge =
+  Platform.OS === 'web'
+    ? ({
+        boxShadow:
+          'inset 0 1px 0 rgba(245, 240, 235, 0.10), inset 0 -1px 0 rgba(212, 169, 118, 0.14)',
+      } as object)
+    : undefined;

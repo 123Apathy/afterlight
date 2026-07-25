@@ -7,6 +7,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
+import Atmosphere from './Atmosphere';
 import { colors, images } from '../constants/theme';
 
 // Comforting lines that rotate while something loads — the wait becomes a
@@ -121,6 +122,8 @@ export default function LoadingState({
 
   return (
     <View style={styles.pageContent}>
+      {/* Embers rising through the wait: the screen breathes, not spins. */}
+      <Atmosphere />
       <View style={styles.loadingWrap}>
         <Text style={styles.loadingLabel}>{label}</Text>
         <View style={styles.loadingEmblem}>
