@@ -2031,6 +2031,40 @@
       .faq-item[open]::details-content { height: auto; }
     }
 
+    /* Ember dust: a quiet band above the footer where faint gold specks
+       drift slowly, like dust in candlelight. Three stacked dot patterns at
+       different densities so the layers never visibly repeat together; the
+       200%-wide layer loops seamlessly at -50%. Decorative only. */
+    .ember-dust {
+      position: relative;
+      height: 110px;
+      overflow: hidden;
+      background: rgb(18, 14, 12);
+    }
+    .ember-dust__layer {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      width: 200%;
+      height: 64px;
+      opacity: 0.7;
+      transform: translate3d(0, -50%, 0);
+      background-image:
+        radial-gradient(circle, rgba(212, 169, 118, 0.4) 1.5px, transparent 2px),
+        radial-gradient(circle, rgba(212, 169, 118, 0.22) 1px, transparent 1.5px),
+        radial-gradient(circle, rgba(245, 240, 235, 0.18) 1.2px, transparent 1.8px);
+      background-position: 0 8px, 24px 22px, 48px 14px;
+      background-size: 72px 38px, 110px 44px, 160px 52px;
+      animation: emberDrift 26s linear infinite;
+    }
+    @keyframes emberDrift {
+      from { transform: translate3d(0, -50%, 0); }
+      to { transform: translate3d(-50%, -50%, 0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ember-dust__layer { animation: none; }
+    }
+
     /* Site footer: quiet close to the page, echoes the app's dim gold accents. */
     .site-footer {
       text-align: center;
@@ -2478,6 +2512,10 @@
       <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
     </a>
   </section>
+
+  <div class="ember-dust" aria-hidden="true">
+    <div class="ember-dust__layer"></div>
+  </div>
 
   <footer class="site-footer">
     <p class="site-footer-brand">Everlit</p>
