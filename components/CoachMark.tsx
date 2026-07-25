@@ -229,23 +229,27 @@ export default function CoachMark({
           )}
           {!!title && <Text style={styles.title}>{title}</Text>}
           <Text style={styles.text}>{text}</Text>
-          {!!checkboxLabel && !!onToggleCheckbox && (
-            <PressableScale onPress={onToggleCheckbox} scaleTo={0.98} style={styles.checkRow} hitSlop={6}>
-              <View style={[styles.checkBox, checkboxChecked && styles.checkBoxChecked]}>
-                {checkboxChecked && <Text style={styles.checkMark}>✓</Text>}
-              </View>
-              <Text style={styles.checkLabel}>{checkboxLabel}</Text>
-            </PressableScale>
-          )}
           {!interactive && !!onNext && (
             <PressableScale onPress={onNext} scaleTo={0.97} style={styles.button}>
               <Text style={styles.buttonText}>{buttonLabel}</Text>
             </PressableScale>
           )}
-          {!!onSkip && (
-            <PressableScale onPress={onSkip} scaleTo={0.98} style={styles.skip} hitSlop={8}>
-              <Text style={styles.skipText}>{skipLabel}</Text>
-            </PressableScale>
+          {(!!onSkip || (!!checkboxLabel && !!onToggleCheckbox)) && (
+            <View style={[styles.footerRow, !(checkboxLabel && onToggleCheckbox) && styles.footerRowCentered]}>
+              {!!onSkip && (
+                <PressableScale onPress={onSkip} scaleTo={0.98} style={styles.skip} hitSlop={8}>
+                  <Text style={styles.skipText}>{skipLabel}</Text>
+                </PressableScale>
+              )}
+              {!!checkboxLabel && !!onToggleCheckbox && (
+                <PressableScale onPress={onToggleCheckbox} scaleTo={0.98} style={styles.checkRow} hitSlop={6}>
+                  <View style={[styles.checkBox, checkboxChecked && styles.checkBoxChecked]}>
+                    {checkboxChecked && <Text style={styles.checkMark}>✓</Text>}
+                  </View>
+                  <Text style={styles.checkLabel}>{checkboxLabel}</Text>
+                </PressableScale>
+              )}
+            </View>
           )}
         </Animated.View>
       </View>
@@ -341,20 +345,28 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 18,
   },
+  // Footer under the primary button: Skip on the left, the tick on the right.
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 2,
+  },
+  footerRowCentered: {
+    justifyContent: 'center',
+  },
   // Big-tap tick row (elderly thumbs): the whole row toggles, not just the box.
   checkRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
+    gap: 8,
     height: 44,
-    marginTop: -6,
-    marginBottom: 10,
   },
   checkBox: {
-    width: 24,
-    height: 24,
-    borderRadius: 7,
+    width: 22,
+    height: 22,
+    borderRadius: 6,
     borderWidth: 1.5,
     borderColor: 'rgba(212, 169, 118, 0.7)',
     alignItems: 'center',
@@ -372,7 +384,8 @@ const styles = StyleSheet.create({
   },
   checkLabel: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 14.5,
+    // Sized so Skip + this row share one line even on a 375px phone card.
+    fontSize: 13,
     color: 'rgba(255, 255, 255, 0.85)',
   },
   button: {
