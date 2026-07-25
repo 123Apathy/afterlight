@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
 const { supabase, PHOTOS_BUCKET, SIGNED_URL_TTL_SECONDS } = require('./supabaseClient');
+const { tributeQuestions, fillName } = require('../constants/tribute-questions');
 
 const app = express();
 
@@ -1608,6 +1609,88 @@ app.delete('/api/admin/archive', requireAdmin, async (req, res, next) => {
     const { error } = await supabase.storage.from(PHOTOS_BUCKET).remove([archivePath]);
     assertOk(error);
     res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
+
+// --- Admin: film export ---
+//
+// The tribute film cannot be rendered here. This API runs as a Netlify Function
+// (netlify/functions/api.js), and a HyperFrames render is a headless-Chrome job
+// that takes minutes and needs npx, ffmpeg and a writable job directory — none
+// of which a serverless function has. So the render happens on a local machine
+// and this endpoint is the read half of that bridge: one call returning
+// everything the renderer needs. The finished MP4 comes back through the
+// /video/upload-url + /video endpoints above.
+//
+// Deliberately a dumb read: it writes nothing, and it returns *every* photo
+// rather than pre-selecting. Which photos make the film is a product decision
+// that lives in the bridge script, so it can change without an Everlit deploy.
+app.get('/api/admin/projects/:projectId/film-export', requireAdmin, async (req, res, next) => {
+  try {
+    const { projectId } = req.params;
+
+    const { data: project, error: projectError } = await supabase
+      .from('afterlight_projects')
+      .select('id, name, invite_code')
+      .eq('id', projectId)
+      .maybeSingle();
+    if (projectError || !project) return res.status(404).json({ error: 'not found' });
+
+    const { data: photos, error: photosError } = await supabase
+      .from('afterlight_photos')
+      .select('id, storage_path, original_name, created_at, photo_date, location')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: true });
+    assertOk(photosError);
+
+    const photoIds = (photos || []).map((p) => p.id);
+    const { data: ratings, error: ratingsError } = photoIds.length
+      ? await supabase.from('afterlight_ratings').select('photo_id, rater').in('photo_id', photoIds)
+      : { data: [], error: null };
+    assertOk(ratingsError);
+
+    const { data: tributes, error: tributesError } = await supabase
+      .from('afterlight_tribute_responses')
+      .select('respondent, answers, created_at')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: true });
+    assertOk(tributesError);
+
+    // Same day-long TTL as the archive download links: the machine that renders
+    // the film is not this one, and it may pick the job up hours later.
+    const exportedPhotos = await Promise.all(
+      (photos || []).map(async (photo) => {
+        const raters = (ratings || []).filter((r) => r.photo_id === photo.id).map((r) => r.rater);
+        return {
+          id: photo.id,
+          signedUrl: await signPhotoUrl(photo.storage_path, ARCHIVE_TTL_SECONDS),
+          heartCount: raters.length,
+          favouritedBy: raters,
+          photoDate: photo.photo_date ?? null,
+          location: photo.location ?? null,
+          originalName: photo.original_name,
+          createdAt: photo.created_at,
+        };
+      })
+    );
+
+    res.json({
+      project: { id: project.id, name: project.name, inviteCode: project.invite_code },
+      photos: exportedPhotos,
+      // Answers pass through exactly as stored: an array of { question, answer }
+      // aligned positionally with `questions` below. The stored `question` is a
+      // snapshot of the wording that family member was actually shown, so it is
+      // kept rather than flattened away.
+      tributes: (tributes || []).map((t) => ({
+        respondent: t.respondent,
+        answers: Array.isArray(t.answers) ? t.answers : [],
+        createdAt: t.created_at,
+      })),
+      // Filled in here so the renderer never has to read Everlit's constants.
+      questions: tributeQuestions.map((q) => fillName(q, project.name)),
+    });
   } catch (err) {
     next(err);
   }
