@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import Atmosphere from '../components/Atmosphere';
 import GoldButton from '../components/GoldButton';
 import LoadingState from '../components/LoadingState';
 import { colors, images } from '../constants/theme';
@@ -48,13 +49,20 @@ export default function FavouritesScreen() {
 
   return (
     <View style={styles.page}>
-      {/* Warm ambient wash so this screen shares the app's candlelit depth
-          instead of a flat page colour; static, one hue, never blocks touches. */}
+      {/* The afterglow sky under a dark scrim, with embers drifting: the same
+          atmosphere as the loading screen so the whole app breathes one air.
+          A still image on purpose (long scrolling list, keep paint cheap);
+          it sits outside the ScrollView so it never scrolls or blocks touches. */}
+      <Image source={images.landingSky} style={styles.bgImage} resizeMode="cover" blurRadius={3} />
       <LinearGradient
-        colors={['rgba(42, 35, 33, 0.9)', 'rgba(25, 20, 19, 0)']}
-        style={styles.topWash}
+        colors={['rgba(20, 16, 14, 0.9)', 'rgba(24, 19, 16, 0.82)', 'rgba(20, 16, 14, 0.96)']}
+        locations={[0, 0.5, 1]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={styles.bgImage}
         pointerEvents="none"
       />
+      <Atmosphere />
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.content}>
           <Text style={styles.overline}>Everyone&rsquo;s favourites</Text>
@@ -159,12 +167,14 @@ const styles = StyleSheet.create({
     borderRadius: 1,
     marginBottom: 8,
   },
-  topWash: {
+  bgImage: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: 380,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
   },
   emptyWrap: {
     alignItems: 'center',
