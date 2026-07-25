@@ -61,6 +61,19 @@ one static HTML file and stays that way.
   CSS. Their palette is wrong for us; recolour to ember golds at low opacity
   if ever used (app loading/gate backdrops).
 
+## Reference sources for future targeted runs (not yet mined)
+
+- **awwwards.com** - gallery of live award-winning sites. Good for DIRECTION
+  (what world-class looks like per genre), poor for cheap technique
+  extraction (must reverse-engineer live sites). Use with a concrete
+  question, e.g. "how do quiet-luxury editorial one-pagers handle a
+  testimonial/story section" once a real family quote exists.
+- **activetheory.net** - the immersive-WebGL studio; Everlit's fluid-light
+  hero cursor descends from this lineage. Wrong direction for the site
+  overall (their signature is maximal spectacle; Everlit wins by restraint).
+  One legitimate future target: the app's film-delivery moment, if opening
+  "<name>'s film" should ever feel like a cinematic reveal.
+
 ## Rejected
 
 - Category tabs on a 5-question FAQ (Rocket) - overkill.
