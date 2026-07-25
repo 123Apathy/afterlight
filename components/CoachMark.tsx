@@ -151,6 +151,37 @@ export default function CoachMark({
           <Pressable style={[styles.scrim, { top: hole.top + hole.height }]} onPress={() => {}} />
           <Pressable style={[styles.scrim, { top: hole.top, bottom: undefined, height: hole.height, right: undefined, width: Math.max(0, hole.left) }]} onPress={() => {}} />
           <Pressable style={[styles.scrim, { top: hole.top, bottom: undefined, height: hole.height, left: hole.left + hole.width }]} onPress={() => {}} />
+          {/* The four panels leave a SQUARE gap, but a round target should sit
+              in a round spotlight: this clipped overlay re-darkens just the
+              square's corners (shadow painted outside a circle, clipped to the
+              hole so it can't stack extra darkness on the panels). Touches
+              still pass through the whole square. Only for ring targets; a
+              box target (a photo tile) is genuinely rectangular. */}
+          {!box && (
+            <View
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                left: hole.left,
+                top: hole.top,
+                width: hole.width,
+                height: hole.height,
+                overflow: 'hidden',
+              }}
+            >
+              <View
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  width: hole.width,
+                  height: hole.height,
+                  borderRadius: hole.width / 2,
+                  boxShadow: '0 0 0 200px rgba(10, 8, 7, 0.7)',
+                }}
+              />
+            </View>
+          )}
         </>
       ) : (
         <Pressable style={styles.scrim} onPress={() => {}} />
