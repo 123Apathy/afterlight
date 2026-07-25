@@ -101,10 +101,9 @@ export default function FavouritesScreen() {
                   </View>
                   <View style={styles.cardBody}>
                     <View style={styles.heartRow}>
-                      <View style={styles.heartChip}>
-                        <Text style={styles.heartGlyph}>♥</Text>
-                        <Text style={styles.heartChipCount}>{heartCount(photo)}</Text>
-                      </View>
+                      <Text style={styles.heartCountText}>
+                        <Text style={styles.heartGlyph}>♥</Text> {heartCount(photo)}
+                      </Text>
                       {raters.length > 0 && (
                         <Text style={styles.lovedBy} numberOfLines={1}>
                           Loved by {raters.join(', ')}
@@ -241,27 +240,15 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
   },
-  // Soft red-tinted chip, same family as the comment sheet's reaction pills
-  // and the grid badges: heart in the favourite red, count in white.
-  heartChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    height: 30,
-    paddingHorizontal: 12,
-    borderRadius: 15,
-    backgroundColor: 'rgba(232, 83, 107, 0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(232, 83, 107, 0.35)',
-  },
+  // Plain and quiet: a bigger red heart, white count, no chrome around it.
   heartGlyph: {
-    fontSize: 14,
-    lineHeight: 17,
+    fontSize: 22,
+    lineHeight: 24,
     color: colors.heart,
   },
-  heartChipCount: {
+  heartCountText: {
     fontFamily: 'Poppins_500Medium',
-    fontSize: 14,
+    fontSize: 15,
     color: colors.white,
   },
   lovedBy: {
