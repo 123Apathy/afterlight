@@ -8,7 +8,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import { colors } from '../constants/theme';
+import { absoluteFill, colors } from '../constants/theme';
 import { glassBlur } from '../lib/glass';
 import PressableScale from './PressableScale';
 
@@ -229,7 +229,7 @@ const BUBBLE_BG = 'rgba(28, 22, 20, 0.86)';
 
 const styles = StyleSheet.create({
   scrim: {
-    ...StyleSheet.absoluteFillObject,
+    ...absoluteFill,
     backgroundColor: 'rgba(10, 8, 7, 0.55)',
   },
   // Positioned/sized per-instance; backgroundColor stays transparent so only

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '../constants/theme';
+import { absoluteFill, colors } from '../constants/theme';
 import { glassBlur } from '../lib/glass';
 import { heartCount, photoThumbUrl, type Photo } from '../lib/api';
 import PressableScale from './PressableScale';
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   },
   // Popup
   scrim: {
-    ...StyleSheet.absoluteFillObject,
+    ...absoluteFill,
     backgroundColor: 'rgba(10, 8, 7, 0.5)',
     alignItems: 'center',
     justifyContent: 'center',

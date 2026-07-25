@@ -28,7 +28,7 @@ import PhotoGrid from '../components/PhotoGrid';
 import PressableScale from '../components/PressableScale';
 import GoldButton from '../components/GoldButton';
 import BackdropVideo from '../components/BackdropVideo';
-import { colors, copy, images, stageWidth, CONTROLS_BAND_MAX } from '../constants/theme';
+import { absoluteFill, colors, copy, images, stageWidth, CONTROLS_BAND_MAX } from '../constants/theme';
 import { DEMO, DEMO_PHOTOS } from '../constants/demo';
 
 // Dev-only: append ?loading=1 to the URL to hold the loading screen on screen
@@ -90,7 +90,9 @@ export default function SwipeScreen() {
     | 'arrows'
     | 'arrowsPrev';
   const [tourStep, setTourStep] = useState<TourStep>(null);
-  const [tourDone, setTourDone] = useLocalStorage('everlit.tour.done', false);
+  // Stored as '' / 'true' -- localStorage only holds strings, and existing
+  // devices already have the coerced string "true" from the old boolean call.
+  const [tourDone, setTourDone] = useLocalStorage('everlit.tour.done', '');
   // The photo index when the final 'arrows' step began, so we can tell when the
   // user has actually moved to the next photo and end the tour.
   const arrowsStartIndex = useRef<number | null>(null);
@@ -346,7 +348,7 @@ export default function SwipeScreen() {
         arrowsStartIndex.current = liveIndex;
       } else if (liveIndex !== arrowsStartIndex.current) {
         arrowsStartIndex.current = null;
-        setTourDone(true);
+        setTourDone('true');
         setTourStep(null);
       }
       return;
@@ -2299,7 +2301,7 @@ const styles = StyleSheet.create({
   // 80px/radius-40 button exactly regardless of overflow settings, and
   // inherits navButtonDisabled's opacity fade same as every other child.
   navButtonTint: {
-    ...StyleSheet.absoluteFillObject,
+    ...absoluteFill,
     borderRadius: 40,
     backgroundColor: 'rgba(0, 0, 0, 0.22)',
   },

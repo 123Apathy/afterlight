@@ -11,6 +11,18 @@ export function stageWidth(viewportWidth: number, _viewportHeight: number): numb
 // screens (a heart 1400px away from its comment button is not a UI).
 export const CONTROLS_BAND_MAX = 680;
 
+// Spreadable absolute-fill. RN 0.86 removed StyleSheet.absoluteFillObject
+// (native would silently spread undefined), and react-native-web's
+// StyleSheet.absoluteFill is a compiled style ($$css), not a plain object,
+// so neither built-in can be spread on both platforms.
+export const absoluteFill = {
+  position: 'absolute',
+  top: 0,
+  right: 0,
+  bottom: 0,
+  left: 0,
+} as const;
+
 export const colors = {
   dark: 'rgb(25, 20, 19)',
   darkWarm: 'rgb(32, 26, 24)',
