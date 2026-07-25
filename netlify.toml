@@ -46,11 +46,17 @@
   status = 200
   force = true
 
-# Extensionless /terms serves the static terms page. Placed before the SPA
-# fallback; force not needed because no file exists at the literal path /terms.
+# Extensionless /terms and /privacy serve the static legal pages. Placed before
+# the SPA fallback; force not needed because no file exists at either literal
+# path. Without these the SPA fallback swallows them and serves the app shell.
 [[redirects]]
   from = "/terms"
   to = "/terms.html"
+  status = 200
+
+[[redirects]]
+  from = "/privacy"
+  to = "/privacy.html"
   status = 200
 
 # SPA fallback: anything else that isn't a static asset resolves client-side.

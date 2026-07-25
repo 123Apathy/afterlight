@@ -2180,10 +2180,12 @@
       text-decoration: none;
     }
     .site-footer-links a:hover { text-decoration: underline; }
+    /* Was 11.5px at 0.3 white, roughly 2.4:1, a clear AA failure. 0.55 sits
+       above the 0.48 step that measures ~4.97:1 on this background. */
     .site-footer-copy {
-      font-size: 11.5px;
+      font-size: 12.5px;
       letter-spacing: 0.4px;
-      color: rgba(255, 255, 255, 0.3);
+      color: rgba(255, 255, 255, 0.55);
     }
   </style>
 </head>
@@ -2612,6 +2614,8 @@
     <p class="site-footer-line">Made with care in South Africa.</p>
     <p class="site-footer-links">
       <a href="/terms">Terms &amp; Conditions</a>
+      <span aria-hidden="true">·</span>
+      <a href="/privacy">Privacy Policy</a>
       <span aria-hidden="true">·</span>
       <a href="https://wa.me/27626607269">WhatsApp us</a>
     </p>

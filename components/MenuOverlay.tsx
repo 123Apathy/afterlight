@@ -326,6 +326,19 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
                     <Text style={styles.switchText}>Terms &amp; Conditions</Text>
                   </PressableScale>
 
+                  {/* POPIA expects the policy to be findable, not just linked
+                      from the marketing site someone may never have seen. */}
+                  <PressableScale
+                    onPress={() => {
+                      if (typeof window !== 'undefined')
+                        window.open('https://everlit.co.za/privacy', '_blank');
+                    }}
+                    style={styles.switchLink}
+                    scaleTo={0.98}
+                  >
+                    <Text style={styles.switchText}>Privacy Policy</Text>
+                  </PressableScale>
+
                   <PressableScale
                     onPress={() => {
                       onClose();
