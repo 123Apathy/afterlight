@@ -101,7 +101,9 @@ export default function FavouritesScreen() {
                   </View>
                   <View style={styles.cardBody}>
                     <View style={styles.heartRow}>
-                      <Text style={styles.heartCount}>♥ {heartCount(photo)}</Text>
+                      <Text style={styles.heartCount}>
+                        <Text style={styles.heartGlyph}>♥</Text> {heartCount(photo)}
+                      </Text>
                       {raters.length > 0 && (
                         <Text style={styles.lovedBy} numberOfLines={1}>
                           Loved by {raters.join(', ')}
@@ -242,6 +244,10 @@ const styles = StyleSheet.create({
     fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 20,
     color: colors.goldWarm,
+  },
+  // The heart itself matches the deck's favourite red; the count stays gold.
+  heartGlyph: {
+    color: colors.heart,
   },
   lovedBy: {
     fontFamily: 'Poppins_400Regular',
