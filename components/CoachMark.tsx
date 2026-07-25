@@ -1,68 +1,73 @@
 import React from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
+  FadeIn,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import { absoluteFill, colors } from '../constants/theme';
-import { glassBlur } from '../lib/glass';
+import { colors } from '../constants/theme';
 import PressableScale from './PressableScale';
 
 type CoachMarkProps = {
   visible: boolean;
+  // Short heading, one idea ("The heart"). Optional for pure-message cards.
+  title?: string;
   text: string;
-  // Screen-space point the ring is centered on (the element being taught).
-  anchor: { x: number; y: number };
-  // Whether the message bubble sits above or below that point.
-  placement: 'above' | 'below';
+  // Screen-space point of the element being taught. Omit for pure-message
+  // cards (welcome / done) which have no target.
+  anchor?: { x: number; y: number };
   buttonLabel?: string;
   onNext?: () => void;
-  // Interactive step: the user advances by tapping the real element the ring
-  // points at (e.g. the grid button), not a Next button. Everything becomes
-  // non-blocking so those taps reach the app, and no button is shown.
+  // Every step offers a way out; skipping ends the whole tour.
+  onSkip?: () => void;
+  skipLabel?: string;
+  // Interactive step: the user advances by tapping the real element the
+  // highlight points at, not a Next button.
   interactive?: boolean;
-  // Rectangular highlight (rims a photo, say) instead of the round ring. Still
-  // pulses. Given in screen coordinates.
+  // Rectangular highlight (rims a photo) instead of the round ring.
   box?: { left: number; top: number; width: number; height: number };
-  // A copy of the target's own glyph rendered at the anchor and swelling with
-  // the pulse, so the element itself appears to breathe (e.g. the pink heart)
-  // rather than a separate ring around it.
+  // A copy of the target's own glyph rendered at the anchor, swelling with the
+  // pulse, so the element itself appears to breathe.
   pulseNode?: React.ReactNode;
-  // Viewport size, for clamping the bubble on-screen.
+  // "Step 2 of 6" progress; omit on welcome/done.
+  stepIndex?: number;
+  stepCount?: number;
   screenWidth: number;
   screenHeight: number;
   ringSize?: number;
 };
 
-const BUBBLE_WIDTH = 260;
-const ARROW = 9;
-const GAP = 14;
-
-// A single onboarding coach mark: a soft scrim that captures taps (so the
-// app underneath can't be poked mid-tour), a pulsing gold ring around the
-// element being pointed at, and a message bubble with a Next/Got it button.
-// Positions are computed from an anchor point + viewport size rather than
-// runtime measurement -- every target sits at a deterministic screen spot.
+// The card is ALWAYS centred on screen (one predictable place to look, sized
+// and typeset for an 80-year-old) and a thin gold line points from the card to
+// the element being talked about, which also pulses. Interactive steps keep
+// the four-panel blocking scrim with a hole cut around the target so the only
+// possible tap is the one being taught.
 export default function CoachMark({
   visible,
+  title,
   text,
   anchor,
-  placement,
-  buttonLabel,
+  buttonLabel = 'Next',
   onNext,
+  onSkip,
+  skipLabel = 'Skip the tour',
   interactive = false,
   box,
   pulseNode,
+  stepIndex,
+  stepCount,
   screenWidth,
   screenHeight,
   ringSize = 66,
 }: CoachMarkProps) {
   const reduceMotion = useReducedMotion();
   const pulse = useSharedValue(0);
+  // Measured card height so the pointer line starts at the card's real edge.
+  const [cardSize, setCardSize] = React.useState({ w: 0, h: 0 });
 
   React.useEffect(() => {
     if (!visible || reduceMotion) {
@@ -80,64 +85,74 @@ export default function CoachMark({
     transform: [{ scale: 1 + pulse.value * 0.12 }],
     opacity: 0.5 + pulse.value * 0.5,
   }));
-  // For a glyph copy: swell only, no opacity fade (an icon flickering in and
-  // out reads as a glitch, a gentle swell reads as "tap me").
+  // Glyph copies swell only; opacity flicker reads as a glitch.
   const nodeStyle = useAnimatedStyle(() => ({
     transform: [{ scale: 1 + pulse.value * 0.18 }],
   }));
 
   if (!visible) return null;
 
-  const bubbleLeft = Math.max(
-    14,
-    Math.min(anchor.x - BUBBLE_WIDTH / 2, screenWidth - 14 - BUBBLE_WIDTH)
-  );
-  // Where the little arrow sits along the bubble's edge, aimed at the anchor.
-  const arrowLeft = Math.max(16, Math.min(anchor.x - bubbleLeft - ARROW, BUBBLE_WIDTH - 32));
+  // --- blocking scrim (hole only for interactive steps with a target) ---
+  const hole =
+    box ||
+    (anchor
+      ? {
+          left: anchor.x - ringSize / 2,
+          top: anchor.y - ringSize / 2,
+          width: ringSize,
+          height: ringSize,
+        }
+      : null);
 
-  // "below": grow down from just under the ring. "above": pin the bubble's
-  // BOTTOM edge just over the ring (measured from the screen bottom) so it
-  // grows upward regardless of its own height.
-  const bubblePos =
-    placement === 'below'
-      ? { top: anchor.y + ringSize / 2 + GAP }
-      : { bottom: screenHeight - (anchor.y - ringSize / 2 - GAP) };
+  // --- pointer line: centre of screen -> anchor, clipped to card + ring ---
+  const cx = screenWidth / 2;
+  const cy = screenHeight / 2;
+  let line: { x: number; y: number; length: number; deg: number } | null = null;
+  if (anchor && cardSize.h > 0) {
+    const dx = anchor.x - cx;
+    const dy = anchor.y - cy;
+    const dist = Math.hypot(dx, dy);
+    if (dist > 1) {
+      const ux = dx / dist;
+      const uy = dy / dist;
+      // Where the centre->anchor ray leaves the card rectangle.
+      const tCard = Math.min(
+        cardSize.w / 2 / Math.max(Math.abs(ux), 0.0001),
+        cardSize.h / 2 / Math.max(Math.abs(uy), 0.0001)
+      );
+      const start = tCard + 12;
+      const targetRadius = box
+        ? Math.min(box.width, box.height) / 2 + 10
+        : (pulseNode ? 46 : ringSize / 2) + 10;
+      const length = dist - start - targetRadius;
+      if (length > 14) {
+        line = {
+          x: cx + ux * start,
+          y: cy + uy * start,
+          length,
+          deg: (Math.atan2(dy, dx) * 180) / Math.PI,
+        };
+      }
+    }
+  }
 
-  // Only the recommended action is reachable while a mark is up: a
-  // non-interactive step fully blocks everything but its Next button;
-  // an interactive step blocks everything EXCEPT a hole cut around the exact
-  // element it's asking you to tap (the grid button, a photo, an arrow), so
-  // you can't swipe past it, only do the one thing.
-  const hole = box || {
-    left: anchor.x - ringSize / 2,
-    top: anchor.y - ringSize / 2,
-    width: ringSize,
-    height: ringSize,
-  };
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-      {interactive ? (
+      {interactive && hole ? (
         <>
-          <Pressable style={[styles.scrim, styles.scrimLight, { bottom: undefined, height: Math.max(0, hole.top) }]} onPress={() => {}} />
-          <Pressable style={[styles.scrim, styles.scrimLight, { top: hole.top + hole.height }]} onPress={() => {}} />
-          <Pressable style={[styles.scrim, styles.scrimLight, { top: hole.top, bottom: undefined, height: hole.height, right: undefined, width: Math.max(0, hole.left) }]} onPress={() => {}} />
-          <Pressable style={[styles.scrim, styles.scrimLight, { top: hole.top, bottom: undefined, height: hole.height, left: hole.left + hole.width }]} onPress={() => {}} />
+          <Pressable style={[styles.scrim, { bottom: undefined, height: Math.max(0, hole.top) }]} onPress={() => {}} />
+          <Pressable style={[styles.scrim, { top: hole.top + hole.height }]} onPress={() => {}} />
+          <Pressable style={[styles.scrim, { top: hole.top, bottom: undefined, height: hole.height, right: undefined, width: Math.max(0, hole.left) }]} onPress={() => {}} />
+          <Pressable style={[styles.scrim, { top: hole.top, bottom: undefined, height: hole.height, left: hole.left + hole.width }]} onPress={() => {}} />
         </>
       ) : (
-        // Full dark scrim: nothing but the bubble's Next button is reachable.
         <Pressable style={styles.scrim} onPress={() => {}} />
       )}
 
-      {/* Highlight on the target, pulsing: a copy of the target's glyph
-          (pulseNode) that swells in place, else a rectangular box that rims a
-          photo, else the default round ring. */}
-      {pulseNode ? (
+      {/* Pulsing highlight on the target. */}
+      {anchor && pulseNode ? (
         <Animated.View
-          style={[
-            styles.pulseNode,
-            { left: anchor.x - 40, top: anchor.y - 40 },
-            nodeStyle,
-          ]}
+          style={[styles.pulseNode, { left: anchor.x - 40, top: anchor.y - 40 }, nodeStyle]}
           pointerEvents="none"
         >
           {pulseNode}
@@ -152,98 +167,85 @@ export default function CoachMark({
           ]}
           pointerEvents="none"
         />
-      ) : (
-        <>
-          {/* The touch-blocking hole above is a square (it's built from four
-              rectangles), but the ring drawn on it is round, so the square's
-              corners poked out past the ring as bright, undimmed patches. This
-              re-dims exactly that leftover corner area using a circular
-              box-shadow spread -- the web/CSS way to paint "everything outside
-              a circle" -- so the visible gap matches the round ring and round
-              button underneath instead of a square. Decorative only
-              (pointerEvents none); the real hole is still the rectangles
-              above. Native falls back to the flat rectangles, unaffected. */}
-          {Platform.OS === 'web' && (
-            <View
-              pointerEvents="none"
-              style={[
-                styles.holeRounder,
-                {
-                  left: anchor.x - ringSize / 2,
-                  top: anchor.y - ringSize / 2,
-                  width: ringSize,
-                  height: ringSize,
-                  borderRadius: ringSize / 2,
-                  // Spread must exceed the viewport DIAGONAL, not just its
-                  // larger side: a box-shadow's corners are rounded (radius
-                  // grows with the spread), so at wide/tall ratios an
-                  // under-sized spread let the far corner's arc curve back into
-                  // view as an undimmed wedge. Sizing off hypot()*2 keeps those
-                  // rounded corners far off-screen at ANY aspect ratio.
-                  boxShadow: `0 0 0 ${Math.ceil(Math.hypot(screenWidth, screenHeight) * 2)}px rgba(10, 8, 7, 0.55)`,
-                },
-              ]}
-            />
-          )}
-          <Animated.View
-            style={[
-              styles.ring,
-              {
-                width: ringSize,
-                height: ringSize,
-                borderRadius: ringSize / 2,
-                left: anchor.x - ringSize / 2,
-                top: anchor.y - ringSize / 2,
-              },
-              ringStyle,
-            ]}
-            pointerEvents="none"
-          />
-        </>
+      ) : anchor ? (
+        <Animated.View
+          style={[
+            styles.ring,
+            {
+              width: ringSize,
+              height: ringSize,
+              borderRadius: ringSize / 2,
+              left: anchor.x - ringSize / 2,
+              top: anchor.y - ringSize / 2,
+            },
+            ringStyle,
+          ]}
+          pointerEvents="none"
+        />
+      ) : null}
+
+      {/* The pointing line, from the card's edge toward the highlight. */}
+      {line && (
+        <View
+          style={[
+            styles.pointerLine,
+            {
+              left: line.x,
+              top: line.y - 1,
+              width: line.length,
+              transform: [{ rotate: `${line.deg}deg` }],
+            },
+          ]}
+          pointerEvents="none"
+        />
+      )}
+      {line && anchor && (
+        <View
+          style={[styles.pointerDot, { left: anchor.x - 3, top: anchor.y - 3, opacity: 0 }]}
+          pointerEvents="none"
+        />
       )}
 
-      {/* Message bubble: the same card language as the Comment/Details sheets
-          (warm dark glass, hairline border, 24px radius) so the tour reads as
-          part of the app, not a separate overlay. No pointer arrow -- the
-          highlight already shows the target. */}
-      <View
-        style={[
-          styles.bubble,
-          glassBlur,
-          { left: bubbleLeft, width: BUBBLE_WIDTH },
-          bubblePos,
-        ]}
-        pointerEvents={interactive ? 'none' : 'auto'}
-      >
-        <Text style={[styles.text, interactive && styles.textInteractive]}>{text}</Text>
-        {!interactive && (
-          <PressableScale onPress={onNext} scaleTo={0.96} style={styles.button}>
-            <Text style={styles.buttonText}>{buttonLabel}</Text>
-          </PressableScale>
-        )}
+      {/* The card: always dead centre, one predictable place to look. */}
+      <View style={styles.cardCentre} pointerEvents="box-none">
+        <Animated.View
+          entering={reduceMotion ? undefined : FadeIn.duration(240)}
+          style={[styles.card, { maxWidth: Math.min(360, screenWidth - 40) }]}
+          onLayout={(e) =>
+            setCardSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })
+          }
+        >
+          {stepIndex != null && stepCount != null && (
+            <Text style={styles.progress}>
+              Step {stepIndex} of {stepCount}
+            </Text>
+          )}
+          {!!title && <Text style={styles.title}>{title}</Text>}
+          <Text style={styles.text}>{text}</Text>
+          {!interactive && !!onNext && (
+            <PressableScale onPress={onNext} scaleTo={0.97} style={styles.button}>
+              <Text style={styles.buttonText}>{buttonLabel}</Text>
+            </PressableScale>
+          )}
+          {!!onSkip && (
+            <PressableScale onPress={onSkip} scaleTo={0.98} style={styles.skip} hitSlop={8}>
+              <Text style={styles.skipText}>{skipLabel}</Text>
+            </PressableScale>
+          )}
+        </Animated.View>
       </View>
     </View>
   );
 }
 
-const BUBBLE_BG = 'rgba(28, 22, 20, 0.86)';
-
 const styles = StyleSheet.create({
   scrim: {
-    ...absoluteFill,
-    backgroundColor: 'rgba(10, 8, 7, 0.72)',
-  },
-  // Positioned/sized per-instance; backgroundColor stays transparent so only
-  // its box-shadow (added inline, web-only) paints.
-  holeRounder: {
     position: 'absolute',
-    backgroundColor: 'transparent',
-  },
-  // Lighter dim for interactive steps so the element they must tap stays
-  // clear -- but still dark enough that the rest of the screen visibly
-  // recedes (keep in sync with holeRounder's box-shadow alpha below).
-  scrimLight: {
-    backgroundColor: 'rgba(10, 8, 7, 0.55)',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(10, 8, 7, 0.45)',
   },
   ring: {
     position: 'absolute',
@@ -251,11 +253,9 @@ const styles = StyleSheet.create({
     borderColor: colors.goldWarm,
     backgroundColor: 'rgba(212, 169, 118, 0.12)',
   },
-  // Rectangular variant that rims a photo (soft-cornered, not a circle).
   ringBox: {
     borderRadius: 10,
   },
-  // Wrapper for a pulsing copy of the target's glyph, centred on the anchor.
   pulseNode: {
     position: 'absolute',
     width: 80,
@@ -263,66 +263,89 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bubble: {
+  pointerLine: {
     position: 'absolute',
-    // Matches the Comment/Details sheet card exactly.
-    backgroundColor: 'rgba(32, 26, 24, 0.52)',
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: 'rgba(212, 169, 118, 0.7)',
+    transformOrigin: 'left center',
+  },
+  pointerDot: {
+    position: 'absolute',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.goldWarm,
+  },
+  cardCentre: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Nearly solid (not glass): this text must be effortlessly readable over any
+  // photo for an 80-year-old, so the card owns its contrast outright.
+  card: {
+    width: '100%',
+    backgroundColor: 'rgba(26, 21, 19, 0.96)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: 'rgba(255, 255, 255, 0.14)',
     borderRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 18,
+    paddingHorizontal: 26,
+    paddingTop: 22,
+    paddingBottom: 14,
     zIndex: 2,
+  },
+  progress: {
+    fontFamily: 'Poppins_500Medium',
+    fontSize: 11,
+    letterSpacing: 2.5,
+    textTransform: 'uppercase',
+    color: 'rgba(212, 169, 118, 0.9)',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  title: {
+    fontFamily: 'PlayfairDisplay_500Medium',
+    fontSize: 25,
+    lineHeight: 32,
+    color: colors.white,
+    textAlign: 'center',
+    marginBottom: 10,
   },
   text: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.white,
-    marginBottom: 16,
+    fontSize: 17,
+    lineHeight: 27,
+    color: 'rgba(255, 255, 255, 0.92)',
+    textAlign: 'center',
+    marginBottom: 18,
   },
-  // No button follows in interactive mode, so the text needs no bottom gap.
-  textInteractive: {
-    marginBottom: 0,
-  },
-  // Matches the sheet's gold action button (Post / Save details).
   button: {
-    alignSelf: 'flex-end',
-    height: 44,
-    paddingHorizontal: 24,
-    borderRadius: 22,
+    height: 54,
+    borderRadius: 27,
     backgroundColor: colors.goldWarm,
     alignItems: 'center',
     justifyContent: 'center',
   },
   buttonText: {
     fontFamily: 'Poppins_600SemiBold',
-    fontSize: 15,
+    fontSize: 17,
     color: '#1A1613',
   },
-  arrowUp: {
-    position: 'absolute',
-    top: -ARROW,
-    width: 0,
-    height: 0,
-    borderLeftWidth: ARROW,
-    borderRightWidth: ARROW,
-    borderBottomWidth: ARROW,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: BUBBLE_BG,
+  skip: {
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
   },
-  arrowDown: {
-    position: 'absolute',
-    bottom: -ARROW,
-    width: 0,
-    height: 0,
-    borderLeftWidth: ARROW,
-    borderRightWidth: ARROW,
-    borderTopWidth: ARROW,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: BUBBLE_BG,
+  skipText: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 14,
+    color: colors.textFainter,
+    textDecorationLine: 'underline',
   },
 });

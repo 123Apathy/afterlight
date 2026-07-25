@@ -54,6 +54,10 @@ export default function SwipeScreen() {
   // the heart button's real on-screen x (band == width on phones).
   const bandApp = Math.min(width, CONTROLS_BAND_MAX);
   const bandLeftApp = (width - bandApp) / 2;
+  // Mirror of PhotoGrid's own column math so the tour's first-tile highlight
+  // is correct at every width (the old 3-column assumption broke on desktop).
+  const gridColsApp = width >= 1400 ? 6 : width >= 1000 ? 5 : width >= 700 ? 4 : 3;
+  const gridCellApp = (width - 2 * (gridColsApp - 1)) / gridColsApp;
   const reduceMotion = useReducedMotion();
   const { projectId, setProject, known } = useActiveProject();
   const [raterName, setRaterName] = useLocalStorage('everlit.rater', '');
@@ -78,24 +82,25 @@ export default function SwipeScreen() {
   const [detailsPhotoId, setDetailsPhotoId] = useState<string | null>(null);
   const [inputFocused, setInputFocused] = useState(false);
 
-  // First-run guided tour, one pass the first time the deck opens. A mix of
-  // "read + tap Next" slides (counter, menu, favourites, comments, details)
-  // and interactive steps the user drives by tapping the real element:
+  // First-run guided tour, one pass the first time the deck opens. Ordered
+  // around what a first-time family member actually needs: how to MOVE first,
+  // then the heart, then the rest. Welcome and done are pure-message cards;
+  // grid, gridInfo and arrows are interactive (the user taps the real element):
+  //   arrows   -> tap next          (advances when the photo index changes)
   //   grid     -> tap the grid button (advances when viewMode becomes 'grid')
-  //   gridInfo -> tap any photo    (advances when viewMode returns to 'deck')
-  //   arrows   -> tap next          (finishes when the photo index changes)
-  // One persisted flag marks the whole tour done.
+  //   gridInfo -> tap any photo     (advances when viewMode returns to 'deck')
+  // Skipping from any step ends the whole tour. One persisted flag marks it done.
   type TourStep =
     | null
-    | 'counter'
-    | 'menu'
-    | 'grid'
-    | 'gridInfo'
+    | 'welcome'
+    | 'arrows'
     | 'favourites'
     | 'comments'
     | 'details'
-    | 'arrows'
-    | 'arrowsPrev';
+    | 'grid'
+    | 'gridInfo'
+    | 'menu'
+    | 'done';
   const [tourStep, setTourStep] = useState<TourStep>(null);
   // Stored as '' / 'true' -- localStorage only holds strings, and existing
   // devices already have the coerced string "true" from the old boolean call.
@@ -318,7 +323,7 @@ export default function SwipeScreen() {
   useEffect(() => {
     if (deckReady && !tourDone && !introStartedRef.current && !menuOpen && !commentPhotoId && !detailsPhotoId) {
       introStartedRef.current = true;
-      setTimeout(() => setTourStep('counter'), 650);
+      setTimeout(() => setTourStep('welcome'), 650);
     }
   }, [deckReady, tourDone, menuOpen, commentPhotoId, detailsPhotoId]);
 
@@ -328,47 +333,45 @@ export default function SwipeScreen() {
     if (tourStep === 'grid' && viewMode === 'grid') setTourStep('gridInfo');
   }, [tourStep, viewMode]);
   useEffect(() => {
-    if (tourStep === 'gridInfo' && viewMode === 'deck') setTourStep('favourites');
+    if (tourStep === 'gridInfo' && viewMode === 'deck') setTourStep('menu');
   }, [tourStep, viewMode]);
   useEffect(() => {
-    // 'arrows' asks them to go forward (tap next); once the index moves we go
-    // to 'arrowsPrev' which asks them to go back; the second move ends the tour.
+    // 'arrows' asks them to tap next; the moment the photo index moves, the
+    // core gesture is learned and the tour moves on to the heart.
     if (tourStep === 'arrows') {
       if (arrowsStartIndex.current === null) {
         arrowsStartIndex.current = liveIndex;
       } else if (liveIndex !== arrowsStartIndex.current) {
-        arrowsStartIndex.current = liveIndex;
-        setTourStep('arrowsPrev');
-      }
-      return;
-    }
-    if (tourStep === 'arrowsPrev') {
-      if (arrowsStartIndex.current === null) {
-        arrowsStartIndex.current = liveIndex;
-      } else if (liveIndex !== arrowsStartIndex.current) {
         arrowsStartIndex.current = null;
-        setTourDone('true');
-        setTourStep(null);
+        setTourStep('favourites');
       }
       return;
     }
     arrowsStartIndex.current = null;
   }, [tourStep, liveIndex]);
 
+  // Ends the tour from anywhere: the Skip link on every card, and the final
+  // Begin button, both land here.
+  const finishTour = () => {
+    arrowsStartIndex.current = null;
+    setTourDone('true');
+    setTourStep(null);
+  };
+
   // The "read + tap Next" slides. Debounced so a stray double-tap (older users
-  // especially) can't skip a step. The interactive steps in between (grid,
-  // gridInfo, arrows) advance from the effects above, not here.
+  // especially) can't skip a step. The interactive steps in between (arrows,
+  // grid, gridInfo) advance from the effects above, not here.
   const lastAdvanceRef = useRef(0);
   const advanceTour = () => {
     const now = Date.now();
     if (now - lastAdvanceRef.current < 600) return;
     lastAdvanceRef.current = now;
     setTourStep((s) => {
-      if (s === 'counter') return 'menu';
-      if (s === 'menu') return 'grid';
+      if (s === 'welcome') return 'arrows';
       if (s === 'favourites') return 'comments';
       if (s === 'comments') return 'details';
-      if (s === 'details') return 'arrows';
+      if (s === 'details') return 'grid';
+      if (s === 'menu') return 'done';
       return s;
     });
   };
@@ -752,101 +755,121 @@ export default function SwipeScreen() {
         </View>
       )}
 
-      {/* First-run guided tour: read + tap Next slides interleaved with three
-          interactive steps (grid, gridInfo, arrows) the user drives by tapping
-          the real element. */}
+      {/* First-run guided tour. Every card sits dead centre with a gold line
+          pointing at the element it's teaching. Ordered around real first
+          needs (move, then heart, then the rest); skippable from every step. */}
       <CoachMark
-        visible={tourStep === 'counter'}
-        text="This shows how many photos there are and which one you're on. Swipe left or right to move through them."
-        anchor={{ x: width / 2, y: 31 }}
-        placement="below"
-        box={{ left: width / 2 - 36, top: 16, width: 72, height: 30 }}
-        buttonLabel="Next"
+        visible={tourStep === 'welcome'}
+        title="Welcome"
+        text="This space holds the photos and memories of someone dearly loved. Let us show you how it works. It takes less than a minute."
+        buttonLabel="Show me around"
         onNext={advanceTour}
-        screenWidth={width}
-        screenHeight={height}
-      />
-      <CoachMark
-        visible={tourStep === 'menu'}
-        text="The menu is here. Open it to invite family with a share link, see everyone's favourites, or share your own memories."
-        anchor={{ x: width - 34, y: 33 }}
-        placement="below"
-        ringSize={52}
-        buttonLabel="Next"
-        onNext={advanceTour}
-        screenWidth={width}
-        screenHeight={height}
-      />
-      <CoachMark
-        visible={tourStep === 'grid'}
-        text="Tap here to see every photo at once."
-        anchor={{ x: width - 78, y: 33 }}
-        placement="below"
-        ringSize={52}
-        interactive
-        screenWidth={width}
-        screenHeight={height}
-      />
-      <CoachMark
-        visible={tourStep === 'gridInfo'}
-        text="Here they all are together. Tap any photo to open it and start swiping."
-        anchor={{ x: (width - 4) / 6, y: 84 + (width - 4) / 6 }}
-        placement="below"
-        box={{ left: 0, top: 84, width: (width - 4) / 3, height: (width - 4) / 3 }}
-        interactive
-        screenWidth={width}
-        screenHeight={height}
-      />
-      <CoachMark
-        visible={tourStep === 'favourites'}
-        text="Tap the heart to favourite a photo you love. Your favourites help the family choose what goes into the film."
-        anchor={{ x: bandLeftApp + bandApp / 2, y: height - 54 }}
-        placement="above"
-        pulseNode={<Text style={styles.tourPulseHeart}>♥</Text>}
-        buttonLabel="Next"
-        onNext={advanceTour}
-        screenWidth={width}
-        screenHeight={height}
-      />
-      <CoachMark
-        visible={tourStep === 'comments'}
-        text="Leave a memory here. Comments stay with the photo for the whole family to read."
-        anchor={{ x: bandLeftApp + bandApp / 6, y: height - 54 }}
-        placement="above"
-        pulseNode={<CommentIcon active />}
-        buttonLabel="Next"
-        onNext={advanceTour}
-        screenWidth={width}
-        screenHeight={height}
-      />
-      <CoachMark
-        visible={tourStep === 'details'}
-        text="Know when or where a photo was taken? Add it here. Even just the year helps us put them in order."
-        anchor={{ x: bandLeftApp + (bandApp * 5) / 6, y: height - 54 }}
-        placement="above"
-        pulseNode={<DetailsIcon />}
-        buttonLabel="Next"
-        onNext={advanceTour}
+        onSkip={finishTour}
+        skipLabel="Skip for now"
         screenWidth={width}
         screenHeight={height}
       />
       <CoachMark
         visible={tourStep === 'arrows'}
-        text="Tap here to move to the next photo."
+        title="Moving between photos"
+        text="Tap the bright arrow to see the next photo."
         anchor={{ x: bandLeftApp + (bandApp * 2) / 3, y: height - 132 }}
-        placement="above"
-        ringSize={88}
+        ringSize={96}
         interactive
+        stepIndex={1}
+        stepCount={6}
+        onSkip={finishTour}
         screenWidth={width}
         screenHeight={height}
       />
       <CoachMark
-        visible={tourStep === 'arrowsPrev'}
-        text="And tap here to go back. That's everything, enjoy remembering them together."
-        anchor={{ x: bandLeftApp + bandApp / 3, y: height - 132 }}
-        placement="above"
-        ringSize={88}
+        visible={tourStep === 'favourites'}
+        title="The heart"
+        text="When a photo touches you, tap the heart. The whole family will see which moments matter."
+        anchor={{ x: bandLeftApp + bandApp / 2, y: height - 54 }}
+        pulseNode={<Text style={styles.tourPulseHeart}>♥</Text>}
+        buttonLabel="Next"
+        onNext={advanceTour}
+        onSkip={finishTour}
+        stepIndex={2}
+        stepCount={6}
+        screenWidth={width}
+        screenHeight={height}
+      />
+      <CoachMark
+        visible={tourStep === 'comments'}
+        title="Sharing a memory"
+        text="Tap the speech bubble to write a memory about the photo you are looking at."
+        anchor={{ x: bandLeftApp + bandApp / 6, y: height - 54 }}
+        pulseNode={<CommentIcon active />}
+        buttonLabel="Next"
+        onNext={advanceTour}
+        onSkip={finishTour}
+        stepIndex={3}
+        stepCount={6}
+        screenWidth={width}
+        screenHeight={height}
+      />
+      <CoachMark
+        visible={tourStep === 'details'}
+        title="When and where"
+        text="Tap this button to tell us when and where a photo was taken. Even just the year helps."
+        anchor={{ x: bandLeftApp + (bandApp * 5) / 6, y: height - 54 }}
+        pulseNode={<DetailsIcon />}
+        buttonLabel="Next"
+        onNext={advanceTour}
+        onSkip={finishTour}
+        stepIndex={4}
+        stepCount={6}
+        screenWidth={width}
+        screenHeight={height}
+      />
+      <CoachMark
+        visible={tourStep === 'grid'}
+        title="All the photos at once"
+        text="Tap this button in the corner to see every photo together."
+        anchor={{ x: width - 78, y: 33 }}
+        ringSize={52}
         interactive
+        stepIndex={5}
+        stepCount={6}
+        onSkip={finishTour}
+        screenWidth={width}
+        screenHeight={height}
+      />
+      <CoachMark
+        visible={tourStep === 'gridInfo'}
+        title="Back to one photo"
+        text="Tap any photo to open it large again."
+        anchor={{ x: gridCellApp / 2, y: 84 + gridCellApp / 2 }}
+        box={{ left: 0, top: 84, width: gridCellApp, height: gridCellApp }}
+        interactive
+        stepIndex={5}
+        stepCount={6}
+        onSkip={finishTour}
+        screenWidth={width}
+        screenHeight={height}
+      />
+      <CoachMark
+        visible={tourStep === 'menu'}
+        title="The menu"
+        text="Everything else is in here: invite your family, see the favourites, and share your memories."
+        anchor={{ x: width - 34, y: 33 }}
+        ringSize={52}
+        buttonLabel="Next"
+        onNext={advanceTour}
+        onSkip={finishTour}
+        stepIndex={6}
+        stepCount={6}
+        screenWidth={width}
+        screenHeight={height}
+      />
+      <CoachMark
+        visible={tourStep === 'done'}
+        title="That is everything"
+        text="Take all the time you need. This space is yours."
+        buttonLabel="Begin"
+        onNext={finishTour}
         screenWidth={width}
         screenHeight={height}
       />
