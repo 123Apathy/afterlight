@@ -126,6 +126,7 @@ export default function TributeScreen() {
                   setNameDraft(text);
                   if (nameHint) setNameHint(false);
                 }}
+                accessibilityLabel="Your name"
                 placeholder="Your name"
                 placeholderTextColor={colors.textFaintest}
                 style={styles.nameInput}
@@ -172,6 +173,7 @@ export default function TributeScreen() {
               <TextInput
                 value={answers[index]}
                 onChangeText={setAnswer}
+                accessibilityLabel="Your answer"
                 placeholder="Write as much or as little as you like…"
                 placeholderTextColor={colors.textFaintest}
                 style={styles.answerInput}

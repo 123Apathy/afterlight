@@ -12,6 +12,9 @@ import { colors } from '../constants/theme';
 // ponytail: web-only (perspective/preserve-3d have no RN-native equivalent;
 // the shipped product is web). On native this renders nothing and the
 // counter simply isn't pressable there.
+// ponytail: every photo mounts as a card (only ~7 are visible at once via
+// the 3.2-offset visibility cut). Fine at family scale; window the list if
+// memorials ever reach many hundreds of photos.
 type Props = {
   photos: Photo[];
   index: number;
@@ -97,6 +100,15 @@ export default function PhotoScrubber({ photos, index, onPick, onClose }: Props)
     });
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closeSoftly(onClose);
+      // Keyboard parity with drag: arrows roll the cylinder, Enter picks.
+      else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+        target.current = Math.max(0, Math.min(count - 1, Math.round(target.current) + 1));
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+        target.current = Math.max(0, Math.min(count - 1, Math.round(target.current) - 1));
+      } else if (e.key === 'Enter') {
+        const picked = Math.max(0, Math.min(count - 1, Math.round(target.current)));
+        closeSoftly(() => onPick(picked));
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => {

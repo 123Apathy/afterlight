@@ -85,6 +85,7 @@ export default function DetailsSheet({ photo, onClose, onSave, autoCloseOnSave =
         <TextInput
           value={photoDate}
           onChangeText={setPhotoDate}
+          accessibilityLabel="When was this taken"
           placeholder="Even just the year, like 1998"
           placeholderTextColor={colors.textFaintest}
           style={styles.input}
@@ -95,6 +96,7 @@ export default function DetailsSheet({ photo, onClose, onSave, autoCloseOnSave =
         <TextInput
           value={location}
           onChangeText={setLocation}
+          accessibilityLabel="Where was this"
           placeholder="A place, town, or home"
           placeholderTextColor={colors.textFaintest}
           style={styles.input}

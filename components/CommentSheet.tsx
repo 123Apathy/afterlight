@@ -173,6 +173,7 @@ export default function CommentSheet({ photo, onClose, onSubmit, onReact, raterN
         <TextInput
           value={draft}
           onChangeText={setDraft}
+          accessibilityLabel="Add a comment"
           placeholder="Add a comment…"
           placeholderTextColor={colors.textFaintest}
           style={styles.input}

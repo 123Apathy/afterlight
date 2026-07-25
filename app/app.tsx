@@ -506,6 +506,7 @@ export default function SwipeScreen() {
               <TextInput
                 value={newProjectName}
                 onChangeText={setNewProjectName}
+                accessibilityLabel="The person's name or the occasion"
                 placeholder="Person's name or occasion…"
                 placeholderTextColor={colors.textFaintest}
                 style={[styles.gateInput, inputFocused && styles.gateInputFocused]}
@@ -627,6 +628,7 @@ export default function SwipeScreen() {
                 setNameDraft(text);
                 if (nameGateHint) setNameGateHint(false);
               }}
+              accessibilityLabel="Your name"
               placeholder="Your name"
               placeholderTextColor="rgba(255,255,255,0.6)"
               style={styles.gateInput}
