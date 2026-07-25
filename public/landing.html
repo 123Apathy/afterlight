@@ -195,28 +195,28 @@
        loops perfectly. Sits above the atmosphere/fluid-cursor layer (z-index
        8) but below the hero text (z-index 10), so the headline always wins
        if they ever overlap. */
-    /* Browser position: a grid item in .hero-content's 2nd column (see
-       .hero-content -- column 1 is sized to exactly match .hero-right's own
-       width, so column 2 is precisely "everything after the text"),
-       spanning both rows (row 1 is the tagline/CTA block, row 2 is the
-       wordmark). align-self:stretch (grid default) fills that combined
-       height, so the top edge lands on the tagline's top and the bottom
-       edge on the wordmark's bottom automatically. justify-self:center
-       centers it within column 2, which makes its gap to the text and its
-       gap to the card's edge equal by construction, at any viewport width.
-       Width is then derived from the stretched height via aspect-ratio.
-       Mobile: see the ≤768px override below (TBD placement/treatment). */
-    /* Pulled out of flow and positioned FLUIDLY: width, right offset and
-       vertical position all interpolate with the viewport via clamp(vw/vh), so
-       as you resize the phone travels in a straight line and resizes gradually
-       -- no jump, flash or snap at any breakpoint. Sits on z-index 2, below the
-       wordmark (4), so the "Everlit" mark always overlaps it. */
+    /* Grid item spanning both text rows: align-self:stretch pins its TOP to
+       the tagline's top and its BOTTOM to the wordmark's bottom by
+       construction, at every viewport width -- the height is the text
+       block's height, never an independent clamp that can drift out of
+       sync. Width derives from that height via aspect-ratio. Horizontally
+       its centre sits on the page's 3/4 line: static position starts at the
+       content box's left edge, so offset = 75vw minus .hero's 24px padding
+       minus .hero-content's own padding-left (keep in sync with both), then
+       translateX(-50%) centres it. z-index 2, below the wordmark (4), so
+       "Everlit" always overlaps it. */
     .phone-mock {
-      position: absolute;
-      right: clamp(14px, 3.4vw, 58px);
-      top: 50%;
-      transform: translateY(-48%);
-      width: clamp(128px, 21vw, 292px);
+      grid-column: 1;
+      grid-row: 1 / -1;
+      justify-self: start;
+      position: relative;
+      left: calc(75vw - 24px - clamp(24px, 5.5vw, 90px));
+      transform: translateX(-50%);
+      /* Explicit 100% (resolves against the 2-row grid AREA) rather than
+         align-self:stretch -- Chrome doesn't transfer alignment-stretched
+         block size through aspect-ratio, so stretch left width at 0. */
+      height: 100%;
+      width: auto;
       aspect-ratio: 9 / 19.5;
       z-index: 2;
       filter: drop-shadow(0 30px 60px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 40px rgba(196, 154, 108, 0.18));
@@ -676,6 +676,10 @@
       z-index: 10;
       display: grid;
       grid-template-columns: 1fr;
+      /* Explicit rows so .phone-mock's grid-row: 1 / -1 spans both (line -1
+         only counts the EXPLICIT grid; with implicit rows it collapses to
+         line 1 and the phone gets a zero-height track). */
+      grid-template-rows: auto auto;
       align-content: center;
       justify-items: start;
       padding: 0 clamp(24px, 5.5vw, 90px);
@@ -683,6 +687,9 @@
     }
 
     .hero-title {
+      /* Explicit row for the same reason as .hero-right above. */
+      grid-row: 2;
+      grid-column: 1;
       /* vh cap stops the wordmark growing forever on wide monitors. */
       font-size: min(25.34vw, 38vh);
       font-weight: 500;
@@ -711,6 +718,10 @@
     }
 
     .hero-right {
+      /* Explicit row: auto-placement would dodge the phone's 1/-1 span and
+         push the text into new implicit rows below it. */
+      grid-row: 1;
+      grid-column: 1;
       display: flex;
       flex-direction: column;
       gap: clamp(25px, 5.07vh, 61px);
@@ -1826,9 +1837,13 @@
       }
 
       /* On mobile, pin the phone's TOP to the hero heading's top and its BOTTOM
-         to the CTA button (its height spans the tagline+desc+CTA block). Still
-         absolute + right-aligned, so the resize stays continuous. */
+         to the CTA button (its height spans the tagline+desc+CTA block).
+         position:absolute re-asserted here because the desktop base is now a
+         relative grid item; the containing block (.hero-content) is unchanged,
+         so these coordinates mean what they always did. */
       .phone-mock {
+        position: absolute;
+        left: auto;
         top: 82px;
         transform: none;
         height: 306px;
@@ -2139,11 +2154,10 @@
         </div>
       </nav>
 
-      <!-- Hero Content: 3-column grid -- tagline/CTA block (row 1) and
-           wordmark (row 2) span the left two columns; the phone mockup
-           spans both rows in the right column, centered in it, so its
-           height is fixed by the combined height of the text above it
-           (see .phone-mock). -->
+      <!-- Hero Content: single-column grid -- tagline/CTA block (row 1),
+           wordmark (row 2); the phone mockup spans both rows so its height
+           IS the text block's height (top = tagline top, bottom = wordmark
+           bottom), and sits centred on the page's 3/4 line (see .phone-mock). -->
       <div class="hero-content">
         <div class="hero-right">
           <p class="hero-tagline">Keep their light lit.</p>
