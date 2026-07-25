@@ -12,7 +12,12 @@ export default function JoinScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!code) return;
+    if (!code) {
+      // No code in the URL: without this the screen sat on "Joining
+      // project..." forever with no way out.
+      setError('This invite link is invalid or has expired.');
+      return;
+    }
     api
       .getProjectByInvite(code)
       .then((project) => {

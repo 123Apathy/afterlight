@@ -203,7 +203,9 @@ export default function SwipeScreen() {
   };
 
   const handleCreateProject = async () => {
-    if (!newProjectName.trim()) return;
+    // creatingProject guard: a double-tap on Begin fired two createProject
+    // calls and made two memorials before the first response landed.
+    if (creatingProject || !newProjectName.trim()) return;
     setCreatingProject(true);
     try {
       const created = await api.createProject(newProjectName.trim());

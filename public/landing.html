@@ -586,9 +586,11 @@
       .mock-comment-btn .mock-ctrl-circle svg { color: #4FCE7E !important; }
     }
 
-    /* Navbar */
+    /* Navbar. Fixed so the pill (which carries its own dark blur background)
+       stays reachable all the way down the page -- the CTA inside it is the
+       shortest path back to /app from anywhere. */
     .navbar {
-      position: absolute;
+      position: fixed;
       top: 0;
       left: 0;
       right: 0;
@@ -1880,6 +1882,91 @@
         border-radius: 8px;
       }
     }
+    /* FAQ: native details/summary, no JS. Same dark card language as the
+       about section; a thin gold plus that turns into a minus when open. */
+    .faq-section {
+      background: var(--about-bg);
+      padding: clamp(64px, 7vw, 96px) 32px;
+    }
+    .faq-wrap {
+      max-width: 44rem;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .faq-title {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-weight: 500;
+      font-size: clamp(1.6rem, 3.4vw, 2.4rem);
+      color: var(--primary);
+      margin: 14px 0 clamp(28px, 4vw, 44px);
+    }
+    .faq-list {
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .faq-item {
+      border: 1px solid rgba(212, 169, 118, 0.18);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.03);
+    }
+    .faq-item summary {
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 20px;
+      font-size: 15px;
+      font-weight: 400;
+      color: var(--primary);
+    }
+    .faq-item summary::-webkit-details-marker { display: none; }
+    .faq-item summary::after {
+      content: '+';
+      flex-shrink: 0;
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 22px;
+      line-height: 1;
+      color: var(--accent);
+      transition: transform 0.25s;
+    }
+    .faq-item[open] summary::after {
+      content: '\2212';
+    }
+    .faq-item p {
+      padding: 0 20px 18px;
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--primary-70);
+    }
+
+    /* Closing CTA band: the page's last action repeats the primary one, so
+       the journey doesn't end on the (higher-friction) contact ask. */
+    .cta-band {
+      padding: clamp(64px, 8vw, 110px) 32px;
+      text-align: center;
+      background:
+        radial-gradient(ellipse 60% 80% at 50% 100%, rgba(212, 169, 118, 0.12), transparent 70%),
+        rgb(14, 11, 10);
+    }
+    .cta-band-title {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-weight: 500;
+      font-size: clamp(1.7rem, 4vw, 2.8rem);
+      color: var(--primary);
+      margin-bottom: 12px;
+    }
+    .cta-band-sub {
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--primary-70);
+      max-width: 30rem;
+      margin: 0 auto clamp(26px, 4vw, 36px);
+    }
+
     /* Site footer: quiet close to the page, echoes the app's dim gold accents. */
     .site-footer {
       text-align: center;
@@ -2270,6 +2357,35 @@
   </section>
 
   <!-- Contact + WhatsApp -->
+  <section class="faq-section" id="faq">
+    <div class="faq-wrap">
+      <span class="about-tag">Questions</span>
+      <h2 class="faq-title">What families ask.</h2>
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>How does my family add their photos?</summary>
+          <p>With one WhatsApp link. You share it, they tap it, and they're in. There's nothing to download or install, and no accounts or passwords.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Do I need to create an account?</summary>
+          <p>No. You start with just their name. No sign-up, no downloads, and your memorial is ready to share in seconds.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Who can see our photos?</summary>
+          <p>Your memorial isn't listed anywhere public. It opens only through its private invite link, the one your family shares on WhatsApp.</p>
+        </details>
+        <details class="faq-item">
+          <summary>What do we receive at the end?</summary>
+          <p>A cinematic HD film for the service, with an original song written from your memories. The film and the gallery are yours to keep, forever.</p>
+        </details>
+        <details class="faq-item">
+          <summary>When will the film be ready?</summary>
+          <p>Your film is ready to watch and download 24 hours before the due date, and within 48 hours of everyone's choices being submitted or the deadline being reached, whichever comes first.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
   <section class="contact-section" id="contact">
     <div class="contact-wrap">
       <span class="about-tag">Get in touch</span>
@@ -2288,6 +2404,15 @@
         </div>
       </div>
     </div>
+  </section>
+
+  <section class="cta-band">
+    <h2 class="cta-band-title">When you're ready, we're here.</h2>
+    <p class="cta-band-sub">Start with just their name. Your family can be gathering photos and memories within minutes.</p>
+    <a class="contact-wa-btn" href="/app">
+      Create a memorial
+      <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </a>
   </section>
 
   <footer class="site-footer">
