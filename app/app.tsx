@@ -1306,8 +1306,6 @@ function PhotoDeck({
               hitSlop={10}
               style={[styles.navButtonBig, glassSurface, glassBlur, styles.navButtonLight, index === 0 && styles.navButtonDisabled]}
             >
-              <View style={styles.navButtonTint} pointerEvents="none" />
-              <NavButtonSheen />
               <NavChevron direction="left" />
             </PressableScale>
           </Animated.View>
@@ -1320,8 +1318,6 @@ function PhotoDeck({
               hitSlop={10}
               style={[styles.navButtonBig, glassSurface, glassBlur, styles.navButtonLight, index === lastIndex && styles.navButtonDisabled]}
             >
-              <View style={styles.navButtonTint} pointerEvents="none" />
-              <NavButtonSheen />
               <NavChevron direction="right" />
             </PressableScale>
           </Animated.View>
@@ -1413,38 +1409,27 @@ function PhotoDeck({
 function NavChevron({ direction }: { direction: 'left' | 'right' }) {
   if (Platform.OS === 'web') {
     const mirror = direction === 'left';
-    // Bright gold with a soft dark halo so the arrow stays crisp and legible on
-    // any background (light sky or dark) without the muddy engraved look.
-    const legible = 'drop-shadow(0 1px 2px rgba(0,0,0,0.45))';
+    // One clean chevron in the same simple-stroke language as every other
+    // icon in the app (comment bubble, details ring). White with a soft dark
+    // halo for legibility on any photo; no flourishes.
     return React.createElement(
       'svg',
       {
-        width: 44,
-        height: 40,
-        viewBox: '0 0 28 24',
-        style: { filter: legible, ...(mirror ? { transform: 'scaleX(-1)' } : {}) },
+        width: 34,
+        height: 34,
+        viewBox: '0 0 24 24',
+        style: {
+          filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.45))',
+          ...(mirror ? { transform: 'scaleX(-1)' } : {}),
+        },
       },
       React.createElement('path', {
-        d: 'M9 6 C 14 9, 19 11, 24 12 C 19 13, 14 15, 9 18',
-        stroke: colors.gold,
-        strokeWidth: 2.4,
+        d: 'M9.5 5.5 L16.5 12 L9.5 18.5',
+        stroke: 'rgba(255, 255, 255, 0.95)',
+        strokeWidth: 2.6,
         strokeLinecap: 'round',
         strokeLinejoin: 'round',
         fill: 'none',
-      }),
-      React.createElement('path', {
-        d: 'M2 9.5 L7.5 10.8',
-        stroke: colors.gold,
-        strokeWidth: 1.2,
-        strokeLinecap: 'round',
-        opacity: 0.5,
-      }),
-      React.createElement('path', {
-        d: 'M2 14.5 L7.5 13.2',
-        stroke: colors.gold,
-        strokeWidth: 1.2,
-        strokeLinecap: 'round',
-        opacity: 0.5,
       })
     );
   }
@@ -1454,26 +1439,6 @@ function NavChevron({ direction }: { direction: 'left' | 'right' }) {
 // Radial sheen filling the nav button, brightest at the centre and fading to
 // the button's own edge fill, so the disc reads as gently domed. Web-only
 // (RN has no radial-gradient); native keeps the flat fill.
-function NavButtonSheen() {
-  if (Platform.OS !== 'web') return null;
-  return React.createElement('div', {
-    style: {
-      position: 'absolute',
-      inset: 0,
-      borderRadius: '50%',
-      // Restrained: a soft lift toward the centre (per request) plus a delicate
-      // gold ring set just inside the edge, echoing the flame emblem's compass
-      // ring. No glossy dome -- it stays in the app's warm, engraved-line
-      // language while giving the disc a defined, on-brand rim.
-      background:
-        'radial-gradient(circle at 50% 44%, rgba(255,255,255,0.26) 0%, rgba(255,255,255,0.08) 58%, rgba(255,255,255,0) 100%)',
-      boxShadow:
-        'inset 0 0 0 1px rgba(212,169,118,0.55), inset 0 0 0 4px rgba(212,169,118,0.14), inset 0 1px 1px rgba(255,255,255,0.22)',
-      pointerEvents: 'none',
-    },
-  });
-}
-
 // A true radial gradient (fades to transparent at the edges) instead of a
 // flat-colour filled circle, which had a hard, visible edge rather than
 // softly fading toward the sides. RN's style system has no radial-gradient
@@ -2248,17 +2213,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.18)',
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.36)',
-  },
-  // Sits between the blurred glass fill and the sheen/icon (rendered first,
-  // so later siblings paint over it): a flat dark layer, no blur of its own,
-  // that just mutes whatever photo colour is shining through the frosted
-  // glass. Self-clipping (absoluteFill + its own radius) so it matches the
-  // 80px/radius-40 button exactly regardless of overflow settings, and
-  // inherits navButtonDisabled's opacity fade same as every other child.
-  navButtonTint: {
-    ...absoluteFill,
-    borderRadius: 40,
-    backgroundColor: 'rgba(0, 0, 0, 0.22)',
   },
   detailsIconFallback: {
     width: 24,
