@@ -102,6 +102,10 @@ export default function SwipeScreen() {
     | 'menu'
     | 'done';
   const [tourStep, setTourStep] = useState<TourStep>(null);
+  // Welcome card's "Do not show this again" tick. Unticked + Skip = the tour
+  // simply closes and offers itself again next visit; ticked = never again.
+  // Completing (or skipping mid-tour) always counts as done.
+  const [dontShowTour, setDontShowTour] = useState(false);
   // Stored as '' / 'true' -- localStorage only holds strings, and existing
   // devices already have the coerced string "true" from the old boolean call.
   const [tourDone, setTourDone] = useLocalStorage('everlit.tour.done', '');
@@ -764,8 +768,18 @@ export default function SwipeScreen() {
         text="This space holds the photos and memories of someone dearly loved. Let us show you how it works. It takes less than a minute."
         buttonLabel="Show me around"
         onNext={advanceTour}
-        onSkip={finishTour}
+        onSkip={() => {
+          if (dontShowTour) {
+            finishTour();
+          } else {
+            // Soft skip: closes now, offers itself again next visit.
+            setTourStep(null);
+          }
+        }}
         skipLabel="Skip for now"
+        checkboxLabel="Do not show this again"
+        checkboxChecked={dontShowTour}
+        onToggleCheckbox={() => setDontShowTour((v) => !v)}
         screenWidth={width}
         screenHeight={height}
       />

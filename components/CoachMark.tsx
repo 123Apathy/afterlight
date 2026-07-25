@@ -36,6 +36,10 @@ type CoachMarkProps = {
   // "Step 2 of 6" progress; omit on welcome/done.
   stepIndex?: number;
   stepCount?: number;
+  // Optional tick box (used on the welcome card: "Do not show this again").
+  checkboxLabel?: string;
+  checkboxChecked?: boolean;
+  onToggleCheckbox?: () => void;
   screenWidth: number;
   screenHeight: number;
   ringSize?: number;
@@ -60,6 +64,9 @@ export default function CoachMark({
   pulseNode,
   stepIndex,
   stepCount,
+  checkboxLabel,
+  checkboxChecked = false,
+  onToggleCheckbox,
   screenWidth,
   screenHeight,
   ringSize = 66,
@@ -222,6 +229,14 @@ export default function CoachMark({
           )}
           {!!title && <Text style={styles.title}>{title}</Text>}
           <Text style={styles.text}>{text}</Text>
+          {!!checkboxLabel && !!onToggleCheckbox && (
+            <PressableScale onPress={onToggleCheckbox} scaleTo={0.98} style={styles.checkRow} hitSlop={6}>
+              <View style={[styles.checkBox, checkboxChecked && styles.checkBoxChecked]}>
+                {checkboxChecked && <Text style={styles.checkMark}>✓</Text>}
+              </View>
+              <Text style={styles.checkLabel}>{checkboxLabel}</Text>
+            </PressableScale>
+          )}
           {!interactive && !!onNext && (
             <PressableScale onPress={onNext} scaleTo={0.97} style={styles.button}>
               <Text style={styles.buttonText}>{buttonLabel}</Text>
@@ -323,6 +338,40 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.92)',
     textAlign: 'center',
     marginBottom: 18,
+  },
+  // Big-tap tick row (elderly thumbs): the whole row toggles, not just the box.
+  checkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    height: 44,
+    marginTop: -6,
+    marginBottom: 10,
+  },
+  checkBox: {
+    width: 24,
+    height: 24,
+    borderRadius: 7,
+    borderWidth: 1.5,
+    borderColor: 'rgba(212, 169, 118, 0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkBoxChecked: {
+    backgroundColor: colors.goldWarm,
+    borderColor: colors.goldWarm,
+  },
+  checkMark: {
+    fontFamily: 'Poppins_600SemiBold',
+    fontSize: 14,
+    lineHeight: 17,
+    color: '#1A1613',
+  },
+  checkLabel: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 14.5,
+    color: 'rgba(255, 255, 255, 0.85)',
   },
   button: {
     height: 54,

@@ -178,11 +178,29 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
       <View style={[styles.glassCard, glassBlur]}>
       <View style={styles.header}>
         <Text style={styles.title}>Menu</Text>
-        <PressableScale onPress={onClose} style={styles.closeButton} scaleTo={0.94}>
-          <View style={[styles.closeLine, { transform: [{ rotate: '45deg' }] }]} />
-          <View style={[styles.closeLine, { transform: [{ rotate: '-45deg' }] }]} />
-          <Text style={styles.closeText}>Close</Text>
-        </PressableScale>
+        <View style={styles.headerActions}>
+          {/* Help: restarts the guided tour (same reset as the footer link,
+              surfaced as an icon so it's findable without reading small print). */}
+          <PressableScale
+            onPress={() => {
+              onClose();
+              try {
+                localStorage.removeItem('everlit.tour.done');
+              } catch {}
+              if (typeof window !== 'undefined') window.location.reload();
+            }}
+            style={styles.helpButton}
+            scaleTo={0.94}
+            hitSlop={6}
+          >
+            <Text style={styles.helpText}>?</Text>
+          </PressableScale>
+          <PressableScale onPress={onClose} style={styles.closeButton} scaleTo={0.94}>
+            <View style={[styles.closeLine, { transform: [{ rotate: '45deg' }] }]} />
+            <View style={[styles.closeLine, { transform: [{ rotate: '-45deg' }] }]} />
+            <Text style={styles.closeText}>Close</Text>
+          </PressableScale>
+        </View>
       </View>
 
       {DEMO ? (
@@ -491,6 +509,26 @@ const styles = StyleSheet.create({
     color: colors.white,
     textDecorationLine: 'underline',
     textDecorationColor: colors.goldWarm,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  // Round help button, same glass family as Close.
+  helpButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.glassMedium,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  helpText: {
+    fontFamily: 'Poppins_600SemiBold',
+    fontSize: 16,
+    lineHeight: 20,
+    color: colors.goldWarm,
   },
   closeButton: {
     flexDirection: 'row',
