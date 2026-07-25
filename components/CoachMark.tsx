@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     // Deep enough that the card and its glow clearly lead the screen.
-    backgroundColor: 'rgba(10, 8, 7, 0.62)',
+    backgroundColor: 'rgba(10, 8, 7, 0.7)',
   },
   ring: {
     position: 'absolute',
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
     paddingTop: 22,
     paddingBottom: 14,
     zIndex: 2,
-    boxShadow: '0 0 28px rgba(212, 169, 118, 0.4), 0 0 80px rgba(212, 169, 118, 0.2)',
+    boxShadow: '0 0 28px rgba(212, 169, 118, 0.2), 0 0 80px rgba(212, 169, 118, 0.1)',
   },
   progress: {
     fontFamily: 'Poppins_500Medium',
