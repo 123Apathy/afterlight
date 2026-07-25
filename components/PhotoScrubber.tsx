@@ -30,6 +30,18 @@ export default function PhotoScrubber({ photos, index, onPick, onClose }: Props)
   const target = useRef(index);
   const drag = useRef({ active: false, startY: 0, startTarget: 0, moved: 0 });
 
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const closingRef = useRef(false);
+
+  // Everything else in the app breathes; an instant pop in/out here read as
+  // a glitch. Fade the overlay in on mount and out before unmounting.
+  const closeSoftly = (after: () => void) => {
+    if (closingRef.current) return;
+    closingRef.current = true;
+    if (rootRef.current) rootRef.current.style.opacity = '0';
+    setTimeout(after, 190);
+  };
+
   const count = photos.length;
   const vw = typeof window !== 'undefined' ? window.innerWidth : 1280;
   const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
@@ -79,8 +91,12 @@ export default function PhotoScrubber({ photos, index, onPick, onClose }: Props)
     };
     frame.current = requestAnimationFrame(tick);
 
+    // Fade in on the next frame so the initial opacity 0 actually paints.
+    requestAnimationFrame(() => {
+      if (rootRef.current) rootRef.current.style.opacity = '1';
+    });
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') closeSoftly(onClose);
     };
     window.addEventListener('keydown', onKey);
     return () => {
@@ -115,8 +131,12 @@ export default function PhotoScrubber({ photos, index, onPick, onClose }: Props)
       // makes the overlay the event target, which silently ate every pick.
       const hit = document.elementFromPoint(e.clientX, e.clientY);
       const el = hit && (hit as HTMLElement).closest('[data-scrub-idx]');
-      if (el) onPick(clamp(Number(el.getAttribute('data-scrub-idx'))));
-      else onClose();
+      if (el) {
+        const picked = clamp(Number(el.getAttribute('data-scrub-idx')));
+        closeSoftly(() => onPick(picked));
+      } else {
+        closeSoftly(onClose);
+      }
     }
   };
   const onWheel = (e: React.WheelEvent) => {
@@ -127,6 +147,7 @@ export default function PhotoScrubber({ photos, index, onPick, onClose }: Props)
   return D(
     'div',
     {
+      ref: (el: HTMLDivElement) => { rootRef.current = el; },
       onPointerDown,
       onPointerMove,
       onPointerUp,
@@ -135,6 +156,8 @@ export default function PhotoScrubber({ photos, index, onPick, onClose }: Props)
         position: 'fixed',
         inset: 0,
         zIndex: 300,
+        opacity: 0,
+        transition: 'opacity 0.19s ease',
         background: 'rgba(10, 8, 7, 0.92)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
@@ -156,7 +179,7 @@ export default function PhotoScrubber({ photos, index, onPick, onClose }: Props)
     // Close.
     D('div', {
       'data-scrub-close': '1',
-      onPointerUp: (e: React.PointerEvent) => { e.stopPropagation(); onClose(); },
+      onPointerUp: (e: React.PointerEvent) => { e.stopPropagation(); closeSoftly(onClose); },
       style: {
         position: 'absolute', top: 18, right: 18, width: 44, height: 44, zIndex: 2,
         display: 'flex', alignItems: 'center', justifyContent: 'center',

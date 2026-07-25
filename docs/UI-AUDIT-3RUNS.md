@@ -44,18 +44,29 @@ where. This file is the cross-session state; continue from "NEXT".
 - Liquid-glass (gold-tinted) treatment for gate cards / menu cards
   (technique banked in motionsite-techniques.md).
 
-## RUN 2 -- NEXT (fresh session)
-Focus: visual truth. Open the Browser pane (screenshots need it!), walk
-EVERY screen at 1280 + 768 + 375, run visual-qa-screenshot-critic and
-accessibility-responsive-auditor properly, fix what they surface.
-Must-look items: scrubber (unseen), grid view, sheets on mobile width,
-tour steps with the new darker scrim, deck arrows on a bright photo.
+## RUN 2 -- DONE (2026-07-25, same session; pane came back)
+Visual truth pass with REAL input on every app surface: deck (new arrows
+verified on a photo, prev correctly faded at 01), scrubber (first actual
+sighting -- cylinder reads beautifully; drag 01->02 verified; gold rim
+tracks), grid view (clean; tile tap jumps deck correctly), menu, comment
+sheet. Landing was measured at 3 widths earlier in session.
+FOUND + FIXED: scrubber tap-to-pick never worked with real input --
+setPointerCapture made the overlay the pointerup target, so picks fell
+through to close. Fixed via document.elementFromPoint (95d368f).
+Lesson recorded: synthetic-event verification can mask capture-related
+bugs; always finish with real clicks.
+Noted, not fixed (minor): the counter gives no visual cue it's tappable.
 
-## RUN 3 -- after run 2
-Focus: motion + copy cohesion. motion-microinteraction-designer over
-sheets/menu/scrubber; one copy pass (grief-tone consistency, no em
-dashes); then re-run the innovation list against what runs 1-2 changed,
-prioritize with Deon, and only then implement innovations.
+## RUN 3 -- DONE (same session)
+Copy: zero em dashes in user-facing strings (toast swap earlier cleared
+the last ones); grief-tone consistent.
+Motion: one cohesion defect -- the scrubber popped in/out instantly
+while everything else breathes. Fixed: 190ms fade in on mount, fade out
+through every close path (Esc, backdrop, X, pick). Verified live.
+Everything else consistent (PressableScale, damped scrubber, sheets).
+
+## PROTOCOL COMPLETE. Innovation list above remains NOT implemented,
+per Deon's order -- prioritize with him before building any of it.
 
 ## Session facts a fresh run needs
 - Test memorial "Preview Test" (id a65be5f2-d36b-4b82-b926-f6d2c0a1ca6d)
