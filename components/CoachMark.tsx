@@ -260,7 +260,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(10, 8, 7, 0.45)',
+    // Deep enough that the card and its glow clearly lead the screen.
+    backgroundColor: 'rgba(10, 8, 7, 0.62)',
   },
   ring: {
     position: 'absolute',
@@ -305,15 +306,15 @@ const styles = StyleSheet.create({
   // carrying a faint candlelight glow; the text still owns its contrast.
   card: {
     width: '100%',
-    backgroundColor: 'rgba(26, 21, 19, 0.9)',
+    backgroundColor: 'rgba(26, 21, 19, 0.85)',
     borderWidth: 1,
-    borderColor: 'rgba(212, 169, 118, 0.28)',
+    borderColor: 'rgba(212, 169, 118, 0.35)',
     borderRadius: 24,
     paddingHorizontal: 26,
     paddingTop: 22,
     paddingBottom: 14,
     zIndex: 2,
-    boxShadow: '0 0 22px rgba(212, 169, 118, 0.16), 0 0 56px rgba(212, 169, 118, 0.09)',
+    boxShadow: '0 0 28px rgba(212, 169, 118, 0.4), 0 0 80px rgba(212, 169, 118, 0.2)',
   },
   progress: {
     fontFamily: 'Poppins_500Medium',
