@@ -33,6 +33,11 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
   const [copied, setCopied] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [changingCover, setChangingCover] = useState(false);
+  // The menu is where a lost person goes. Fully populated it offered twelve
+  // choices, one of which silently detached them from the memorial. The four
+  // rarely-needed ones now sit behind this.
+  const [showMore, setShowMore] = useState(false);
+  const [confirmSwitch, setConfirmSwitch] = useState(false);
 
   useEffect(() => {
     const duration = reduceMotion ? 0 : visible ? 220 : 180;
@@ -40,6 +45,12 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
       duration,
       easing: visible ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
     });
+    // The overlay stays mounted, so without this a closed menu would reopen
+    // still expanded, and worse, still showing an armed "Leave" confirm.
+    if (!visible) {
+      setShowMore(false);
+      setConfirmSwitch(false);
+    }
   }, [visible, reduceMotion]);
 
   useEffect(() => {
@@ -282,46 +293,95 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
                   Your photos stay in this memorial. Only people with the link can see them.
                 </Text>
               )}
-              {!!projectId && (
-                <PressableScale onPress={handleChangeCoverPhoto} style={styles.switchLink} scaleTo={0.98}>
-                  <Text style={styles.switchText}>
-                    {changingCover ? 'Updating…' : 'Change the cover photo'}
-                  </Text>
+              {!!projectId && !showMore && (
+                <PressableScale
+                  onPress={() => setShowMore(true)}
+                  style={styles.switchLink}
+                  scaleTo={0.98}
+                >
+                  <Text style={styles.switchText}>More settings</Text>
                 </PressableScale>
               )}
-              {!!projectId && (
-                <PressableScale onPress={clearProject} style={styles.switchLink} scaleTo={0.98}>
-                  <Text style={styles.switchText}>Switch to a different memorial</Text>
-                </PressableScale>
+
+              {!!projectId && showMore && (
+                <>
+                  <PressableScale
+                    onPress={handleChangeCoverPhoto}
+                    style={styles.switchLink}
+                    scaleTo={0.98}
+                  >
+                    <Text style={styles.switchText}>
+                      {changingCover ? 'Updating…' : 'Change the cover photo'}
+                    </Text>
+                  </PressableScale>
+
+                  <PressableScale
+                    onPress={() => {
+                      if (typeof window !== 'undefined')
+                        window.open('https://everlit.co.za/terms', '_blank');
+                    }}
+                    style={styles.switchLink}
+                    scaleTo={0.98}
+                  >
+                    <Text style={styles.switchText}>Terms &amp; Conditions</Text>
+                  </PressableScale>
+
+                  <PressableScale
+                    onPress={() => {
+                      onClose();
+                      try {
+                        localStorage.removeItem('everlit.tour.done');
+                      } catch {}
+                      if (typeof window !== 'undefined') window.location.reload();
+                    }}
+                    style={styles.switchLink}
+                    scaleTo={0.98}
+                  >
+                    <Text style={styles.switchText}>Run the tutorial again</Text>
+                  </PressableScale>
+
+                  {/* Was a one-tap action wearing the same quiet underline as
+                      "Change the cover photo", and getting back in needs the
+                      original WhatsApp link, which an elderly person may no
+                      longer be able to find. */}
+                  {!confirmSwitch ? (
+                    <PressableScale
+                      onPress={() => setConfirmSwitch(true)}
+                      style={styles.switchLink}
+                      scaleTo={0.98}
+                    >
+                      <Text style={styles.switchText}>Switch to a different memorial</Text>
+                    </PressableScale>
+                  ) : (
+                    <View style={styles.confirmBox}>
+                      <Text style={styles.confirmText}>
+                        Leave {projectName ? `${projectName}'s` : 'this'} memorial on this device?
+                        You&rsquo;ll need the family&rsquo;s link to come back.
+                      </Text>
+                      <View style={styles.confirmRow}>
+                        <PressableScale
+                          onPress={() => setConfirmSwitch(false)}
+                          style={styles.confirmBtn}
+                          scaleTo={0.97}
+                        >
+                          <Text style={styles.confirmCancel}>Stay here</Text>
+                        </PressableScale>
+                        <PressableScale
+                          onPress={clearProject}
+                          style={styles.confirmBtn}
+                          scaleTo={0.97}
+                        >
+                          <Text style={styles.confirmLeave}>Leave</Text>
+                        </PressableScale>
+                      </View>
+                    </View>
+                  )}
+                </>
               )}
             </View>
           )}
         </>
       )}
-
-      <View style={styles.legalLinks}>
-        <PressableScale
-          onPress={() => {
-            if (typeof window !== 'undefined') window.open('https://everlit.co.za/terms', '_blank');
-          }}
-          scaleTo={0.97}
-        >
-          <Text style={styles.legalLinkText}>Terms & Conditions</Text>
-        </PressableScale>
-        <View style={styles.legalDot} />
-        <PressableScale
-          onPress={() => {
-            onClose();
-            try {
-              localStorage.removeItem('everlit.tour.done');
-            } catch {}
-            if (typeof window !== 'undefined') window.location.reload();
-          }}
-          scaleTo={0.97}
-        >
-          <Text style={styles.legalLinkText}>Run the tutorial again</Text>
-        </PressableScale>
-      </View>
       </View>
 
       <View style={styles.footer} pointerEvents="none">
@@ -486,24 +546,50 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 20,
   },
-  legalLinks: {
-    marginTop: 20,
-    flexDirection: 'row',
+  // Terms and "Run the tutorial again" moved into More settings, so the
+  // 12px footer row they lived in is gone. They now share switchText's 14px,
+  // which is also the better size for this audience.
+  confirmBox: {
+    marginTop: 6,
+    maxWidth: 320,
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 18,
+    backgroundColor: 'rgba(32, 26, 24, 0.72)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  confirmText: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 14,
+    lineHeight: 21,
+    color: colors.white,
+    textAlign: 'center',
+  },
+  confirmRow: {
+    flexDirection: 'row',
     gap: 10,
   },
-  legalLinkText: {
-    fontFamily: 'Poppins_400Regular',
-    fontSize: 12,
-    color: colors.textFainter,
+  confirmBtn: {
+    minHeight: 44,
+    minWidth: 110,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    borderRadius: 22,
+    backgroundColor: colors.glassMedium,
   },
-  legalDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: colors.textFainter,
-    opacity: 0.6,
+  confirmCancel: {
+    fontFamily: 'Poppins_500Medium',
+    fontSize: 15,
+    color: colors.white,
+  },
+  confirmLeave: {
+    fontFamily: 'Poppins_500Medium',
+    fontSize: 15,
+    color: colors.goldWarm,
   },
   header: {
     flexDirection: 'row',
