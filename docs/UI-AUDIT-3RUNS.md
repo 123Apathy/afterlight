@@ -65,8 +65,29 @@ while everything else breathes. Fixed: 190ms fade in on mount, fade out
 through every close path (Esc, backdrop, X, pick). Verified live.
 Everything else consistent (PressableScale, damped scrubber, sheets).
 
-## PROTOCOL COMPLETE. Innovation list above remains NOT implemented,
-per Deon's order -- prioritize with him before building any of it.
+## PROTOCOL COMPLETE (all 3 runs).
+
+## IMPECCABLE AUDIT x2 (same session, after the 3 runs)
+Run 1: 16/20 Good. Integrity PASS, bundled detector clean. Fixed:
+scrubber was pointer-only (arrows/Enter now work), 7 inputs had no
+accessibilityLabel, scrubber scale ceiling undocumented.
+Run 2: 18/20 Excellent (a11y 3->4, perf 3->4), detector clean again.
+
+## INNOVATION LIST -- ALL IMPLEMENTED (4db7a04), list now closed
+1. Film cinematic reveal (curtain + staged title/streak/player) DONE
+2. components/Atmosphere.tsx: grain + RISING embers on gates, loading,
+   film screen DONE
+3. Film grain over app gate backdrop DONE (same component)
+4. Scrubber momentum/flick + keyboard arrows DONE
+5. Gold-lit edge (goldLitEdge in lib/glass.ts) on menu cards DONE
+
+## WHAT'S ACTUALLY LEFT (for a future session)
+- Testimonials section on the landing: BLOCKED on a real family quote,
+  never fabricate one. Patterns banked in motionsite-techniques.md.
+- Scrubber: no visual cue the counter is tappable (minor, noted run 2).
+- Tribute: 25 questions is a lot; consider progress/exit messaging.
+- Favourites: fixed 340px card image height could become aspect-ratio.
+- Deploy: everything is committed LOCAL only on netlify-migration.
 
 ## Session facts a fresh run needs
 - Test memorial "Preview Test" (id a65be5f2-d36b-4b82-b926-f6d2c0a1ca6d)
