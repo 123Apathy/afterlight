@@ -8,7 +8,7 @@ import LoadingState from '../components/LoadingState';
 import PressableScale from '../components/PressableScale';
 import { colors, images } from '../constants/theme';
 import { DEMO, DEMO_PHOTOS } from '../constants/demo';
-import { api, heartCount, photoThumbUrl, type Photo } from '../lib/api';
+import { api, heartCount, photoAltText, photoThumbUrl, type Photo } from '../lib/api';
 import { glassBlur } from '../lib/glass';
 import { useActiveProject } from '../lib/useActiveProject';
 
@@ -100,6 +100,7 @@ export default function FavouritesScreen() {
                       source={photo.localSource ?? { uri: photoThumbUrl(photo) }}
                       style={styles.cardImage}
                       resizeMode="cover"
+                      accessibilityLabel={photoAltText(photo, projectName)}
                     />
                   </View>
                   <View style={styles.cardBody}>
@@ -131,6 +132,21 @@ export default function FavouritesScreen() {
 
         </View>
       </ScrollView>
+
+      {/* The pill floats over a scrolling list, so whatever happens to be at
+          that height sits behind it. Without this scrim a card's "Loved by
+          ..." line was simply chopped in half mid-sentence. The gradient lets
+          content dissolve into the bottom edge on approach, which reads as
+          deliberate instead of broken, and it gives the glass pill a
+          consistently dark backing on any card. */}
+      <LinearGradient
+        colors={['rgba(20, 16, 14, 0)', 'rgba(20, 16, 14, 0.72)', 'rgba(20, 16, 14, 0.94)']}
+        locations={[0, 0.55, 1]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={styles.backScrim}
+        pointerEvents="none"
+      />
 
       {/* Floating back pill: with a long list (a real memorial has 100+
           photos) a bottom-of-scroll button left people feeling stuck. Always
@@ -273,6 +289,13 @@ const styles = StyleSheet.create({
   cardCommentAuthor: {
     fontFamily: 'Poppins_500Medium',
     color: colors.white,
+  },
+  backScrim: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 132,
   },
   backFloatWrap: {
     position: 'absolute',

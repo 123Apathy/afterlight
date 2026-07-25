@@ -4,7 +4,7 @@ import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { absoluteFill, colors } from '../constants/theme';
 import { glassBlur } from '../lib/glass';
-import { heartCount, photoThumbUrl, type Photo } from '../lib/api';
+import { heartCount, photoAltText, photoThumbUrl, type Photo } from '../lib/api';
 import PressableScale from './PressableScale';
 
 type PhotoGridProps = {
@@ -13,6 +13,8 @@ type PhotoGridProps = {
   onSelect: (index: number) => void;
   // Open the comment thread for a photo (from the comments popup's action row).
   onOpenComments: (photo: Photo) => void;
+  // Only used to build screen-reader labels for the cells.
+  projectName?: string | null;
 };
 
 const GAP = 2;
@@ -70,7 +72,7 @@ type Popup = { type: 'likes' | 'comments'; photo: Photo } | null;
 // the swipe view at that exact photo. The heart and comment badges each open a
 // small popup naming who loved or commented; the comments popup also offers a
 // one-tap jump into the thread.
-export default function PhotoGrid({ photos, width, onSelect, onOpenComments }: PhotoGridProps) {
+export default function PhotoGrid({ photos, width, onSelect, onOpenComments, projectName }: PhotoGridProps) {
   const columns = columnsFor(width);
   const cellSize = (width - GAP * (columns - 1)) / columns;
   const reduceMotion = useReducedMotion();
@@ -106,11 +108,14 @@ export default function PhotoGrid({ photos, width, onSelect, onOpenComments }: P
                   onPress={() => onSelect(i)}
                   scaleTo={0.96}
                   style={{ width: '100%', height: '100%' }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open ${photoAltText(photo, projectName)}, photo ${i + 1} of ${photos.length}`}
                 >
                   <Image
                     source={photo.localSource ?? { uri: photoThumbUrl(photo) }}
                     style={styles.cellImage}
                     resizeMode="cover"
+                    accessibilityLabel={photoAltText(photo, projectName)}
                   />
                 </PressableScale>
                 {(count > 0 || comments > 0) && (

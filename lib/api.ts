@@ -176,6 +176,22 @@ export function heartCount(photo: Photo) {
   return photo.ratingCount;
 }
 
+// Screen-reader label for a memorial photograph. Every Image in the deck, the
+// grid and the favourites list was previously unlabelled, so a screen reader
+// announced the whole memorial as an anonymous pile of images.
+//
+// We cannot describe what is *in* the photo, and inventing a description would
+// be worse than none. What we do know is whose memorial it belongs to and any
+// date or place the family added, which is genuinely the useful part: it lets
+// someone tell one photo from the next and hear the context the family chose
+// to record. Falls back to a plain, honest label when nothing is known.
+export function photoAltText(photo: Photo, projectName?: string | null) {
+  const who = projectName ? `${projectName}'s memorial` : 'this memorial';
+  const facts = [photo.photoDate, photo.location].filter(Boolean) as string[];
+  if (facts.length === 0) return `Photograph from ${who}`;
+  return `Photograph from ${who}, ${facts.join(', ')}`;
+}
+
 // Groups a comment's flat reaction list into [{ emoji, count, mine }] in a
 // stable order (COMMENT_REACTION_EMOJI order, only emoji that have at least
 // one reaction), so the UI can render pills without re-deriving this itself.

@@ -38,7 +38,7 @@ import { DEMO, DEMO_PHOTOS } from '../constants/demo';
 // (so its design can be iterated). Never true in a normal session.
 const FORCE_LOADING =
   typeof window !== 'undefined' && /[?&]loading=1/.test(window.location.search);
-import { api, heartCount, isFavoritedBy, photoThumbUrl, photoUrl, setInviteCode, type Photo, type Project } from '../lib/api';
+import { api, heartCount, isFavoritedBy, photoAltText, photoThumbUrl, photoUrl, setInviteCode, type Photo, type Project } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
 import { useLocalStorage } from '../lib/useLocalStorage';
 import { glassBlur, glassSurface } from '../lib/glass';
@@ -726,6 +726,7 @@ export default function SwipeScreen() {
             setViewMode('deck');
           }}
           onOpenComments={(photo) => setCommentPhotoId(photo.id)}
+          projectName={projectDetails?.name || ''}
         />
       ) : (
         <PhotoDeck
@@ -1379,6 +1380,8 @@ function PhotoDeck({
               raterName={raterName}
               onToggleFavorite={onToggleFavorite}
               reduceMotion={reduceMotion}
+              projectName={projectName}
+              total={photos.length}
             />
           ) : (
             <View key={photo.id} style={{ width, height }} />
@@ -1714,6 +1717,9 @@ type PhotoSlideProps = {
   raterName: string;
   onToggleFavorite: (photo: Photo) => void;
   reduceMotion: boolean;
+  // Both only used to build the screen-reader label for the photograph.
+  projectName?: string | null;
+  total: number;
 };
 
 // A single gold ember drifting up from the heart burst. Deterministic offsets
@@ -1752,7 +1758,7 @@ function Ember({ progress, spec }: { progress: SharedValue<number>; spec: EmberS
 // animation. Everything else that used to live here (counter, comment
 // button, heart button) is now a fixed overlay in PhotoDeck instead, so it
 // doesn't slide away with the photo mid-swipe -- see PhotoDeck.
-function PhotoSlide({ photo, index, scrollX, width, height, raterName, onToggleFavorite, reduceMotion }: PhotoSlideProps) {
+function PhotoSlide({ photo, index, scrollX, width, height, raterName, onToggleFavorite, reduceMotion, projectName, total }: PhotoSlideProps) {
   const favorited = isFavoritedBy(photo, raterName);
   const burst = useSharedValue(0);
   const emberP = useSharedValue(0);
@@ -1843,14 +1849,29 @@ function PhotoSlide({ photo, index, scrollX, width, height, raterName, onToggleF
       <Animated.View style={[StyleSheet.absoluteFill, pageStyle]}>
         {/* Blurred, dimmed, slowly-breathing copy behind the framed print. */}
         <Animated.View style={[StyleSheet.absoluteFill, bgStyle]}>
-          <Image source={source} style={StyleSheet.absoluteFill} resizeMode="cover" blurRadius={24} />
+          <Image
+            source={source}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+            blurRadius={24}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            accessibilityLabel=""
+          />
         </Animated.View>
         <View style={styles.fillDim} pointerEvents="none" />
 
         {/* The whole photo, fit to screen (no cropping / bleed) — the framed
             "print" treatment was tried and reverted: against this near-black
             backdrop the border read as a floating rectangle, not a print. */}
-        <Image source={source} style={StyleSheet.absoluteFill} resizeMode="contain" />
+        {/* The one image that matters to a screen reader. The blurred copy
+            above it is decorative and is hidden. */}
+        <Image
+          source={source}
+          style={StyleSheet.absoluteFill}
+          resizeMode="contain"
+          accessibilityLabel={`${photoAltText(photo, projectName)}, photo ${index + 1} of ${total}`}
+        />
 
         <LinearGradient colors={['rgba(0,0,0,0.4)', 'transparent']} style={styles.topScrim} pointerEvents="none" />
         <LinearGradient

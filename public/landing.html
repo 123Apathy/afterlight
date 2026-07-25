@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Set before any stylesheet applies, so the scroll-reveal styles that hide
+       content only ever engage when JS is actually running to reveal it again.
+       Deliberately the first script on the page and dependency-free. -->
+  <script>document.documentElement.classList.add('js');</script>
   <title>Everlit: Keep their light lit</title>
   <meta name="description" content="Everlit gathers the photos and memories scattered across your family's phones into one gentle place, and turns them into a tribute film you'll keep forever." />
   <link rel="canonical" href="https://everlit.co.za/" />
@@ -2055,6 +2059,9 @@
       transform: scaleX(0);
       transition: transform 0.8s ease 0.15s;
     }
+    /* Same no-JS reasoning as .blur-up: unrevealed it is scaled to nothing.
+       transition:none so it is simply drawn, not animated from collapsed. */
+    html:not(.js) .streak-divider { transform: none; transition: none; }
     .streak-divider.revealed { transform: scaleX(1); }
     @media (prefers-reduced-motion: reduce) {
       .streak-divider { transform: none; transition: none; }
@@ -2063,22 +2070,27 @@
     /* Blur-up reveal: opacity + lift + unblur together (the unblur is what
        makes it read as expensive). Applied via .revealed from the shared
        reveal-group observer; staggering comes from the JS delay, not CSS. */
-    .blur-up {
+    /* Scoped to .js on purpose. These elements start invisible and are only
+       revealed by an IntersectionObserver, so if JS never runs (script error,
+       content blocker, old browser) the FAQ, the contact block and the closing
+       CTA would be permanently invisible. The .js class is set by an inline
+       script in <head>, so no-JS gets the fully visible, unanimated page. */
+    html.js .blur-up {
       opacity: 0;
       transform: translateY(28px);
       filter: blur(14px);
       transition: opacity 0.9s ease, transform 0.9s ease, filter 0.9s ease;
     }
-    .blur-up.revealed {
+    html.js .blur-up.revealed {
       opacity: 1;
       transform: none;
       filter: blur(0);
     }
     /* Re-assert the button's hover lift, which .blur-up.revealed's
        transform: none would otherwise override (it sits later in the sheet). */
-    .contact-wa-btn.blur-up.revealed:hover { transform: translateY(-1px); }
+    html.js .contact-wa-btn.blur-up.revealed:hover { transform: translateY(-1px); }
     @media (prefers-reduced-motion: reduce) {
-      .blur-up {
+      html.js .blur-up {
         transform: none;
         filter: none;
         transition: opacity 0.6s ease;
@@ -2730,6 +2742,13 @@
     // .streak-divider elements reveal individually the same way.
     function revealOnScroll(root, items) {
       if (!items.length) return;
+      // Second half of the no-JS guard above: JS may be running while
+      // IntersectionObserver is missing or blocked. Reveal immediately rather
+      // than leaving whole sections invisible.
+      if (typeof IntersectionObserver !== 'function') {
+        items.forEach((el) => el.classList.add('revealed'));
+        return;
+      }
       const obs = new IntersectionObserver((entries) => {
         entries.forEach((entry) => {
           if (!entry.isIntersecting) return;
