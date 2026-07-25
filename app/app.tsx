@@ -35,15 +35,12 @@ import { DEMO, DEMO_PHOTOS } from '../constants/demo';
 // (so its design can be iterated). Never true in a normal session.
 const FORCE_LOADING =
   typeof window !== 'undefined' && /[?&]loading=1/.test(window.location.search);
-import { API_BASE, api, heartCount, isFavoritedBy, photoThumbUrl, photoUrl, setInviteCode, type Photo, type Project } from '../lib/api';
+import { api, heartCount, isFavoritedBy, photoThumbUrl, photoUrl, setInviteCode, type Photo, type Project } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
 import { useLocalStorage } from '../lib/useLocalStorage';
 import { glassBlur, glassSurface } from '../lib/glass';
 
 const DOUBLE_TAP_MS = 280;
-const MOTION_DURATION = 240;
-const ENTRANCE_DURATION = 360;
-const STAGGER_DELAY = 45;
 
 export default function SwipeScreen() {
   const { width: winWidth, height } = useWindowDimensions();
@@ -1561,13 +1558,6 @@ function CommentIcon({ active }: { active: boolean }) {
   return <View style={[styles.commentIconFallback, active && { borderColor: colors.comment }]} />;
 }
 
-// "1998 · Cape Town" from whatever's filled in; null when the photo has
-// neither, so the chip falls back to its "Add details" invitation.
-function formatPhotoDetails(photo: Photo): string | null {
-  const parts = [photo.photoDate, photo.location].map((s) => (s || '').trim()).filter(Boolean);
-  return parts.length ? parts.join(' · ') : null;
-}
-
 // Small info glyph for the details chip: a circle with an "i". Web-only inline
 // SVG (same escape hatch as CommentIcon/NavChevron); native falls back to a
 // bordered circle.
@@ -1895,11 +1885,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
     color: colors.white,
   },
-  // Grows the wordmark from its top-left corner so enlarging pushes it right
-  // and down, never up the page.
-  wordmarkOrigin: {
-    transformOrigin: 'left top',
-  },
   // Closing-slide CTA on the left, gold-tinted pill.
   shareCta: {
     height: 30,
@@ -1928,14 +1913,6 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     gap: 18,
-  },
-  gateTagline: {
-    fontFamily: 'Poppins_400Regular',
-    fontSize: 14,
-    fontStyle: 'italic',
-    letterSpacing: 0.4,
-    color: colors.goldWarm,
-    textAlign: 'center',
   },
   gateSegment: {
     width: '100%',
@@ -2088,12 +2065,6 @@ const styles = StyleSheet.create({
   gateTermsLink: {
     color: colors.goldWarm,
     textDecorationLine: 'underline',
-  },
-  gateButtonText: {
-    fontFamily: 'Poppins_500Medium',
-    fontSize: 16,
-    letterSpacing: 0.3,
-    color: colors.ink,
   },
   switchLink: {
     marginTop: 4,
@@ -2332,29 +2303,6 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     backgroundColor: 'rgba(0, 0, 0, 0.22)',
   },
-  // Details chip sits just above the controls row, left-aligned.
-  detailsChipWrap: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    bottom: 92,
-    flexDirection: 'row',
-  },
-  detailsChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    maxWidth: '78%',
-    height: 34,
-    paddingHorizontal: 13,
-    borderRadius: 17,
-  },
-  detailsChipText: {
-    flexShrink: 1,
-    fontFamily: 'Poppins_500Medium',
-    fontSize: 12.5,
-    color: 'rgba(255, 255, 255, 0.9)',
-  },
   detailsIconFallback: {
     width: 24,
     height: 24,
@@ -2362,32 +2310,11 @@ const styles = StyleSheet.create({
     borderWidth: 1.6,
     borderColor: 'rgba(255, 255, 255, 0.85)',
   },
-  // Non-blocking tour banner shown over the comment sheet (so it never blocks
-  // the input) during the first-favourite comment prompt.
   // Pink heart glyph that swells during the favourites tour step.
   tourPulseHeart: {
     fontSize: 42,
     lineHeight: 46,
     color: colors.heart,
-  },
-  tourBanner: {
-    position: 'absolute',
-    top: 92,
-    left: 16,
-    right: 16,
-    zIndex: 60,
-    backgroundColor: 'rgba(28, 22, 20, 0.9)',
-    borderWidth: 1,
-    borderColor: 'rgba(212, 169, 118, 0.4)',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-  },
-  tourBannerText: {
-    fontFamily: 'Poppins_400Regular',
-    fontSize: 13.5,
-    lineHeight: 20,
-    color: colors.white,
   },
   // Shared column for the comment + heart controls: a fixed-height box that
   // vertically centers the glass button so its center lines up with the nav
@@ -2457,19 +2384,6 @@ const styles = StyleSheet.create({
     lineHeight: 15,
     color: 'rgba(255, 255, 255, 0.95)',
   },
-  navRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    flexShrink: 0,
-  },
-  navButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   // Applied after glassSurface (which the array-merge would otherwise let
   // win outright, since later entries override earlier ones for the same
   // key) -- a touch more fill and a thicker border just for the nav
@@ -2494,24 +2408,6 @@ const styles = StyleSheet.create({
     color: colors.goldWarm,
     marginTop: 4,
   },
-  commentPillWrap: {
-    justifyContent: 'center',
-  },
-  // No pill/background -- text-as-label plus a count underneath, matching
-  // the heart button's own icon-then-count-below shape instead of standing
-  // out as a different kind of control. Fixed height (just the label's own
-  // line) so the count appearing/disappearing never shifts the row, same
-  // fix as heartFixedInner/heartFixedCount below.
-  // Same fixed height as heartFixedInner (46, the heart glyph's own box) so
-  // the two counts land at an identical Y regardless of the icon inside
-  // being a big glyph or a smaller drawn icon -- matching heights was the
-  // actual fix, not the offset numbers underneath them.
-  commentPillInner: {
-    position: 'relative',
-    height: 46,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   commentIconFallback: {
     width: 24,
     height: 15,
@@ -2521,21 +2417,11 @@ const styles = StyleSheet.create({
   },
   // Same filled-circle burst as the heart's glowPulse (not a blurred shadow
   // around the icon's box, which just read as a pill-shaped outline at this
-  // size) -- centered behind the icon via commentPillInner's own centering.
+  // size) -- centered behind the icon by its parent's own centering.
   commentGlow: {
     position: 'absolute',
     width: 48,
     height: 48,
-  },
-  commentCount: {
-    position: 'absolute',
-    top: 40,
-    left: 0,
-    right: 0,
-    textAlign: 'center',
-    fontFamily: 'Poppins_600SemiBold',
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.85)',
   },
   heartButtonContainer: {
     position: 'relative',
@@ -2543,43 +2429,6 @@ const styles = StyleSheet.create({
     height: 56,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  heartFixed: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  // Fixed height = just the heart glyph's own box. The count/hint below it
-  // are absolutely positioned (see heartFixedCount/heartHint) so they never
-  // add to this height -- otherwise a photo with a count would make this
-  // column taller than one without, and centering the row on its tallest
-  // child would shift the nav arrows and comment pill up and down between
-  // photos.
-  heartFixedInner: {
-    alignItems: 'center',
-    height: 46,
-    justifyContent: 'center',
-  },
-  heartFixedCount: {
-    position: 'absolute',
-    top: 40,
-    left: 0,
-    right: 0,
-    textAlign: 'center',
-    fontFamily: 'Poppins_600SemiBold',
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.85)',
-  },
-  heartHint: {
-    position: 'absolute',
-    top: 40,
-    left: -14,
-    right: -14,
-    textAlign: 'center',
-    fontFamily: 'Poppins_400Regular',
-    fontSize: 9.5,
-    lineHeight: 12,
-    letterSpacing: 0.2,
-    color: 'rgba(255, 255, 255, 0.55)',
   },
   glowPulse: {
     position: 'absolute',

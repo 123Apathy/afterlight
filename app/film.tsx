@@ -4,7 +4,6 @@ import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import BackdropVideo from '../components/BackdropVideo';
-import GoldButton from '../components/GoldButton';
 import LoadingState from '../components/LoadingState';
 import PressableScale from '../components/PressableScale';
 import { colors } from '../constants/theme';

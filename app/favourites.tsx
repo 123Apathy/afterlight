@@ -5,7 +5,6 @@ import { useReducedMotion } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import GoldButton from '../components/GoldButton';
 import LoadingState from '../components/LoadingState';
-import PressableScale from '../components/PressableScale';
 import { colors, images } from '../constants/theme';
 import { DEMO, DEMO_PHOTOS } from '../constants/demo';
 import { api, heartCount, photoThumbUrl, type Photo } from '../lib/api';

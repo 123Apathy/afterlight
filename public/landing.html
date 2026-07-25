@@ -789,9 +789,18 @@
     }
 
     /* About Section */
+    /* Top padding is a single clamp() solved so it equals EXACTLY 44px (the
+       original value) at every width up to and including the 768px mobile
+       breakpoint, i.e. it is mathematically identical to the old fixed 44px
+       everywhere the mobile dead-gap fix depends on it, then grows smoothly
+       past 768px for more breathing room after the 100vh hero on
+       tablet/desktop, where there's no dead-video-tail to worry about. Bottom
+       padding similarly floors at the original 60px for narrow widths and only
+       grows for wider ones. Nothing here touches the hero's own
+       height/position or the mobile margin-top overlap fix. */
     .about {
       width: 100%;
-      padding: 44px 32px 60px;
+      padding: clamp(44px, calc(8.93vw - 24.6px), 104px) 32px clamp(60px, 8vw, 100px);
     }
 
     .about-inner {
@@ -801,7 +810,10 @@
 
     .about-card {
       background: var(--about-bg);
-      padding: 48px 56px;
+      /* Mobile keeps its own explicit 40px/24px override below (768px query),
+         this base value only ever paints at >768px, so growing it here is
+         desktop/tablet-only breathing room with zero mobile side effect. */
+      padding: clamp(48px, 6vw, 80px) clamp(40px, 7vw, 88px);
       text-align: center;
     }
 
@@ -820,7 +832,7 @@
       max-width: 48rem;
       margin: 0 auto;
       line-height: 0.95;
-      margin-top: 16px;
+      margin-top: clamp(16px, 3vw, 28px);
     }
 
     .about-heading .word {
@@ -841,7 +853,7 @@
 
     .about-body {
       max-width: 36rem;
-      margin: 26px auto 0;
+      margin: clamp(26px, 3.5vw, 36px) auto 0;
       font-size: 14px;
       line-height: 1.6;
       color: var(--primary);
@@ -860,8 +872,11 @@
     }
 
     /* Features Section */
+    /* Mobile fully overrides this below (768px query: 64px 16px), so growing
+       the top/bottom here is desktop/tablet-only: more air around the "how it
+       works" intro to match the bigger hero-to-about gap above. */
     .features {
-      padding: 56px 24px 64px;
+      padding: clamp(64px, 7vw, 96px) 24px clamp(72px, 8vw, 112px);
       position: relative;
       overflow: hidden;
     }
@@ -880,8 +895,12 @@
       z-index: 1;
     }
 
+    /* Floors at the original 36px on mobile (5vw stays under 36px below
+       ~720px wide) and only grows past that: more separation between the
+       "How it works" intro and the dense 4-card grid on larger screens,
+       without touching the grid's own internal layout. */
     .features-header {
-      margin-bottom: 36px;
+      margin-bottom: clamp(36px, 5vw, 64px);
     }
 
     .features-title {
@@ -1621,11 +1640,15 @@
     }
 
     /* Contact section */
-    .contact-section { background: var(--about-bg); padding: 62px 32px; text-align: center; }
+    /* The page's true closing section, so it gets a slightly bottom-heavy pad:
+       a bigger pause before the footer, rather than matching top/bottom
+       symmetrically like the middle sections do. Values still floor near the
+       original 62px so nothing feels newly cramped on mobile. */
+    .contact-section { background: var(--about-bg); padding: clamp(64px, 7vw, 96px) 32px clamp(72px, 9vw, 120px); text-align: center; }
     .contact-wrap { max-width: 720px; margin: 0 auto; }
     .contact-title { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2rem, 5vw, 3.4rem); color: var(--primary); margin-top: 12px; line-height: 1; }
     .contact-lead { margin-top: 20px; font-size: 15px; color: var(--primary-70); line-height: 1.6; }
-    .contact-row { margin-top: 44px; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: clamp(28px, 5vw, 56px); }
+    .contact-row { margin-top: clamp(44px, 6vw, 64px); display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: clamp(28px, 5vw, 56px); }
     .qr-card { background: var(--primary); padding: 14px; border-radius: 16px; box-shadow: 0 16px 40px rgba(0,0,0,0.4); }
     .qr-card img { display: block; width: 180px; height: 180px; }
     .contact-actions { display: flex; flex-direction: column; align-items: center; gap: 14px; }
