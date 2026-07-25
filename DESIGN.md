@@ -28,7 +28,16 @@ reanimated `withTiming`, ease in/out cubic/quad, 200–520ms. Signature moves: h
 
 ## Known rough edges (candidates for the next UI round)
 
-- `/favourites` is the only content screen with a flat `colors.dark` background — no backdrop, no glow; feels like a different app.
-- Deck letterboxing on desktop: photo fills height, bare `colors.dark` side bands.
-- Grid view is pure black edge-to-edge tiles (may be intentional Instagram-style).
+- `/favourites` no longer has a flat background (corrected 2026-07-25): it renders `landingSky` under a gradient with `Atmosphere` embers, and its cards use the same `rgba(32,26,24,0.52)` glass as the sheets. Two real breaks remain. It is the only content screen with **no app header** (no wordmark, no menu, no counter), and it is lit by *sky* while every other destination screen is lit by the *candle* (`BackdropVideo`). It also just stops scrolling, while `PhotoGrid`, a lesser screen, closes with a gold streak, the wordmark and a memory count. The payoff screen has the worse ending.
+- The floating "Back to the photos" pill on `/favourites` overlaps the card caption behind it at 375px, cutting "Loved by ..." in half.
+- Deck letterboxing on desktop: the blurred breathing backdrop is the right answer, but `fillDim` at `rgba(16,14,12,0.55)` flattens it to near-invisible. ~0.40 would let the side bands carry the photo's own colour instead of reading as dead bars.
+- Grid view is **not** pure black edge-to-edge tiles (corrected 2026-07-25): it has `paddingTop: 84`, a 2px gap, and a designed footer (streak, wordmark, "Every photo here was chosen with love", memory count).
 - Film screen is sparse (fine while it's a placeholder state).
+- The tribute closes with "Have a wonderful day." after 25 questions about a person who has died. The one misfire in an otherwise careful copy deck.
+- "See What We All Loved" is the only Title Case button in the product; everything else is sentence case.
+- The landing hardcodes `--accent: #C49A6C` rather than deriving from `constants/theme.ts`, in a 2756-line single file that inlines its whole design system. Palette drift between the two lanes is a matter of time.
+- `app.tsx` duplicates `PhotoGrid`'s `columnsFor` breakpoints so the tour's tile highlight stays correct. Two copies of one truth; they will drift.
+
+## Platform gotcha (learned the hard way, 2026-07-25)
+
+**`hitSlop` does nothing on react-native-web.** RNW 0.21's `Pressable` has no `hitSlop` handling at all (the prop lives only on the legacy `Touchable` mixin, which this codebase never uses), so it is dropped as an invalid DOM prop and every hit area equals its styled box. `PressableScale` now polyfills it with a transparent absolutely-positioned expander child, capped at 44 and measured from `onLayout` so already-large controls do not grow and start stealing presses from their neighbours. **Use `PressableScale`, not a raw `Pressable`, for anything tappable**, or the control silently ships with no hit slop on the platform we actually deploy to.
