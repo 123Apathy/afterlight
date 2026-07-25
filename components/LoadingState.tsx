@@ -15,14 +15,15 @@ import { colors, images } from '../constants/theme';
 // Each line is pre-split into two halves so the larger type always breaks in
 // the same, readable place (top clause / bottom clause) instead of wrapping
 // wherever the width happens to run out.
+// NOTE: no pacing lines ("take your time", "no rush") — during a load it's the
+// APP keeping the person waiting, so those read as tone-deaf. Every line here
+// is either the app quietly at work or a comfort that stands on its own.
 const LOADING_PHRASES: [string, string][] = [
-  ['Take all the time', 'you need.'],
+  ['Gathering the moments', 'that mattered.'],
   ['Every memory', 'keeps them close.'],
-  ['Grief is love', 'with a home here.'],
-  ['You are not', 'alone in this.'],
   ['Their light', 'stays with us.'],
-  ['Breathe.', 'There is no rush.'],
-  ['Hold the good', 'moments close.'],
+  ['You are not', 'alone in this.'],
+  ['Grief is love', 'with a home here.'],
   ['We remember them,', 'together.'],
 ];
 
@@ -96,12 +97,12 @@ export default function LoadingState({
         setPhrase((p) => (p + 1) % LOADING_PHRASES.length);
         return;
       }
-      fade.value = withTiming(0, { duration: 600, easing: Easing.in(Easing.quad) });
+      fade.value = withTiming(0, { duration: 700, easing: Easing.in(Easing.quad) });
       setTimeout(() => {
         setPhrase((p) => (p + 1) % LOADING_PHRASES.length);
-        fade.value = withTiming(1, { duration: 750, easing: Easing.out(Easing.quad) });
-      }, 640);
-    }, 4200);
+        fade.value = withTiming(1, { duration: 900, easing: Easing.out(Easing.cubic) });
+      }, 740);
+    }, 5200);
     return () => clearInterval(id);
   }, [reduceMotion]);
 
@@ -118,7 +119,12 @@ export default function LoadingState({
     opacity: breath.value,
     transform: [{ scale: 0.98 + breath.value * 0.05 }],
   }));
-  const phraseStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
+  // The line doesn't just blink: the outgoing line settles downward as it
+  // fades, and the incoming one rises gently into place — a breath, not a swap.
+  const phraseStyle = useAnimatedStyle(() => ({
+    opacity: fade.value,
+    transform: [{ translateY: (1 - fade.value) * 12 }],
+  }));
 
   return (
     <View style={styles.pageContent}>
