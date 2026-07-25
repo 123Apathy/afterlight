@@ -942,7 +942,9 @@ export default function SwipeScreen() {
                 onPress={() => setViewMode((m) => (m === 'deck' ? 'grid' : 'deck'))}
               />
             )}
-            <HamburgerButton onPress={() => setMenuOpen(true)} />
+            {/* No menu while loading: nothing in it works yet, and the loading
+                screen is meant to be a held breath, not a navigation moment. */}
+            {!loading && <HamburgerButton onPress={() => setMenuOpen(true)} />}
           </View>
         </View>
       </View>
