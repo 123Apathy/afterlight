@@ -4,11 +4,12 @@ import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import Atmosphere from '../components/Atmosphere';
-import GoldButton from '../components/GoldButton';
 import LoadingState from '../components/LoadingState';
+import PressableScale from '../components/PressableScale';
 import { colors, images } from '../constants/theme';
 import { DEMO, DEMO_PHOTOS } from '../constants/demo';
 import { api, heartCount, photoThumbUrl, type Photo } from '../lib/api';
+import { glassBlur } from '../lib/glass';
 import { useActiveProject } from '../lib/useActiveProject';
 
 // In-app "everyone's favourites": the photos the family loved, most-loved
@@ -123,9 +124,22 @@ export default function FavouritesScreen() {
             })
           )}
 
-          <GoldButton label="Back to the photos" onPress={() => router.replace('/app')} style={styles.backButton} />
         </View>
       </ScrollView>
+
+      {/* Floating back pill: with a long list (a real memorial has 100+
+          photos) a bottom-of-scroll button left people feeling stuck. Always
+          visible, glass so it never fully hides the card behind it. */}
+      <View style={styles.backFloatWrap} pointerEvents="box-none">
+        <PressableScale
+          onPress={() => router.replace('/app')}
+          scaleTo={0.96}
+          style={[styles.backPill, glassBlur]}
+        >
+          <Text style={styles.backPillChevron}>‹</Text>
+          <Text style={styles.backPillText}>Back to the photos</Text>
+        </PressableScale>
+      </View>
     </View>
   );
 }
@@ -136,7 +150,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.dark,
   },
   scroll: {
-    paddingVertical: 56,
+    paddingTop: 56,
+    // Extra bottom room so the last card scrolls clear of the floating pill.
+    paddingBottom: 120,
     paddingHorizontal: 20,
   },
   content: {
@@ -247,8 +263,34 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_500Medium',
     color: colors.white,
   },
-  backButton: {
-    marginTop: 16,
-    minWidth: 240,
+  backFloatWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 24,
+    alignItems: 'center',
+  },
+  backPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    height: 48,
+    paddingHorizontal: 24,
+    borderRadius: 24,
+    backgroundColor: 'rgba(32, 26, 24, 0.72)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.16)',
+  },
+  backPillChevron: {
+    fontFamily: 'Poppins_500Medium',
+    fontSize: 22,
+    lineHeight: 24,
+    color: colors.goldWarm,
+    marginTop: -2,
+  },
+  backPillText: {
+    fontFamily: 'Poppins_500Medium',
+    fontSize: 15,
+    color: colors.white,
   },
 });
