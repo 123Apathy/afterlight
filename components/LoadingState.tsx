@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 3,
     textTransform: 'uppercase',
-    color: 'rgba(212, 169, 118, 0.6)',
+    color: 'rgba(212, 169, 118, 0.9)',
     textAlign: 'center',
     // Extra gap so the label clears the top of the breathing glow underneath.
     marginBottom: 72,
