@@ -111,7 +111,10 @@ export default function PhotoScrubber({ photos, index, onPick, onClose }: Props)
     target.current = clamp(Math.round(target.current));
     if (drag.current.moved < 6) {
       // A tap, not a drag: a tapped photo jumps to it; the backdrop closes.
-      const el = (e.target as HTMLElement).closest('[data-scrub-idx]');
+      // Hit-test the release point rather than e.target -- pointer capture
+      // makes the overlay the event target, which silently ate every pick.
+      const hit = document.elementFromPoint(e.clientX, e.clientY);
+      const el = hit && (hit as HTMLElement).closest('[data-scrub-idx]');
       if (el) onPick(clamp(Number(el.getAttribute('data-scrub-idx'))));
       else onClose();
     }
