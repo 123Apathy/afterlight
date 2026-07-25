@@ -7,6 +7,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { hasReadableYear } from '../constants/photo-date';
 import { colors } from '../constants/theme';
 import { type Photo } from '../lib/api';
 import { glassBlur } from '../lib/glass';
@@ -30,7 +31,12 @@ export default function DetailsSheet({ photo, onClose, onSave, autoCloseOnSave =
   const progress = useSharedValue(0);
   const [photoDate, setPhotoDate] = useState('');
   const [location, setLocation] = useState('');
+  // The "we couldn't spot a year" nudge waits for blur. Judging mid-keystroke
+  // means it appears the moment someone types "19" and vanishes at "1998",
+  // which reads as the app arguing with you while you type.
+  const [dateBlurred, setDateBlurred] = useState(false);
   const visible = !!photo;
+  const dateUnreadable = dateBlurred && !!photoDate.trim() && !hasReadableYear(photoDate);
 
   useEffect(() => {
     progress.value = withTiming(visible ? 1 : 0, {
@@ -45,6 +51,7 @@ export default function DetailsSheet({ photo, onClose, onSave, autoCloseOnSave =
     if (photo) {
       setPhotoDate(photo.photoDate ?? '');
       setLocation(photo.location ?? '');
+      setDateBlurred(false);
     }
   }, [photo?.id]);
 
@@ -88,9 +95,17 @@ export default function DetailsSheet({ photo, onClose, onSave, autoCloseOnSave =
           accessibilityLabel="When was this taken"
           placeholder="Even just the year, like 1998"
           placeholderTextColor={colors.textFainter}
-          style={styles.input}
+          style={[styles.input, dateUnreadable && styles.inputWithHint]}
           returnKeyType="next"
+          onFocus={() => setDateBlurred(false)}
+          onBlur={() => setDateBlurred(true)}
         />
+        {dateUnreadable && (
+          <Text style={styles.hint} accessibilityLiveRegion="polite">
+            We could not spot a year in that. Add one if you can, even roughly, so this photo sits in
+            the right place in their story.
+          </Text>
+        )}
 
         <Text style={styles.label}>Where was this?</Text>
         <TextInput
@@ -196,6 +211,18 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_400Regular',
     fontSize: 15,
     marginBottom: 18,
+  },
+  // The hint sits in the gap the input's own margin would have left, so nothing
+  // below it shifts when the nudge appears.
+  inputWithHint: {
+    marginBottom: 8,
+  },
+  hint: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: colors.goldWarm,
+    marginBottom: 16,
   },
   saveButton: {
     height: 50,
