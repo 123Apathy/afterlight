@@ -101,9 +101,10 @@ export default function FavouritesScreen() {
                   </View>
                   <View style={styles.cardBody}>
                     <View style={styles.heartRow}>
-                      <Text style={styles.heartCount}>
-                        <Text style={styles.heartGlyph}>♥</Text> {heartCount(photo)}
-                      </Text>
+                      <View style={styles.heartChip}>
+                        <Text style={styles.heartGlyph}>♥</Text>
+                        <Text style={styles.heartChipCount}>{heartCount(photo)}</Text>
+                      </View>
                       {raters.length > 0 && (
                         <Text style={styles.lovedBy} numberOfLines={1}>
                           Loved by {raters.join(', ')}
@@ -236,18 +237,32 @@ const styles = StyleSheet.create({
   },
   heartRow: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'center',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
   },
-  heartCount: {
-    fontFamily: 'PlayfairDisplay_500Medium',
-    fontSize: 20,
-    color: colors.goldWarm,
+  // Soft red-tinted chip, same family as the comment sheet's reaction pills
+  // and the grid badges: heart in the favourite red, count in white.
+  heartChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 30,
+    paddingHorizontal: 12,
+    borderRadius: 15,
+    backgroundColor: 'rgba(232, 83, 107, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(232, 83, 107, 0.35)',
   },
-  // The heart itself matches the deck's favourite red; the count stays gold.
   heartGlyph: {
+    fontSize: 14,
+    lineHeight: 17,
     color: colors.heart,
+  },
+  heartChipCount: {
+    fontFamily: 'Poppins_500Medium',
+    fontSize: 14,
+    color: colors.white,
   },
   lovedBy: {
     fontFamily: 'Poppins_400Regular',
