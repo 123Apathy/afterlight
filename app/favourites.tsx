@@ -82,9 +82,12 @@ export default function FavouritesScreen() {
           {hearted.length === 0 ? (
             <View style={styles.emptyWrap}>
               <Image source={images.logoRing} style={styles.emptyEmblem} resizeMode="contain" />
+              {/* Leads with the labelled heart button, not the double-tap.
+                  Pointing people at the gesture first sent them down the path
+                  most likely to fail them. */}
               <Text style={styles.empty}>
-                No favourites yet. Go back and double-tap the photos that matter to you, they&rsquo;ll gather
-                here for the whole family to see.
+                No favourites yet. Go back and tap the heart under any photo that matters to you (or
+                double-tap the photo itself), and they&rsquo;ll gather here for the whole family to see.
               </Text>
             </View>
           ) : (

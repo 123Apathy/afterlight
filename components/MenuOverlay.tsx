@@ -274,6 +274,14 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
                   <Text style={styles.uploadPillText}>{uploading ? 'Adding photos…' : 'Add photos'}</Text>
                 </PressableScale>
               )}
+              {/* Answered at the moment of the decision, not buried in Terms:
+                  this is the point where someone hesitates over uploading a
+                  relative's photographs. */}
+              {showButton('addPhotos') && (
+                <Text style={styles.uploadPrivacy}>
+                  Your photos stay in this memorial. Only people with the link can see them.
+                </Text>
+              )}
               {!!projectId && (
                 <PressableScale onPress={handleChangeCoverPhoto} style={styles.switchLink} scaleTo={0.98}>
                   <Text style={styles.switchText}>
@@ -704,6 +712,15 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_500Medium',
     fontSize: 15,
     color: colors.white,
+  },
+  uploadPrivacy: {
+    marginTop: 2,
+    maxWidth: 300,
+    textAlign: 'center',
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.textFainter,
   },
   switchLink: {
     height: 40,

@@ -43,7 +43,11 @@ import { useActiveProject } from '../lib/useActiveProject';
 import { useLocalStorage } from '../lib/useLocalStorage';
 import { glassBlur, glassSurface } from '../lib/glass';
 
-const DOUBLE_TAP_MS = 280;
+// 500, not 280. 280ms is a designer-speed interval: Windows' own default
+// double-click window is 500ms and older adults routinely exceed even that,
+// and this product's readers are mostly elderly. The old failure was silent
+// too, so a missed double-tap read as "the app is broken" or "I did it wrong".
+const DOUBLE_TAP_MS = 500;
 
 export default function SwipeScreen() {
   const { width: winWidth, height } = useWindowDimensions();
@@ -675,6 +679,13 @@ export default function SwipeScreen() {
                 Add your name first, so your favourites carry a little of you with them.
               </Text>
             )}
+            {/* "Who can see this?" is the loudest unspoken question for someone
+                about to put photographs of a relative into a link a nephew sent
+                on WhatsApp, and nothing in the app answered it. Silence on a
+                privacy question reads as risk, not as neutral. */}
+            <Text style={styles.gatePrivacy}>
+              This memorial is private. Only people with the family&rsquo;s link can see it.
+            </Text>
             <Text style={styles.gateTerms}>
               By entering, you agree to our{' '}
               <Text
@@ -1746,6 +1757,7 @@ function PhotoSlide({ photo, index, scrollX, width, height, raterName, onToggleF
   const burst = useSharedValue(0);
   const emberP = useSharedValue(0);
   const vignette = useSharedValue(0);
+  const hint = useSharedValue(0);
   const bgBreath = useSharedValue(0);
   const lastTap = useRef(0);
 
@@ -1781,6 +1793,8 @@ function PhotoSlide({ photo, index, scrollX, width, height, raterName, onToggleF
 
   const vignetteStyle = useAnimatedStyle(() => ({ opacity: vignette.value }));
 
+  const hintStyle = useAnimatedStyle(() => ({ opacity: hint.value }));
+
   const playBurst = () => {
     if (reduceMotion) return;
     burst.value = withSequence(
@@ -1795,16 +1809,30 @@ function PhotoSlide({ photo, index, scrollX, width, height, raterName, onToggleF
     );
   };
 
+  // A single tap used to do nothing at all, so someone whose hands missed the
+  // double-tap window got no response whatsoever and had no way to tell
+  // whether the app was broken, the photo was broken, or they had done it
+  // wrong. Now the first tap always answers, and tells them what to do next.
+  const showTapHint = () => {
+    if (favorited) return;
+    hint.value = withSequence(
+      withTiming(1, { duration: 160, easing: Easing.out(Easing.cubic) }),
+      withDelay(1400, withTiming(0, { duration: 320, easing: Easing.in(Easing.quad) })),
+    );
+  };
+
   // Double-tap = favourite (never un-favourite), Instagram-style. The heart
   // burst always plays on a double-tap, even when it was already a favourite.
   const handleTap = () => {
     const now = Date.now();
     if (now - lastTap.current < DOUBLE_TAP_MS) {
       lastTap.current = 0;
+      hint.value = 0;
       if (!favorited) onToggleFavorite(photo);
       playBurst();
     } else {
       lastTap.current = now;
+      showTapHint();
     }
   };
 
@@ -1845,6 +1873,13 @@ function PhotoSlide({ photo, index, scrollX, width, height, raterName, onToggleF
         <Animated.Text style={[styles.burstHeart, burstStyle]} pointerEvents="none">
           ♥
         </Animated.Text>
+
+        {/* The answer to a single tap: an outlined heart (hollow, so it never
+            reads as "already kept") plus the one instruction that matters. */}
+        <Animated.View style={[styles.tapHint, hintStyle]} pointerEvents="none">
+          <Text style={styles.tapHintHeart}>♡</Text>
+          <Text style={styles.tapHintText}>Tap again to keep this one</Text>
+        </Animated.View>
       </Animated.View>
     </Pressable>
   );
@@ -2099,6 +2134,21 @@ const styles = StyleSheet.create({
     height: 52,
   },
   // Subtle, respectful consent line under the gate's primary button.
+  // Deliberately brighter and larger than gateTerms below it: this is
+  // reassurance the person needs before deciding to take part, not boilerplate
+  // they scan past.
+  gatePrivacy: {
+    marginTop: 14,
+    maxWidth: 330,
+    textAlign: 'center',
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 13,
+    lineHeight: 20,
+    color: colors.textFaint,
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 12,
+  },
   // Carries the only Terms link on the gate, and sat at 11.5px / 0.42 white
   // (~4.1:1) over a *moving* candle video, so its real contrast was worse than
   // the static figure. 13px at 0.62 clears AA against the gate's darkest band
@@ -2485,5 +2535,27 @@ const styles = StyleSheet.create({
     color: colors.heart,
     textShadowColor: 'rgba(0, 0, 0, 0.35)',
     textShadowRadius: 24,
+  },
+  tapHint: {
+    position: 'absolute',
+    alignSelf: 'center',
+    top: '38%',
+    alignItems: 'center',
+    gap: 6,
+  },
+  tapHintHeart: {
+    fontSize: 76,
+    lineHeight: 88,
+    color: 'rgba(255, 255, 255, 0.92)',
+    textShadowColor: 'rgba(0, 0, 0, 0.45)',
+    textShadowRadius: 20,
+  },
+  tapHintText: {
+    fontFamily: 'Poppins_500Medium',
+    fontSize: 15,
+    color: colors.white,
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 12,
   },
 });
