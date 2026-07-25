@@ -1955,9 +1955,13 @@
     .cta-band-title {
       font-family: 'Playfair Display', Georgia, serif;
       font-weight: 500;
-      font-size: clamp(1.7rem, 4vw, 2.8rem);
+      /* Editorial scale: one big serif line with a single italic accent word
+         carries the close; sub and button stay quiet beneath it. */
+      font-size: clamp(2.1rem, 5.5vw, 4.2rem);
+      line-height: 1.05;
+      letter-spacing: -0.02em;
       color: var(--primary);
-      margin-bottom: 12px;
+      margin-bottom: 16px;
     }
     .cta-band-sub {
       font-size: 15px;
@@ -1965,6 +1969,66 @@
       color: var(--primary-70);
       max-width: 30rem;
       margin: 0 auto clamp(26px, 4vw, 36px);
+    }
+    .cta-band-title em {
+      font-style: italic;
+      color: var(--accent);
+    }
+
+    /* Blur-up reveal: opacity + lift + unblur together (the unblur is what
+       makes it read as expensive). Applied via .revealed from the shared
+       reveal-group observer; staggering comes from the JS delay, not CSS. */
+    .blur-up {
+      opacity: 0;
+      transform: translateY(28px);
+      filter: blur(14px);
+      transition: opacity 0.9s ease, transform 0.9s ease, filter 0.9s ease;
+    }
+    .blur-up.revealed {
+      opacity: 1;
+      transform: none;
+      filter: blur(0);
+    }
+    /* Re-assert the button's hover lift, which .blur-up.revealed's
+       transform: none would otherwise override (it sits later in the sheet). */
+    .contact-wa-btn.blur-up.revealed:hover { transform: translateY(-1px); }
+    @media (prefers-reduced-motion: reduce) {
+      .blur-up {
+        transform: none;
+        filter: none;
+        transition: opacity 0.6s ease;
+      }
+    }
+
+    /* Cursor-tracked 1px gold ring on FAQ cards (mask-composite keeps only
+       the ring painting). Pointer devices only; the vars default far
+       off-card so nothing shows until the cursor arrives. */
+    @media (hover: hover) and (pointer: fine) {
+      .faq-item { position: relative; }
+      .faq-item::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 14px;
+        padding: 1px;
+        background: radial-gradient(240px circle at var(--spot-x, -300px) var(--spot-y, -300px), rgba(212, 169, 118, 0.55), transparent 60%);
+        -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        pointer-events: none;
+      }
+    }
+
+    /* Smooth accordion open/close where ::details-content is supported
+       (Chrome 131+); everywhere else it degrades to the instant toggle. */
+    @supports (interpolate-size: allow-keywords) {
+      :root { interpolate-size: allow-keywords; }
+      .faq-item::details-content {
+        height: 0;
+        overflow: clip;
+        transition: height 0.28s ease, content-visibility 0.28s allow-discrete;
+      }
+      .faq-item[open]::details-content { height: auto; }
     }
 
     /* Site footer: quiet close to the page, echoes the app's dim gold accents. */
@@ -2361,24 +2425,24 @@
     <div class="faq-wrap">
       <span class="about-tag">Questions</span>
       <h2 class="faq-title">What families ask.</h2>
-      <div class="faq-list">
-        <details class="faq-item">
+      <div class="faq-list reveal-group">
+        <details class="faq-item blur-up">
           <summary>How does my family add their photos?</summary>
           <p>With one WhatsApp link. You share it, they tap it, and they're in. There's nothing to download or install, and no accounts or passwords.</p>
         </details>
-        <details class="faq-item">
+        <details class="faq-item blur-up">
           <summary>Do I need to create an account?</summary>
           <p>No. You start with just their name. No sign-up, no downloads, and your memorial is ready to share in seconds.</p>
         </details>
-        <details class="faq-item">
+        <details class="faq-item blur-up">
           <summary>Who can see our photos?</summary>
           <p>Your memorial isn't listed anywhere public. It opens only through its private invite link, the one your family shares on WhatsApp.</p>
         </details>
-        <details class="faq-item">
+        <details class="faq-item blur-up">
           <summary>What do we receive at the end?</summary>
           <p>A cinematic HD film for the service, with an original song written from your memories. The film and the gallery are yours to keep, forever.</p>
         </details>
-        <details class="faq-item">
+        <details class="faq-item blur-up">
           <summary>When will the film be ready?</summary>
           <p>Your film is ready to watch and download 24 hours before the due date, and within 48 hours of everyone's choices being submitted or the deadline being reached, whichever comes first.</p>
         </details>
@@ -2406,10 +2470,10 @@
     </div>
   </section>
 
-  <section class="cta-band">
-    <h2 class="cta-band-title">When you're ready, we're here.</h2>
-    <p class="cta-band-sub">Start with just their name. Your family can be gathering photos and memories within minutes.</p>
-    <a class="contact-wa-btn" href="/app">
+  <section class="cta-band reveal-group">
+    <h2 class="cta-band-title blur-up">When you're <em>ready</em>, we're here.</h2>
+    <p class="cta-band-sub blur-up">Start with just their name. Your family can be gathering photos and memories within minutes.</p>
+    <a class="contact-wa-btn blur-up" href="/app">
       Create a memorial
       <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
     </a>
@@ -2528,6 +2592,40 @@
 
     // Initial check
     updateCharReveal();
+
+    // Staggered blur-up reveals: each .reveal-group reveals its .blur-up
+    // children 120ms apart, once, when the group is ~20% visible.
+    document.querySelectorAll('.reveal-group').forEach((group) => {
+      const items = group.querySelectorAll('.blur-up');
+      if (!items.length) return;
+      const obs = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          items.forEach((el, i) => {
+            setTimeout(() => el.classList.add('revealed'), i * 120);
+          });
+          obs.disconnect();
+        });
+      }, { threshold: 0.2 });
+      obs.observe(group);
+    });
+
+    // Cursor spotlight ring on FAQ cards: one mousemove listener writes each
+    // card's --spot-x/--spot-y relative to its own rect (the ::after ring
+    // paints only near the cursor). Pointer devices only.
+    (function () {
+      if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+      const list = document.querySelector('.faq-list');
+      if (!list) return;
+      const items = list.querySelectorAll('.faq-item');
+      list.addEventListener('mousemove', (e) => {
+        items.forEach((item) => {
+          const r = item.getBoundingClientRect();
+          item.style.setProperty('--spot-x', (e.clientX - r.left) + 'px');
+          item.style.setProperty('--spot-y', (e.clientY - r.top) + 'px');
+        });
+      });
+    })();
   </script>
 
   <!-- Dev-only: click-drag-move + pull-to-resize overlay, Ctrl+Shift+M.
