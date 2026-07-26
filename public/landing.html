@@ -692,14 +692,22 @@
       /* Explicit row for the same reason as .hero-right above. */
       grid-row: 2;
       grid-column: 1;
-      /* vh cap stops the wordmark growing forever on wide monitors. */
+      /* vh cap stops the wordmark growing forever on wide monitors. The
+         formula is only the starting size: a script below shrinks it to fit
+         whenever a device's font metrics render the word wider than the
+         column (it never grows it). */
       font-size: min(25.34vw, 38vh);
       font-weight: 500;
       line-height: 0.85;
       letter-spacing: -0.07em;
       color: var(--primary);
       display: inline-flex;
-      flex-wrap: wrap;
+      /* NEVER wrap: in flex layout "Everl", the flame-i span, "t" and the
+         asterisk are separate items, and flex-wrap:wrap let the wordmark
+         break into "Everl / it" whenever a device rendered it a pixel wider
+         than the column. The fit script resizes instead. */
+      flex-wrap: nowrap;
+      white-space: nowrap;
       /* Top layer: the wordmark always wins over the phone where they meet. */
       position: relative;
       z-index: 4;
@@ -2823,6 +2831,45 @@
     }
 
     observeWords(document.getElementById('about-heading'));
+
+    // Shrink the wordmark to fit its column whenever a device's font metrics
+    // render it wider than the CSS formula assumed (the same per-device drift
+    // that moved the flame tittle). Shrink-only: when the formula fits, the
+    // tuned size and the asterisk's deliberate overhang are untouched (the
+    // asterisk is absolutely positioned, so scrollWidth ignores it). MUST be
+    // registered before the flame-placement IIFE below: listeners run in
+    // registration order, so the flame always measures the FINAL font size.
+    (function () {
+      var title = document.querySelector('.hero-title');
+      if (!title) return;
+      var host = title.closest('.hero-content') || title.parentElement;
+      function fit() {
+        title.style.fontSize = ''; // re-measure from the CSS formula
+        // Available space = from the wordmark's left edge to the hero
+        // column's content edge. NOT the title's own clientWidth: the title
+        // box is content-sized in every layout here, so it grows WITH the
+        // word and can never overflow itself.
+        var hostRect = host.getBoundingClientRect();
+        var padRight = parseFloat(getComputedStyle(host).paddingRight) || 0;
+        var avail = hostRect.right - padRight - title.getBoundingClientRect().left;
+        // A Range over everything before the asterisk, NOT scrollWidth:
+        // scrollWidth counts the asterisk's deliberate overhang (absolutely
+        // positioned boxes overflowing right still contribute to scroll
+        // overflow), which made this shrink the tuned size ~4% everywhere.
+        var range = document.createRange();
+        range.selectNodeContents(title);
+        var ast = title.querySelector('.asterisk');
+        if (ast) range.setEndBefore(ast);
+        var needed = range.getBoundingClientRect().width;
+        if (needed > avail + 0.5 && avail > 0) {
+          var fs = parseFloat(getComputedStyle(title).fontSize);
+          title.style.fontSize = Math.floor(fs * (avail / needed) * 100) / 100 + 'px';
+        }
+      }
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+      fit();
+      window.addEventListener('resize', fit);
+    })();
 
     // Place the flame tittle from the DEVICE'S OWN rendered metrics. The CSS
     // em values are only a no-JS fallback: they position against the span's
