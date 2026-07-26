@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -8,6 +8,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { hasReadableYear } from '../constants/photo-date';
+import useKeyboardInset from '../lib/useKeyboardInset';
 import { colors } from '../constants/theme';
 import { COMMENT_REACTION_EMOJI, reactionSummary, type Photo } from '../lib/api';
 import { glassBlur, glassSurface } from '../lib/glass';
@@ -64,6 +65,17 @@ export default function CommentSheet({ photo, onClose, onSubmit, onReact, onSave
   const listRef = useRef<ScrollView>(null);
   const autoCloseRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dateUnreadable = dateBlurred && !!photoDate.trim() && !hasReadableYear(photoDate);
+
+  // Phone keyboards: lift the sheet to sit just above the keyboard instead of
+  // being buried under it, and clamp its height to the space that is actually
+  // visible so the input being typed into can never scroll out of view. Both
+  // are 0/no-ops when the keyboard is closed and on desktop.
+  const keyboardInset = useKeyboardInset();
+  const { height: winHeight } = useWindowDimensions();
+  const keyboardStyle =
+    keyboardInset > 0
+      ? { bottom: keyboardInset + 8, maxHeight: Math.max(200, winHeight - keyboardInset - 16) }
+      : null;
 
   useEffect(() => {
     progress.value = withTiming(visible ? 1 : 0, {
@@ -163,7 +175,7 @@ export default function CommentSheet({ photo, onClose, onSubmit, onReact, onSave
       <Animated.View style={[styles.backdrop, backdropStyle]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={close} />
       </Animated.View>
-      <Animated.View style={[styles.sheet, glassBlur, style]}>
+      <Animated.View style={[styles.sheet, glassBlur, keyboardStyle, style]}>
       <View style={styles.header}>
         <Text style={styles.title}>This moment</Text>
         <PressableScale onPress={close} hitSlop={12} style={styles.close}>
