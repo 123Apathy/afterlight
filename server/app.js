@@ -460,6 +460,14 @@ app.post('/api/projects', rateLimit(5), async (req, res, next) => {
       .single();
     assertOk(ownerError);
 
+    // Creation is currently open to anyone on the site -- until/unless it is
+    // gated, the operator at least hears about every memorial the moment it
+    // exists (same channel as tribute notifications).
+    notify(
+      `🕯 Everlit: new memorial created: "${project.name}" (invite ${project.invite_code})` +
+        (owner.contact ? `\nContact left: ${owner.contact}` : '\nNo contact left.')
+    );
+
     const defaults = await getButtonDefaults();
     res.status(201).json({
       ...mapProject(project, resolveEnabledButtons(project.enabled_buttons, defaults)),

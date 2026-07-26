@@ -581,14 +581,14 @@ export default function SwipeScreen() {
                 onBlur={() => setInputFocused(false)}
                 onSubmitEditing={handleCreateProject}
               />
-              {/* Not a sign-up field: it is the film's delivery address. The
-                  product's no-passwords promise holds -- this is optional and
-                  the only thing it gates is where the finished film gets sent. */}
+              {/* Not a sign-up field: an optional way to reach the creator.
+                  Deliberately says nothing about the film or payment -- that
+                  conversation happens person-to-person on WhatsApp. */}
               <TextInput
                 value={newProjectContact}
                 onChangeText={setNewProjectContact}
-                accessibilityLabel="Where should we send the film? WhatsApp number or email, optional"
-                placeholder="Where should we send the film? (optional)"
+                accessibilityLabel="Your WhatsApp number or email, so we can stay in touch, optional"
+                placeholder="Your WhatsApp number or email (optional)"
                 placeholderTextColor={colors.textFaintest}
                 style={styles.gateInput}
                 onSubmitEditing={handleCreateProject}
