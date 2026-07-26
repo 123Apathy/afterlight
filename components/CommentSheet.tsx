@@ -311,14 +311,17 @@ export default function CommentSheet({ photo, onClose, onSubmit, onReact, onSave
         <TextInput
           value={draft}
           onChangeText={setDraft}
-          accessibilityLabel="Add a comment"
-          placeholder="Add a comment…"
+          accessibilityLabel="Share a memory"
+          placeholder="Share a memory…"
           placeholderTextColor={colors.textFainter}
           style={styles.input}
           onSubmitEditing={send}
           returnKeyType="send"
         />
-        <GoldButton label="Post" onPress={send} style={styles.sendButton} textStyle={styles.sendText} />
+        {/* "Share", not "Post": these become the film's captions -- the empty
+            state already asks them to "share a memory", and "post" is
+            social-feed language this place is not. */}
+        <GoldButton label="Share" onPress={send} style={styles.sendButton} textStyle={styles.sendText} />
       </View>
       </Animated.View>
     </View>

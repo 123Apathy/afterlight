@@ -68,7 +68,10 @@ export const images = {
 export const copy = {
   slogan: 'A memory you can hold.',
   landing: {
-    title: "Let's help you remember them well.",
+    // "Let's remember them well", not "Let's help you remember them well":
+    // the shorter line centres the family doing the remembering together,
+    // instead of the company offering a service.
+    title: "Let's remember them well.",
     subtitle: "Everlit brings together the photos everyone holds of them into one gentle place, so nothing is lost and no one has to grieve alone. Just the moments that mattered, gathered with care.",
   },
 };

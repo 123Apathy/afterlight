@@ -228,7 +228,7 @@ export default function SwipeScreen() {
       setNewProjectName('');
       setPickingCover(created);
     } catch {
-      showToast("Couldn't create the project. Check your connection and try again.");
+      showToast("Couldn't create the memorial. Check your connection and try again.");
     } finally {
       setCreatingProject(false);
     }
@@ -690,8 +690,10 @@ export default function SwipeScreen() {
                 else setNameGateHint(true);
               }}
             />
+            {/* "Come in", not "Enter": completes the doorway the screen opens
+                with ("Who's here?"), and "Enter" reads like a keyboard key. */}
             <GoldButton
-              label="Enter"
+              label="Come in"
               onPress={() => {
                 if (nameDraft.trim()) setRaterName(nameDraft.trim());
                 else setNameGateHint(true);
@@ -1691,17 +1693,21 @@ function EndOfDeckSlide({ width, height, projectName, photos, reduceMotion, acti
           style={StyleSheet.absoluteFill}
         />
       </View>
+      {/* No trailing "with us": the thank-you belongs to the person being
+          remembered, not to the app. */}
       <Text style={styles.endTitle}>
         Thank you for spending this time remembering{' '}
         <Text style={styles.endNameFirst}>{nameFirst}</Text>
         {nameRest ? <Text style={styles.endNameRest}> {nameRest}</Text> : null}
-        {' '}with us.
+        .
       </Text>
       <Text style={styles.endSubtitle}>
-        Now you can see the moments your whole family chose to hold onto. Tap below to see the
+        Now you can see the moments your whole family chose to hold onto. Tap below for the
         favourites, and the memories everyone shared.
       </Text>
-      <GoldButton label="See What We All Loved" onPress={openFavourites} style={styles.endButton} focusable={active} />
+      {/* Sentence case like every other label in the app -- Title Case read
+          as a feature name. */}
+      <GoldButton label="See what we all loved" onPress={openFavourites} style={styles.endButton} focusable={active} />
     </View>
   );
 }
