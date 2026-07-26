@@ -15,6 +15,7 @@ import { colors, images } from '../constants/theme';
 import { DEMO } from '../constants/demo';
 import { api, inviteUrl, type ButtonKey, type Project } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
+import useEscapeToClose from '../lib/useEscapeToClose';
 import BackdropVideo from './BackdropVideo';
 import PressableScale from './PressableScale';
 import { glassBlur, goldLitEdge } from '../lib/glass';
@@ -38,6 +39,9 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
   // rarely-needed ones now sit behind this.
   const [showMore, setShowMore] = useState(false);
   const [confirmSwitch, setConfirmSwitch] = useState(false);
+
+  // Desktop web: Escape closes the menu, as every dialog on the web does.
+  useEscapeToClose(visible, onClose);
 
   useEffect(() => {
     const duration = reduceMotion ? 0 : visible ? 220 : 180;

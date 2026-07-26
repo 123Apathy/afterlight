@@ -513,7 +513,16 @@ export default function SwipeScreen() {
             </PressableScale>
           </View>
         </View>
-        <View style={styles.gate}>
+        {/* ScrollView, not View: this is the one gate whose column (with the
+            tall lockup) outgrows short phone screens -- centred when it fits,
+            scrolls when it does not, instead of clipping the terms line and
+            riding the lockup's flame up into the header. */}
+        <ScrollView
+          style={styles.gateScroll}
+          contentContainerStyle={styles.gate}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.gateInner}>
             <Animated.View style={[styles.gateSegment, enterStyleA]}>
               <Image source={images.lockup} style={styles.lockup} resizeMode="contain" />
@@ -529,8 +538,8 @@ export default function SwipeScreen() {
               <TextInput
                 value={newProjectName}
                 onChangeText={setNewProjectName}
-                accessibilityLabel="The person's name or the occasion"
-                placeholder="Person's name or occasion…"
+                accessibilityLabel="The name of the person being remembered"
+                placeholder="Their name…"
                 placeholderTextColor={colors.textFaintest}
                 style={[styles.gateInput, inputFocused && styles.gateInputFocused]}
                 onFocus={() => setInputFocused(true)}
@@ -573,7 +582,7 @@ export default function SwipeScreen() {
               )}
             </Animated.View>
           </View>
-        </View>
+        </ScrollView>
       </View>
     );
   }
@@ -1930,12 +1939,24 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
     color: colors.goldWarm,
   },
+  // flexGrow (not flex): styles.gate doubles as the create gate's ScrollView
+  // contentContainerStyle, where flexGrow means "centre when the content
+  // fits, grow the scroll area when it does not".
   gate: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 28,
-    paddingBottom: 80,
+    // Was paddingBottom 80 alone: the bottom-only bias pushed the centred
+    // column up until, at common phone heights (~800-870px), the lockup's
+    // flame rode into the header band and sat beside the header's own flame
+    // as a doubled mark. Top padding reserves the header's band instead.
+    paddingTop: 64,
+    paddingBottom: 32,
+  },
+  gateScroll: {
+    flex: 1,
+    alignSelf: 'stretch',
   },
   gateInner: {
     width: '100%',

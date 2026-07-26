@@ -8,6 +8,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { hasReadableYear } from '../constants/photo-date';
+import useEscapeToClose from '../lib/useEscapeToClose';
 import useKeyboardInset from '../lib/useKeyboardInset';
 import { colors } from '../constants/theme';
 import { COMMENT_REACTION_EMOJI, reactionSummary, type Photo } from '../lib/api';
@@ -62,6 +63,8 @@ export default function CommentSheet({ photo, onClose, onSubmit, onReact, onSave
   // vanishes at "1998", which reads as the app arguing while you type.
   const [dateBlurred, setDateBlurred] = useState(false);
   const visible = !!photo;
+  // Desktop web: Escape closes the sheet, as every dialog on the web does.
+  useEscapeToClose(visible, onClose);
   const listRef = useRef<ScrollView>(null);
   const autoCloseRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dateUnreadable = dateBlurred && !!photoDate.trim() && !hasReadableYear(photoDate);

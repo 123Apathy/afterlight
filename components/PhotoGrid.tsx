@@ -162,7 +162,9 @@ export default function PhotoGrid({ photos, width, onSelect, onOpenComments, pro
             end={{ x: 1, y: 0.5 }}
             style={styles.footerStreak}
           />
-          <Text style={styles.footerBrand}>Everlit</Text>
+          {/* The person's name, not the app's -- the header wordmark already
+              says Everlit, and this closing line belongs to the family. */}
+          <Text style={styles.footerBrand}>{projectName || 'Everlit'}</Text>
           <Text style={styles.footerLine}>Every photo here was chosen with love.</Text>
           <Text style={styles.footerMeta}>
             {photos.length} {photos.length === 1 ? 'memory' : 'memories'} shared
