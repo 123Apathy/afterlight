@@ -1762,7 +1762,11 @@
     .contact-wa-btn:hover { transform: translateY(-1px); }
     .contact-wa-btn svg { width: 18px; height: 18px; stroke: #1A1613; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .contact-number { font-size: 15px; color: var(--primary-70); letter-spacing: 0.5px; }
-    @media (max-width: 640px) { .contact-row { flex-direction: column-reverse; } .qr-card img { width: 150px; height: 150px; } }
+    /* The QR exists so a DESKTOP visitor can jump to WhatsApp on their phone.
+       On a phone it is pointless (you cannot scan your own screen) and it was
+       eating a large block of prime space under the button -- hide it; the
+       WhatsApp button and number are the whole story there. */
+    @media (max-width: 768px) { .qr-card { display: none; } }
 
     /* Animations */
     @keyframes pullUp {
@@ -2312,13 +2316,21 @@
       font-size: 13px;
       color: rgba(255, 255, 255, 0.45);
       display: flex;
-      gap: 10px;
+      /* Wrap BETWEEN links on narrow screens, never inside one -- each link
+         is nowrap, so "Terms & / Conditions" can't split mid-name with the
+         dot separators left floating. */
+      flex-wrap: wrap;
+      row-gap: 6px;
+      /* Dot separators removed: when the row wrapped on narrow screens a dot
+         dangled at the line end. Spacing alone separates the gold links. */
+      gap: 18px;
       justify-content: center;
       margin-bottom: 14px;
     }
     .site-footer-links a {
       color: #C49A6C;
       text-decoration: none;
+      white-space: nowrap;
     }
     .site-footer-links a:hover { text-decoration: underline; }
     /* Was 11.5px at 0.3 white, roughly 2.4:1, a clear AA failure. 0.55 sits
@@ -2748,12 +2760,10 @@
     <p class="site-footer-line">Made with care in South Africa.</p>
     <p class="site-footer-links">
       <a href="/terms">Terms &amp; Conditions</a>
-      <span aria-hidden="true">·</span>
       <a href="/privacy">Privacy Policy</a>
-      <span aria-hidden="true">·</span>
       <a href="https://wa.me/27626607269">WhatsApp us</a>
     </p>
-    <p class="site-footer-copy">&copy; 2026 Afterlight Memorial Films</p>
+    <p class="site-footer-copy">&copy; 2026 Everlit Memorial Films</p>
   </footer>
 
   <script>
