@@ -23,7 +23,6 @@ import MenuOverlay from '../components/MenuOverlay';
 import PhotoScrubber from '../components/PhotoScrubber';
 import LoadingState from '../components/LoadingState';
 import CommentSheet from '../components/CommentSheet';
-import DetailsSheet from '../components/DetailsSheet';
 import CoachMark from '../components/CoachMark';
 import PhotoGrid from '../components/PhotoGrid';
 import PressableScale from '../components/PressableScale';
@@ -83,7 +82,6 @@ export default function SwipeScreen() {
   // The header counter opens a draggable 3D scrubber over the deck (web only).
   const [scrubberOpen, setScrubberOpen] = useState(false);
   const [commentPhotoId, setCommentPhotoId] = useState<string | null>(null);
-  const [detailsPhotoId, setDetailsPhotoId] = useState<string | null>(null);
   const [inputFocused, setInputFocused] = useState(false);
 
   // First-run guided tour, one pass the first time the deck opens. Ordered
@@ -100,7 +98,6 @@ export default function SwipeScreen() {
     | 'arrows'
     | 'favourites'
     | 'comments'
-    | 'details'
     | 'grid'
     | 'gridInfo'
     | 'menu'
@@ -121,7 +118,6 @@ export default function SwipeScreen() {
   // photo; after that it stays open so people can keep adding without it
   // shutting each time.
   const postedPhotos = useRef<Set<string>>(new Set());
-  const savedPhotos = useRef<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'deck' | 'grid'>('deck');
   const [deckIndex, setDeckIndex] = useState(0);
   // Mirrors PhotoDeck's live swipe position for the header counter. Kept
@@ -312,7 +308,6 @@ export default function SwipeScreen() {
         p.id === photo.id ? { ...p, photoDate: details.photoDate || null, location: details.location || null } : p
       )
     );
-    savedPhotos.current.add(photo.id);
     if (DEMO) return; // in-memory only, no backend
     try {
       await api.updatePhotoDetails(photo.id, details);
@@ -329,11 +324,11 @@ export default function SwipeScreen() {
     !loading && !loadError && photos.length > 0 && viewMode === 'deck' && !!raterName;
   const introStartedRef = useRef(false);
   useEffect(() => {
-    if (deckReady && !tourDone && !introStartedRef.current && !menuOpen && !commentPhotoId && !detailsPhotoId) {
+    if (deckReady && !tourDone && !introStartedRef.current && !menuOpen && !commentPhotoId) {
       introStartedRef.current = true;
       setTimeout(() => setTourStep('welcome'), 650);
     }
-  }, [deckReady, tourDone, menuOpen, commentPhotoId, detailsPhotoId]);
+  }, [deckReady, tourDone, menuOpen, commentPhotoId]);
 
   // Interactive steps advance when the user performs the action, not on a Next
   // tap: open the grid, come back from it, and finally move to the next photo.
@@ -394,8 +389,7 @@ export default function SwipeScreen() {
     setTourStep((s) => {
       if (s === 'welcome') return 'arrows';
       if (s === 'favourites') return 'comments';
-      if (s === 'comments') return 'details';
-      if (s === 'details') return 'grid';
+      if (s === 'comments') return 'grid';
       if (s === 'menu') return 'done';
       return s;
     });
@@ -736,10 +730,9 @@ export default function SwipeScreen() {
           height={height}
           raterName={raterName}
           initialIndex={deckIndex}
-          navEnabled={!commentPhotoId && !detailsPhotoId && !scrubberOpen}
+          navEnabled={!commentPhotoId && !scrubberOpen}
           onToggleFavorite={toggleFavorite}
           onOpenComments={(photo) => setCommentPhotoId(photo.id)}
-          onOpenDetails={(photo) => setDetailsPhotoId(photo.id)}
           onIndexChange={setLiveIndex}
           reduceMotion={reduceMotion}
           projectName={projectDetails?.name || ''}
@@ -751,16 +744,11 @@ export default function SwipeScreen() {
         onClose={closeComments}
         onSubmit={addComment}
         onReact={reactToComment}
+        onSaveDetails={saveDetails}
         raterName={raterName}
         autoCloseOnPost={!!commentPhotoId && !postedPhotos.current.has(commentPhotoId)}
       />
 
-      <DetailsSheet
-        photo={photos.find((p) => p.id === detailsPhotoId) ?? null}
-        onClose={() => setDetailsPhotoId(null)}
-        onSave={saveDetails}
-        autoCloseOnSave={!!detailsPhotoId && !savedPhotos.current.has(detailsPhotoId)}
-      />
 
       {/* Keep the button that opened a sheet BRIGHT above that sheet's dimming
           backdrop: a lit copy sits exactly over the (now-dimmed) real button.
@@ -774,16 +762,6 @@ export default function SwipeScreen() {
               <CommentIcon active />
             </View>
             <Text style={styles.controlLabel}>Comment</Text>
-          </View>
-        </View>
-      )}
-      {detailsPhotoId && (
-        <View style={styles.spotlightRow} pointerEvents="none">
-          <View style={[styles.controlColumn, quarterCenterStyle(bandLeftApp + (bandApp * 5) / 6)]}>
-            <View style={[styles.glassCircle, glassSurface, glassBlur, styles.navButtonContrast]}>
-              <DetailsIcon />
-            </View>
-            <Text style={styles.controlLabel}>Details</Text>
           </View>
         </View>
       )}
@@ -820,7 +798,7 @@ export default function SwipeScreen() {
         ringSize={96}
         interactive
         stepIndex={1}
-        stepCount={6}
+        stepCount={5}
         onSkip={finishTour}
         onBack={() => goTourStep('welcome')}
         screenWidth={width}
@@ -837,14 +815,14 @@ export default function SwipeScreen() {
         onSkip={finishTour}
         onBack={() => goTourStep('arrows')}
         stepIndex={2}
-        stepCount={6}
+        stepCount={5}
         screenWidth={width}
         screenHeight={height}
       />
       <CoachMark
         visible={tourStep === 'comments'}
         title="Sharing a memory"
-        text="Tap the speech bubble to write a memory about the photo you are looking at."
+        text="Tap the speech bubble to write a memory about this photo, and to say when and where it was taken. Even just the year helps."
         anchor={{ x: bandLeftApp + bandApp / 6, y: height - 54 }}
         pulseNode={<CommentIcon active />}
         buttonLabel="Next"
@@ -852,22 +830,7 @@ export default function SwipeScreen() {
         onSkip={finishTour}
         onBack={() => goTourStep('favourites')}
         stepIndex={3}
-        stepCount={6}
-        screenWidth={width}
-        screenHeight={height}
-      />
-      <CoachMark
-        visible={tourStep === 'details'}
-        title="When and where"
-        text="Tap this button to tell us when and where a photo was taken. Even just the year helps."
-        anchor={{ x: bandLeftApp + (bandApp * 5) / 6, y: height - 54 }}
-        pulseNode={<DetailsIcon />}
-        buttonLabel="Next"
-        onNext={advanceTour}
-        onSkip={finishTour}
-        onBack={() => goTourStep('comments')}
-        stepIndex={4}
-        stepCount={6}
+        stepCount={5}
         screenWidth={width}
         screenHeight={height}
       />
@@ -878,10 +841,10 @@ export default function SwipeScreen() {
         anchor={{ x: width - 78, y: 33 }}
         ringSize={52}
         interactive
-        stepIndex={5}
-        stepCount={6}
+        stepIndex={4}
+        stepCount={5}
         onSkip={finishTour}
-        onBack={() => goTourStep('details')}
+        onBack={() => goTourStep('comments')}
         screenWidth={width}
         screenHeight={height}
       />
@@ -892,8 +855,8 @@ export default function SwipeScreen() {
         anchor={{ x: gridCellApp / 2, y: 84 + gridCellApp / 2 }}
         box={{ left: 0, top: 84, width: gridCellApp, height: gridCellApp }}
         interactive
-        stepIndex={5}
-        stepCount={6}
+        stepIndex={4}
+        stepCount={5}
         onSkip={finishTour}
         screenWidth={width}
         screenHeight={height}
@@ -908,8 +871,8 @@ export default function SwipeScreen() {
         onNext={advanceTour}
         onSkip={finishTour}
         onBack={() => goTourStep('grid')}
-        stepIndex={6}
-        stepCount={6}
+        stepIndex={5}
+        stepCount={5}
         screenWidth={width}
         screenHeight={height}
       />
@@ -1124,7 +1087,6 @@ type PhotoDeckProps = {
   navEnabled?: boolean;
   onToggleFavorite: (photo: Photo) => void;
   onOpenComments: (photo: Photo) => void;
-  onOpenDetails: (photo: Photo) => void;
   onIndexChange?: (index: number) => void;
   reduceMotion: boolean;
   projectName: string;
@@ -1174,7 +1136,6 @@ function PhotoDeck({
   navEnabled = true,
   onToggleFavorite,
   onOpenComments,
-  onOpenDetails,
   onIndexChange,
   reduceMotion,
   projectName,
@@ -1435,8 +1396,8 @@ function PhotoDeck({
         </View>
       </View>
 
-      {/* Three labelled glass buttons, evenly spread: Comment (left),
-          Favourites (centre), Details (right). All read off `currentPhoto`. */}
+      {/* Two labelled glass buttons: Comment (left, also holds when-and-where
+          since the sheets merged) and Favourites (centre, the hero). */}
       <View style={styles.controlsRow} pointerEvents="box-none">
         <View style={[styles.controlSlot, quarterCenterStyle(bandLeft + band / 6)]}>
           {currentPhoto && (
@@ -1453,7 +1414,7 @@ function PhotoDeck({
                 style={commentPulseStyle}
               >
                 <View style={[styles.glassCircle, glassSurface, glassBlur, styles.navButtonContrast]}>
-                  <CommentIcon active={currentPhoto.comments.length > 0} />
+                  <CommentIcon active={currentPhoto.comments.length > 0 || !!(currentPhoto.photoDate || currentPhoto.location)} />
                 </View>
               </PressableScale>
               {currentPhoto.comments.length > 0 && (
@@ -1489,22 +1450,6 @@ function PhotoDeck({
           )}
         </View>
 
-        <View style={[styles.controlSlot, quarterCenterStyle(bandLeft + (band * 5) / 6)]} pointerEvents="box-none">
-          {currentPhoto && (
-            <View style={styles.controlColumn}>
-              <PressableScale
-                onPress={() => onOpenDetails(currentPhoto)}
-                scaleTo={0.96}
-                hitSlop={12}
-              >
-                <View style={[styles.glassCircle, glassSurface, glassBlur, styles.navButtonContrast]}>
-                  <DetailsIcon active={!!(currentPhoto.photoDate || currentPhoto.location)} />
-                </View>
-              </PressableScale>
-              <Text style={styles.controlLabel}>Details</Text>
-            </View>
-          )}
-        </View>
       </View>
     </View>
   );
@@ -1609,23 +1554,6 @@ function CommentIcon({ active }: { active: boolean }) {
     );
   }
   return <View style={[styles.commentIconFallback, active && { borderColor: colors.comment }]} />;
-}
-
-// Small info glyph for the details chip: a circle with an "i". Web-only inline
-// SVG (same escape hatch as CommentIcon/NavChevron); native falls back to a
-// bordered circle.
-function DetailsIcon({ active = false }: { active?: boolean }) {
-  const color = active ? colors.detail : 'rgba(255, 255, 255, 0.85)';
-  if (Platform.OS === 'web') {
-    return React.createElement(
-      'svg',
-      { width: 26, height: 26, viewBox: '0 0 20 20' },
-      React.createElement('circle', { cx: 10, cy: 10, r: 8, stroke: color, strokeWidth: 1.5, fill: 'none' }),
-      React.createElement('circle', { cx: 10, cy: 6.2, r: 1, fill: color }),
-      React.createElement('path', { d: 'M10 9 L10 14', stroke: color, strokeWidth: 1.5, strokeLinecap: 'round' })
-    );
-  }
-  return <View style={[styles.detailsIconFallback, active && { borderColor: colors.detail }]} />;
 }
 
 type EndOfDeckSlideProps = {
@@ -2402,13 +2330,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.18)',
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.36)',
-  },
-  detailsIconFallback: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 1.6,
-    borderColor: 'rgba(255, 255, 255, 0.85)',
   },
   // Pink heart glyph that swells during the favourites tour step.
   tourPulseHeart: {
