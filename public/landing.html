@@ -188,24 +188,15 @@
       background: linear-gradient(to bottom, rgba(0,0,0,0.3), transparent, rgba(0,0,0,0.6));
     }
 
-    .hero-fluid-canvas {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 5;
-      pointer-events: none;
-    }
-
     /* Device mockup: a live CSS/JS recreation of the real swipe/heart/comment
        interaction from app/app.tsx (blurred-photo card, heart burst on
        favourite, comment bubble reveal) -- not a screen recording or
        generated video. Colors match constants/theme.ts exactly: goldWarm
        #C49A6C, heart #E8536B, comment #4FCE7E, ink #1A1613. Fully CSS-keyframe
        driven on a single 7s loop so it never needs a video file and always
-       loops perfectly. Sits above the atmosphere/fluid-cursor layer (z-index
-       8) but below the hero text (z-index 10), so the headline always wins
-       if they ever overlap. */
+       loops perfectly. Sits above the atmosphere layers (z-index 8) but below
+       the hero text (z-index 10), so the headline always wins if they ever
+       overlap. */
     /* Grid item spanning both text rows: align-self:stretch pins its TOP to
        the tagline's top and its BOTTOM to the wordmark's bottom by
        construction, at every viewport width -- the height is the text
@@ -2024,8 +2015,7 @@
          nothing interactive is touched. */
       .hero-video-container,
       .hero-noise,
-      .hero-gradient,
-      .hero-fluid-canvas {
+      .hero-gradient {
         -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent 98%);
         mask-image: linear-gradient(to bottom, #000 72%, transparent 98%);
       }
@@ -2356,15 +2346,7 @@
       <!-- Gradient Overlay -->
       <div class="hero-gradient"></div>
 
-      <!-- Liquid-light cursor reaction. Real-time WebGL fluid simulation
-           (PavelDoGreat/WebGL-Fluid-Simulation, MIT), retuned to a warm
-           gold palette -- see public/vendor/fluid-sim.js for the full
-           adaptation notes. Click-through (pointer-events:none) so it never
-           blocks the nav or CTA; auto-skipped on touch devices and under
-           prefers-reduced-motion. -->
-      <canvas id="fluid-canvas" class="hero-fluid-canvas"></canvas>
-
-      <!-- Film grain over the video + fluid light, below the hero content. -->
+      <!-- Film grain over the video, below the hero content. -->
       <div class="film-grain" aria-hidden="true"></div>
 
       <!-- Navbar -->
@@ -2775,22 +2757,6 @@
   </footer>
 
   <script>
-    // Liquid-light cursor: skip entirely on touch (no cursor to react to) and
-    // under prefers-reduced-motion. The script is never even downloaded in
-    // those cases, not just hidden.
-    (function () {
-      var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      var touch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      var canvas = document.getElementById('fluid-canvas');
-      if (reduced || touch) {
-        canvas.remove();
-        return;
-      }
-      var s = document.createElement('script');
-      s.src = '/vendor/fluid-sim.js';
-      document.body.appendChild(s);
-    })();
-
     // Reveal the "back to your memorial" nav item only when this device already
     // has an active project (same localStorage key the app uses).
     try {
