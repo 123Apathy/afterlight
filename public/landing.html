@@ -1785,8 +1785,11 @@
       /* Soft left-anchored scrim behind the hero text so the copy stays
          legible where its lines cross over the phone, and the text zone reads
          as its own tonal layer -- turning the overlap into deliberate depth
-         rather than a collision. Sits behind the phone (z-index 0 < phone 1 <
-         text 2). */
+         rather than a collision. Now that the mock spans the full right
+         column, the scrim must sit ABOVE the phone and BELOW the text
+         (phone 1 < scrim 2 < text 3 < wordmark 4), so the gradient's tail
+         gently dims the phone's left edge exactly where the paragraph's
+         line-ends cross its bright, Ken-Burns-moving photo. */
       .hero-content::before {
         content: '';
         position: absolute;
@@ -1794,10 +1797,11 @@
         bottom: -8px;
         left: -4px;
         width: 76%;
-        z-index: 0;
+        z-index: 2;
         background: linear-gradient(102deg, rgba(10, 8, 7, 0.74) 44%, rgba(10, 8, 7, 0.34) 66%, transparent 84%);
         pointer-events: none;
       }
+      .phone-mock { z-index: 1; }
 
       .hero-title {
         /* The wordmark is a single unbreakable word, and its box is never
@@ -1828,9 +1832,10 @@
       /* The page's only conversion action, on the device almost every
          visitor uses. It was previously shrunk to 9.5px text on a ~26px
          pill so it would fit beside .phone-mock -- a decoration sizing
-         the action. Now the button keeps a real, tappable size (44px
-         tall: 36px icon + 4px padding either side) and the mock gives up
-         the space instead. */
+         the action. The button keeps a real, tappable size (44px tall:
+         36px icon + 4px padding either side); where its right end crosses
+         the (pointer-events:none, lower z) mock it simply renders on top,
+         so neither element sizes the other. */
       .hero-btn-text {
         font-size: 15px;
         padding-left: 20px;
@@ -1850,20 +1855,30 @@
         padding: 4px 4px 4px 0;
       }
 
-      /* On mobile, pin the phone's TOP to the hero heading's top and its BOTTOM
-         to the CTA button (its height spans the tagline+desc+CTA block).
-         position:absolute re-asserted here because the desktop base is now a
-         relative grid item; the containing block (.hero-content) is unchanged,
-         so these coordinates mean what they always did. */
+      /* On mobile the phone owns the right column at full height, mirroring
+         the desktop composition, instead of the shrunken 196px stamp it was
+         (a previous pass shrank it 306 -> 196 so the CTA could stay one line
+         BESIDE it, which protected the button and orphaned the layout: a
+         ~90px-wide mock floating next to the copy with dead space under it).
+         The CTA no longer negotiates for width because overlap is safe by
+         construction, which is this hero's established language everywhere
+         else: the mock is pointer-events:none and z-index 2, the text block
+         and its button sit above at z-index 3, and the wordmark wins over
+         everything at 4. Where the pill's right end crosses the frame's
+         lower-left edge it reads as the same deliberate layering the desktop
+         wordmark-over-phone does.
+         Height: 44vh tracks the tagline+desc+CTA block on ordinary phones
+         (bottom lands just above the wordmark), clamped so short phones still
+         get a real phone (300px) and tall ones never push it into the
+         wordmark's row (380px).
+         position:absolute re-asserted because the desktop base is a relative
+         grid item; the containing block (.hero-content) is unchanged. */
       .phone-mock {
         position: absolute;
         left: auto;
         top: 82px;
         transform: none;
-        /* 306px -> 196px: the mock is proof-of-product on a page whose job
-           is one tap, so it yields the width the CTA needs to stay one line.
-           width:auto keeps its aspect, so this frees horizontal room too. */
-        height: 196px;
+        height: clamp(300px, 44vh, 380px);
         width: auto;
         right: 8px;
       }
