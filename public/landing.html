@@ -901,7 +901,13 @@
 
     .about-heading {
       color: var(--primary);
-      font-size: clamp(2rem, 5vw, 4.5rem);
+      /* One continuous curve at every width. The old ≤768 override (a fixed
+         1.875rem) met the fluid size in a hard cliff at the breakpoint:
+         640-768px windows got a small heading that fitted ONE line, then
+         769px snapped to the designed two-line lockup. Resizing across it
+         showed two different sections. The lower bound keeps phones at the
+         same 30px they had. */
+      font-size: clamp(1.875rem, 5vw, 4.5rem);
       max-width: 48rem;
       margin: 0 auto;
       line-height: 0.95;
@@ -2034,10 +2040,6 @@
         mask-image: linear-gradient(to bottom, #000 72%, transparent 98%);
       }
 
-      .about-heading {
-        font-size: 1.875rem;
-      }
-
       .features {
         padding: 64px 16px;
       }
@@ -2481,7 +2483,11 @@
         <!-- The gold italic phrase wraps as ONE unit (nowrap) so the line
              break can never split it mid-phrase ("never / in one place"
              was landing wherever the width happened to run out). -->
-        <h2 class="about-heading" id="about-heading"><span class="word">The</span> <span class="word">best</span> <span style="white-space:nowrap"><span class="word">photos</span> <span class="word">are</span></span> <span style="white-space:nowrap"><span class="word italic-text">never</span> <span class="word italic-text">in</span> <span class="word italic-text">one</span> <span class="word italic-text">place.</span></span></h2>
+        <!-- Explicit break: the two-line lockup IS the design. Without it,
+             mid-size windows fitted the whole heading on one line and the
+             section flipped composition while resizing. Both halves fit one
+             line each down to a 360px viewport at the clamp's lower bound. -->
+        <h2 class="about-heading" id="about-heading"><span style="white-space:nowrap"><span class="word">The</span> <span class="word">best</span> <span class="word">photos</span> <span class="word">are</span></span><br /><span style="white-space:nowrap"><span class="word italic-text">never</span> <span class="word italic-text">in</span> <span class="word italic-text">one</span> <span class="word italic-text">place.</span></span></h2>
         <div class="streak-divider" aria-hidden="true"></div>
 
         <div class="about-body" id="about-body">When someone we love passes, grief scatters the family, and the memories scatter with it, spread across a hundred phones. Everlit gathers both into one gentle place, so nothing is lost.</div>
