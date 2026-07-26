@@ -525,7 +525,12 @@ app.post('/api/projects/:projectId/members', rateLimit(30), requireInvite(projec
     }
 
     const member = await findOrCreateMember(req.params.projectId, trimmed);
-    res.json(mapMember(member, { withToken: true }));
+    // Trust boundary: bare name entry may ADOPT an owner member (it is how
+    // the creator's attribution stays continuous on a new device), but it
+    // never receives the owner's transfer token -- that would let anyone who
+    // typed the creator's name mint owner "keep your place" links. Owners
+    // move devices via their existing keep-place link or the claim token.
+    res.json(mapMember(member, { withToken: member.role !== 'owner' }));
   } catch (err) {
     next(err);
   }
