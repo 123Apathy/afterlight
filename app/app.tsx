@@ -757,7 +757,7 @@ export default function SwipeScreen() {
           it, so it never overlaps the sheet itself. */}
       {commentPhotoId && (
         <View style={styles.spotlightRow} pointerEvents="none">
-          <View style={[styles.controlColumn, quarterCenterStyle(bandLeftApp + bandApp / 6)]}>
+          <View style={[styles.controlColumn, quarterCenterStyle(bandLeftApp + bandApp / 8)]}>
             <View style={[styles.glassCircle, glassSurface, glassBlur, styles.navButtonContrast]}>
               <CommentIcon active />
             </View>
@@ -794,7 +794,7 @@ export default function SwipeScreen() {
         visible={tourStep === 'arrows'}
         title="Moving between photos"
         text="Tap the bright arrow to see the next photo."
-        anchor={{ x: bandLeftApp + (bandApp * 2) / 3, y: height - 132 }}
+        anchor={{ x: bandLeftApp + (bandApp * 5) / 8, y: height - 54 }}
         ringSize={96}
         interactive
         stepIndex={1}
@@ -808,7 +808,7 @@ export default function SwipeScreen() {
         visible={tourStep === 'favourites'}
         title="The heart"
         text="When a photo touches you, tap the heart. The whole family will see which moments matter."
-        anchor={{ x: bandLeftApp + bandApp / 2, y: height - 54 }}
+        anchor={{ x: bandLeftApp + (bandApp * 7) / 8, y: height - 54 }}
         pulseNode={<Text style={styles.tourPulseHeart}>♥</Text>}
         buttonLabel="Next"
         onNext={advanceTour}
@@ -823,7 +823,7 @@ export default function SwipeScreen() {
         visible={tourStep === 'comments'}
         title="Sharing a memory"
         text="Tap the speech bubble to write a memory about this photo, and to say when and where it was taken. Even just the year helps."
-        anchor={{ x: bandLeftApp + bandApp / 6, y: height - 54 }}
+        anchor={{ x: bandLeftApp + bandApp / 8, y: height - 54 }}
         pulseNode={<CommentIcon active />}
         buttonLabel="Next"
         onNext={advanceTour}
@@ -1267,7 +1267,7 @@ function PhotoDeck({
     });
   }, [atEnd, reduceMotion]);
   const prevShiftStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: endArrows.value * (width / 2 - (bandLeft + band / 3)) }],
+    transform: [{ translateX: endArrows.value * (width / 2 - (bandLeft + (band * 3) / 8)) }],
   }));
   const nextFadeStyle = useAnimatedStyle(() => ({ opacity: 1 - endArrows.value }));
 
@@ -1365,41 +1365,13 @@ function PhotoDeck({
         pointerEvents="none"
       />
 
-      {/* Prev/Next: their own row, nudged up above the labelled action
-          buttons, spread wider toward the edges, and a touch bigger. Bare
-          arrows on purpose -- direction reads instantly, and the three
-          labelled buttons below are the primary action family. */}
-      <View style={styles.navRowUp} pointerEvents="box-none">
-        <View style={quarterCenterStyle(bandLeft + band / 3)}>
-          <Animated.View style={prevShiftStyle}>
-            <PressableScale
-              onPress={() => goTo(index - 1)}
-              scaleTo={0.9}
-              hitSlop={10}
-              style={[styles.navButtonBig, glassSurface, glassBlur, styles.navButtonLight, index === 0 && styles.navButtonDisabled]}
-            >
-              <NavChevron direction="left" />
-            </PressableScale>
-          </Animated.View>
-        </View>
-        <View style={quarterCenterStyle(bandLeft + (band * 2) / 3)} pointerEvents={atEnd ? 'none' : 'box-none'}>
-          <Animated.View style={nextFadeStyle}>
-            <PressableScale
-              onPress={() => goTo(index + 1)}
-              scaleTo={0.9}
-              hitSlop={10}
-              style={[styles.navButtonBig, glassSurface, glassBlur, styles.navButtonLight, index === lastIndex && styles.navButtonDisabled]}
-            >
-              <NavChevron direction="right" />
-            </PressableScale>
-          </Animated.View>
-        </View>
-      </View>
-
-      {/* Two labelled glass buttons: Comment (left, also holds when-and-where
-          since the sheets merged) and Favourites (centre, the hero). */}
+      {/* One row of four, evenly spread at eighths of the band: Comment on
+          the left, the Prev/Next pair dead centre (movement is the deck's
+          core act, so it owns the middle), Favourites on the right. Arrows
+          stay bare and bigger -- direction reads instantly, and the two
+          labelled buttons flanking them are the action family. */}
       <View style={styles.controlsRow} pointerEvents="box-none">
-        <View style={[styles.controlSlot, quarterCenterStyle(bandLeft + band / 6)]}>
+        <View style={[styles.controlSlot, quarterCenterStyle(bandLeft + band / 8)]}>
           {currentPhoto && (
             <View style={styles.controlColumn}>
               <Animated.View style={[styles.commentGlow, commentGlowStyle]} pointerEvents="none">
@@ -1427,7 +1399,33 @@ function PhotoDeck({
           )}
         </View>
 
-        <View style={[styles.controlSlot, quarterCenterStyle(bandLeft + band / 2)]} pointerEvents="box-none">
+        <View style={[styles.controlSlot, quarterCenterStyle(bandLeft + (band * 3) / 8)]}>
+          <Animated.View style={prevShiftStyle}>
+            <PressableScale
+              onPress={() => goTo(index - 1)}
+              scaleTo={0.9}
+              hitSlop={10}
+              style={[styles.navButtonBig, glassSurface, glassBlur, styles.navButtonLight, index === 0 && styles.navButtonDisabled]}
+            >
+              <NavChevron direction="left" />
+            </PressableScale>
+          </Animated.View>
+        </View>
+
+        <View style={[styles.controlSlot, quarterCenterStyle(bandLeft + (band * 5) / 8)]} pointerEvents={atEnd ? 'none' : 'box-none'}>
+          <Animated.View style={nextFadeStyle}>
+            <PressableScale
+              onPress={() => goTo(index + 1)}
+              scaleTo={0.9}
+              hitSlop={10}
+              style={[styles.navButtonBig, glassSurface, glassBlur, styles.navButtonLight, index === lastIndex && styles.navButtonDisabled]}
+            >
+              <NavChevron direction="right" />
+            </PressableScale>
+          </Animated.View>
+        </View>
+
+        <View style={[styles.controlSlot, quarterCenterStyle(bandLeft + (band * 7) / 8)]} pointerEvents="box-none">
           {currentPhoto && (
             <View style={styles.controlColumn}>
               <Animated.View style={[styles.glowPulse, glowStyle]} pointerEvents="none">
@@ -2306,16 +2304,9 @@ const styles = StyleSheet.create({
   // screen - (bottom + height) = screen - 172); the buttons grew 30% larger
   // downward, so bottom dropped from 110 to 92 while 92 + 80 == 172 holds the
   // top steady.
-  navRowUp: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 92,
-    height: 80,
-  },
   // Biggest touch target of all (older users navigate constantly). 30% larger
   // than before (62 -> 80). Keeps the lighter navButtonLight fill so it still
-  // recedes a touch versus Favourites, but its border now matches the bottom
+  // recedes a touch versus Favourites, but its border now matches the row's
   // three (see navButtonLight).
   navButtonBig: {
     width: 80,
