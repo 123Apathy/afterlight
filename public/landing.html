@@ -1155,13 +1155,20 @@
       position: absolute;
       left: 14%;
       right: 14%;
-      top: 40%;
+      /* Anchored to the pane's BOTTOM, not top 40%: the bubble's text wraps
+         differently at every card width, so a top-anchored group grew
+         downward until the send button clipped the pane's bottom edge on
+         tall wraps. Bottom-anchored it grows upward into open space. */
+      bottom: 9%;
       opacity: 0;
       transform: translateY(6px);
       animation: invWaFade 14s -4s infinite;
     }
-    /* A little WhatsApp chat header so the bubble reads as a real conversation. */
-    .invfx-wa-head { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+    /* A little WhatsApp chat header so the bubble reads as a real conversation.
+       Indented past the card's corner icon disc (fixed px at left 20-60):
+       bottom-anchoring lets the group top rise on short panes, and the head
+       row is the only part that reaches the disc's band. */
+    .invfx-wa-head { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; margin-left: 30px; }
     .invfx-wa-avatar {
       width: 24px;
       height: 24px;
@@ -1202,9 +1209,10 @@
       animation: invTicksIn 14s -4s infinite;
     }
     .invfx-wa-send {
-      position: absolute;
-      right: 0;
-      bottom: -12px;
+      /* In flow below the bubble (was absolute at bottom:-12px, which sat on
+         the bubble's meta row -- over the blue read ticks -- whenever the
+         message wrapped short). margin-left:auto right-aligns it. */
+      margin: 8px 0 0 auto;
       width: 32px;
       height: 32px;
       border-radius: 50%;
