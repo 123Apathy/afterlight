@@ -422,7 +422,18 @@ async function seedProjectKanban(projectId) {
 
 app.post('/api/projects', rateLimit(5), async (req, res, next) => {
   try {
-    const { name, contact } = req.body || {};
+    const { name, contact, startCode } = req.body || {};
+    // Concierge gate: every memorial starts with a conversation with the
+    // operator. Creation needs the private start code (EVERLIT_CREATE_CODE,
+    // known to the operator via the /app?start=<code> link). Fails CLOSED
+    // when the env var is missing -- a silent open gate is worse than a loud
+    // closed one.
+    const createCode = process.env.EVERLIT_CREATE_CODE || '';
+    if (!createCode || startCode !== createCode) {
+      return res.status(403).json({
+        error: 'Creating a memorial starts with a conversation. Message us on WhatsApp at 062 660 7269.',
+      });
+    }
     if (!name || typeof name !== 'string' || !name.trim()) {
       return res.status(400).json({ error: 'name is required' });
     }

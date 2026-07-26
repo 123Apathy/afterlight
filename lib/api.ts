@@ -234,11 +234,11 @@ export function keepPlaceUrl(project: Project | { inviteCode: string }, transfer
 }
 
 export const api = {
-  createProject: (name: string, contact?: string) =>
+  createProject: (name: string, contact?: string, startCode?: string) =>
     request<Project>('/api/projects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, contact }),
+      body: JSON.stringify({ name, contact, startCode }),
     }),
 
   getProject: (projectId: string) => request<Project>(`/api/projects/${projectId}`),

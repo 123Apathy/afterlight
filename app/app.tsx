@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -63,6 +63,12 @@ export default function SwipeScreen() {
   const gridCellApp = (width - 2 * (gridColsApp - 1)) / gridColsApp;
   const reduceMotion = useReducedMotion();
   const { projectId, setProject, known, activeEntry, rememberMember } = useActiveProject();
+  // Concierge gate: creation is operator-led. The create form only appears
+  // with the private start link (/app?start=<code>); everyone else gets a
+  // warm "begin with a conversation" screen. The server enforces the code
+  // too -- this is presentation, not the lock.
+  const { start } = useLocalSearchParams<{ start?: string }>();
+  const startCode = typeof start === 'string' ? start : undefined;
   const [raterName, setRaterName] = useLocalStorage('everlit.rater', '');
   // Durable identity for the active memorial (minted server-side when the
   // person enters their name). Writes carry it; the name stays the display.
@@ -250,7 +256,7 @@ export default function SwipeScreen() {
     if (creatingProject || !newProjectName.trim()) return;
     setCreatingProject(true);
     try {
-      const created = await api.createProject(newProjectName.trim(), newProjectContact.trim() || undefined);
+      const created = await api.createProject(newProjectName.trim(), newProjectContact.trim() || undefined, startCode);
       setProject(created);
       setNewProjectName('');
       setNewProjectContact('');
@@ -570,46 +576,71 @@ export default function SwipeScreen() {
               <Text style={styles.gateSubtitle}>
                 {copy.landing.subtitle}
               </Text>
-              <TextInput
-                value={newProjectName}
-                onChangeText={setNewProjectName}
-                accessibilityLabel="The name of the person being remembered"
-                placeholder="Their name…"
-                placeholderTextColor={colors.textFaintest}
-                style={[styles.gateInput, inputFocused && styles.gateInputFocused]}
-                onFocus={() => setInputFocused(true)}
-                onBlur={() => setInputFocused(false)}
-                onSubmitEditing={handleCreateProject}
-              />
-              {/* Not a sign-up field: an optional way to reach the creator.
-                  Deliberately says nothing about the film or payment -- that
-                  conversation happens person-to-person on WhatsApp. */}
-              <TextInput
-                value={newProjectContact}
-                onChangeText={setNewProjectContact}
-                accessibilityLabel="Your WhatsApp number or email, so we can stay in touch, optional"
-                placeholder="Your WhatsApp number or email (optional)"
-                placeholderTextColor={colors.textFaintest}
-                style={styles.gateInput}
-                onSubmitEditing={handleCreateProject}
-              />
-              <GoldButton
-                label={creatingProject ? 'Creating…' : 'Begin'}
-                onPress={handleCreateProject}
-                style={styles.gateButton}
-              />
-              <Text style={styles.gateTerms}>
-                By beginning, you agree to our{' '}
-                <Text
-                  style={styles.gateTermsLink}
-                  onPress={() => {
-                    if (typeof window !== 'undefined') window.open('https://everlit.co.za/terms', '_blank');
-                  }}
-                >
-                  Terms &amp; Conditions
-                </Text>
-                .
-              </Text>
+              {startCode ? (
+                <>
+                  <TextInput
+                    value={newProjectName}
+                    onChangeText={setNewProjectName}
+                    accessibilityLabel="The name of the person being remembered"
+                    placeholder="Their name…"
+                    placeholderTextColor={colors.textFaintest}
+                    style={[styles.gateInput, inputFocused && styles.gateInputFocused]}
+                    onFocus={() => setInputFocused(true)}
+                    onBlur={() => setInputFocused(false)}
+                    onSubmitEditing={handleCreateProject}
+                  />
+                  {/* Not a sign-up field: an optional way to reach the creator.
+                      Deliberately says nothing about the film or payment -- that
+                      conversation happens person-to-person on WhatsApp. */}
+                  <TextInput
+                    value={newProjectContact}
+                    onChangeText={setNewProjectContact}
+                    accessibilityLabel="Your WhatsApp number or email, so we can stay in touch, optional"
+                    placeholder="Your WhatsApp number or email (optional)"
+                    placeholderTextColor={colors.textFaintest}
+                    style={styles.gateInput}
+                    onSubmitEditing={handleCreateProject}
+                  />
+                  <GoldButton
+                    label={creatingProject ? 'Creating…' : 'Begin'}
+                    onPress={handleCreateProject}
+                    style={styles.gateButton}
+                  />
+                  <Text style={styles.gateTerms}>
+                    By beginning, you agree to our{' '}
+                    <Text
+                      style={styles.gateTermsLink}
+                      onPress={() => {
+                        if (typeof window !== 'undefined') window.open('https://everlit.co.za/terms', '_blank');
+                      }}
+                    >
+                      Terms &amp; Conditions
+                    </Text>
+                    .
+                  </Text>
+                </>
+              ) : (
+                <>
+                  {/* Concierge path: creation is operator-led, so the public
+                      screen offers the conversation, not a form. */}
+                  <GoldButton
+                    label="Message Deon on WhatsApp"
+                    onPress={() => {
+                      if (typeof window !== 'undefined') {
+                        window.open(
+                          'https://wa.me/27626607269?text=Hi%20Deon%2C%20I%27d%20like%20to%20create%20a%20memorial%20with%20Everlit.%20Could%20you%20help%20me%20get%20started%3F',
+                          '_blank'
+                        );
+                      }
+                    }}
+                    style={styles.gateButton}
+                  />
+                  <Text style={styles.gatePrivacy}>
+                    Every memorial begins with a conversation. Deon sets yours up with you and sends
+                    your family&rsquo;s private link.
+                  </Text>
+                </>
+              )}
 
               {known.length > 0 && (
                 <View style={styles.knownBlock}>
