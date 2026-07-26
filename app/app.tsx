@@ -33,6 +33,10 @@ import { showToast } from '../components/Toast';
 import { absoluteFill, colors, copy, images, stageWidth, CONTROLS_BAND_MAX } from '../constants/theme';
 import { DEMO, DEMO_PHOTOS } from '../constants/demo';
 
+// Relation chips offered at the "Who's here?" gate. Short and warm; Other
+// opens a free-text field for everything else.
+const RELATION_OPTIONS = ['Spouse', 'Child', 'Grandchild', 'Sibling', 'Cousin', 'Friend', 'Other'];
+
 // Dev-only: append ?loading=1 to the URL to hold the loading screen on screen
 // (so its design can be iterated). Never true in a normal session.
 const FORCE_LOADING =
@@ -74,6 +78,10 @@ export default function SwipeScreen() {
   // person enters their name). Writes carry it; the name stays the display.
   const memberId = activeEntry?.memberId;
   const [nameDraft, setNameDraft] = useState('');
+  // Relation to the person, declared alongside the name: one tap on a chip,
+  // or Other with a few words. Optional -- never a gate within the gate.
+  const [relationChoice, setRelationChoice] = useState('');
+  const [relationOther, setRelationOther] = useState('');
   // Gentle hint when Enter is tapped with no name (mirrors tribute's fix).
   const [nameGateHint, setNameGateHint] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
@@ -109,8 +117,6 @@ export default function SwipeScreen() {
     | 'arrows'
     | 'favourites'
     | 'comments'
-    | 'grid'
-    | 'gridInfo'
     | 'menu'
     | 'done';
   const [tourStep, setTourStep] = useState<TourStep>(null);
@@ -124,12 +130,21 @@ export default function SwipeScreen() {
   // The photo index when the final 'arrows' step began, so we can tell when the
   // user has actually moved to the next photo and end the tour.
   const arrowsStartIndex = useRef<number | null>(null);
-  // Photos that have already had a comment posted / details saved this session.
-  // The sheet auto-closes only the FIRST time either action happens for a
-  // photo; after that it stays open so people can keep adding without it
-  // shutting each time.
-  const postedPhotos = useRef<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'deck' | 'grid'>('deck');
+  // The grid is a REWARD: locked until this device has been through every
+  // photo once (reached the closing slide), per memorial.
+  const gridKey = projectId ? `everlit.gridUnlocked.${projectId}` : '';
+  const [gridUnlocked, setGridUnlocked] = useState(false);
+  // One-time coach mark the moment the grid unlocks.
+  const [gridReveal, setGridReveal] = useState(false);
+  useEffect(() => {
+    if (!gridKey) return;
+    try {
+      setGridUnlocked(typeof localStorage !== 'undefined' && localStorage.getItem(gridKey) === 'true');
+    } catch {
+      /* storage blocked: stays locked until the end slide this session */
+    }
+  }, [gridKey]);
   const [deckIndex, setDeckIndex] = useState(0);
   // Mirrors PhotoDeck's live swipe position for the header counter. Kept
   // separate from deckIndex, which is also used as PhotoDeck's remount key
@@ -238,9 +253,10 @@ export default function SwipeScreen() {
       setNameGateHint(true);
       return;
     }
+    const relation = relationChoice === 'Other' ? relationOther.trim() : relationChoice;
     setRaterName(name);
     api
-      .enterProject(projectId, name, activeEntry?.ownerClaimToken)
+      .enterProject(projectId, name, activeEntry?.ownerClaimToken, relation || undefined)
       .then((member) => {
         rememberMember(projectId, name, member);
         // The owner claim can hand back the creator's earlier display name
@@ -326,7 +342,6 @@ export default function SwipeScreen() {
     setPhotos((prev) =>
       prev.map((p) => (p.id === photo.id ? { ...p, comments: [...p.comments, optimistic] } : p))
     );
-    postedPhotos.current.add(photo.id);
     if (DEMO) return; // in-memory only, no backend
     try {
       await api.addComment(photo.id, raterName, text, memberId);
@@ -364,14 +379,8 @@ export default function SwipeScreen() {
     }
   }, [deckReady, tourDone, menuOpen, commentPhotoId]);
 
-  // Interactive steps advance when the user performs the action, not on a Next
-  // tap: open the grid, come back from it, and finally move to the next photo.
-  useEffect(() => {
-    if (tourStep === 'grid' && viewMode === 'grid') setTourStep('gridInfo');
-  }, [tourStep, viewMode]);
-  useEffect(() => {
-    if (tourStep === 'gridInfo' && viewMode === 'deck') setTourStep('menu');
-  }, [tourStep, viewMode]);
+  // The one interactive step advances when the user performs the action, not
+  // on a Next tap: move to the next photo.
   useEffect(() => {
     // 'arrows' asks them to tap next; the moment the photo index moves, the
     // core gesture is learned and the tour moves on to the heart.
@@ -416,14 +425,16 @@ export default function SwipeScreen() {
     setTourStep(step);
   };
 
-  // The "read + tap Next" slides. The interactive steps in between (arrows,
-  // grid, gridInfo) advance from the effects above, not here.
+  // The "read + tap Next" slides. The interactive arrows step advances from
+  // the effect above, not here. The grid is deliberately NOT in this chain
+  // anymore: it is the reward the closing card promises, unlocked by going
+  // through every photo.
   const advanceTour = () => {
     if (!tourGuard()) return;
     setTourStep((s) => {
       if (s === 'welcome') return 'arrows';
       if (s === 'favourites') return 'comments';
-      if (s === 'comments') return 'grid';
+      if (s === 'comments') return 'menu';
       if (s === 'menu') return 'done';
       return s;
     });
@@ -439,6 +450,20 @@ export default function SwipeScreen() {
   // top-left corner when you swipe back to a photo. A timing move so it reads
   // as one smooth glide, not a snap.
   const onEndSlide = photos.length > 0 && viewMode === 'deck' && liveIndex >= photos.length;
+
+  // Reaching the closing slide for the first time unlocks the grid and, when
+  // nothing else is open, celebrates it once with a coach mark on the newly
+  // revealed button.
+  useEffect(() => {
+    if (!onEndSlide || gridUnlocked || !gridKey) return;
+    try {
+      if (typeof localStorage !== 'undefined') localStorage.setItem(gridKey, 'true');
+    } catch {
+      /* storage blocked: unlock still applies for this session */
+    }
+    setGridUnlocked(true);
+    if (!tourStep && !menuOpen && !commentPhotoId) setGridReveal(true);
+  }, [onEndSlide, gridUnlocked, gridKey, tourStep, menuOpen, commentPhotoId]);
   const brandGrow = useSharedValue(0);
   useEffect(() => {
     brandGrow.value = withTiming(onEndSlide ? 1 : 0, {
@@ -758,6 +783,40 @@ export default function SwipeScreen() {
               style={styles.gateInput}
               onSubmitEditing={enterMemorial}
             />
+            {/* Relation chips: one tap covers most people; Other opens a small
+                free-text field. Tapping a selected chip clears it again. */}
+            <Text style={styles.relationLabel}>Your relation to them</Text>
+            <View style={styles.relationRow}>
+              {RELATION_OPTIONS.map((r) => {
+                const selected = relationChoice === r;
+                return (
+                  <PressableScale
+                    key={r}
+                    onPress={() => setRelationChoice(selected ? '' : r)}
+                    scaleTo={0.94}
+                    style={[styles.relationChip, selected && styles.relationChipActive]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Relation: ${r}`}
+                    accessibilityState={{ selected }}
+                  >
+                    <Text style={[styles.relationChipText, selected && styles.relationChipTextActive]}>
+                      {r}
+                    </Text>
+                  </PressableScale>
+                );
+              })}
+            </View>
+            {relationChoice === 'Other' && (
+              <TextInput
+                value={relationOther}
+                onChangeText={setRelationOther}
+                accessibilityLabel="Your relation to them, in your own words"
+                placeholder="In a word or two…"
+                placeholderTextColor="rgba(255,255,255,0.6)"
+                style={styles.gateInput}
+                onSubmitEditing={enterMemorial}
+              />
+            )}
             {/* "Come in", not "Enter": completes the doorway the screen opens
                 with ("Who's here?"), and "Enter" reads like a keyboard key. */}
             <GoldButton
@@ -843,7 +902,7 @@ export default function SwipeScreen() {
         onReact={reactToComment}
         onSaveDetails={saveDetails}
         raterName={raterName}
-        autoCloseOnPost={!!commentPhotoId && !postedPhotos.current.has(commentPhotoId)}
+        autoCloseOnPost
       />
 
 
@@ -895,7 +954,7 @@ export default function SwipeScreen() {
         ringSize={96}
         interactive
         stepIndex={1}
-        stepCount={5}
+        stepCount={4}
         onSkip={finishTour}
         onBack={() => goTourStep('welcome')}
         screenWidth={width}
@@ -912,7 +971,7 @@ export default function SwipeScreen() {
         onSkip={finishTour}
         onBack={() => goTourStep('arrows')}
         stepIndex={2}
-        stepCount={5}
+        stepCount={4}
         screenWidth={width}
         screenHeight={height}
       />
@@ -927,34 +986,7 @@ export default function SwipeScreen() {
         onSkip={finishTour}
         onBack={() => goTourStep('favourites')}
         stepIndex={3}
-        stepCount={5}
-        screenWidth={width}
-        screenHeight={height}
-      />
-      <CoachMark
-        visible={tourStep === 'grid'}
-        title="All the photos at once"
-        text="Tap this button in the corner to see every photo together."
-        anchor={{ x: width - 78, y: 33 }}
-        ringSize={52}
-        interactive
-        stepIndex={4}
-        stepCount={5}
-        onSkip={finishTour}
-        onBack={() => goTourStep('comments')}
-        screenWidth={width}
-        screenHeight={height}
-      />
-      <CoachMark
-        visible={tourStep === 'gridInfo'}
-        title="Back to one photo"
-        text="Tap any photo to open it large again."
-        anchor={{ x: gridCellApp / 2, y: 84 + gridCellApp / 2 }}
-        box={{ left: 0, top: 84, width: gridCellApp, height: gridCellApp }}
-        interactive
-        stepIndex={4}
-        stepCount={5}
-        onSkip={finishTour}
+        stepCount={4}
         screenWidth={width}
         screenHeight={height}
       />
@@ -967,19 +999,38 @@ export default function SwipeScreen() {
         buttonLabel="Next"
         onNext={advanceTour}
         onSkip={finishTour}
-        onBack={() => goTourStep('grid')}
-        stepIndex={5}
-        stepCount={5}
+        onBack={() => goTourStep('comments')}
+        stepIndex={4}
+        stepCount={4}
         screenWidth={width}
         screenHeight={height}
       />
+      {/* The closer doubles as the motivator: the grid is the reward for
+          going through every photo, promised here and revealed by the
+          unlock coach mark when they actually reach the end. */}
       <CoachMark
         visible={tourStep === 'done'}
-        title="That is everything"
-        text="Take all the time you need. This space is yours."
+        title="One more thing"
+        text="When you have been through every photo, the grid unlocks: every memory together, all at once. Take all the time you need. This space is yours."
         buttonLabel="Begin"
         onNext={finishTour}
         onBack={() => goTourStep('menu')}
+        screenWidth={width}
+        screenHeight={height}
+      />
+      {/* Not a tour step: fires once, the moment the grid unlocks. */}
+      <CoachMark
+        visible={gridReveal}
+        title="Every photo, all at once"
+        text="You have been through them all. The grid is now yours: every memory together in one view."
+        anchor={{ x: width - 78, y: 33 }}
+        ringSize={52}
+        buttonLabel="See them all"
+        onNext={() => {
+          setGridReveal(false);
+          setViewMode('grid');
+        }}
+        onSkip={() => setGridReveal(false)}
         screenWidth={width}
         screenHeight={height}
       />
@@ -1091,7 +1142,9 @@ export default function SwipeScreen() {
             </Animated.View>
           )}
           <View style={[styles.headerActions, { marginLeft: 'auto' }]}>
-            {photos.length > 0 && (
+            {/* The grid stays hidden until earned: going through every photo
+                once (reaching the closing slide) reveals it, per memorial. */}
+            {photos.length > 0 && gridUnlocked && (
               <ViewModeButton
                 mode={viewMode}
                 onPress={() => setViewMode((m) => (m === 'deck' ? 'grid' : 'deck'))}
@@ -2295,6 +2348,42 @@ const styles = StyleSheet.create({
     color: colors.goldWarm,
     textAlign: 'center',
     maxWidth: 360,
+  },
+  relationLabel: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 13,
+    color: colors.textFainter,
+    textAlign: 'center',
+    marginTop: 14,
+  },
+  relationRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 10,
+    maxWidth: 360,
+  },
+  relationChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(212, 169, 118, 0.35)',
+    backgroundColor: 'rgba(255, 255, 255, 0.07)',
+  },
+  relationChipActive: {
+    borderColor: colors.goldWarm,
+    backgroundColor: 'rgba(212, 169, 118, 0.22)',
+  },
+  relationChipText: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.85)',
+  },
+  relationChipTextActive: {
+    fontFamily: 'Poppins_500Medium',
+    color: colors.white,
   },
   switchLink: {
     marginTop: 4,

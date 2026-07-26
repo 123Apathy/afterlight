@@ -15,6 +15,8 @@ export type Member = {
   id: string;
   displayName: string;
   role: 'owner' | 'member';
+  // "Friend", "Spouse", free text via Other -- declared at the name gate.
+  relation?: string | null;
   transferToken?: string;
 };
 
@@ -251,11 +253,11 @@ export const api = {
   // Enter a memorial as a named person: adopts the existing member of that
   // name or creates one. The creator passes their claimToken here once to
   // claim (and name) the owner member.
-  enterProject: (projectId: string, name: string, claimToken?: string) =>
+  enterProject: (projectId: string, name: string, claimToken?: string, relation?: string) =>
     request<Member>(`/api/projects/${projectId}/members`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, claimToken }),
+      body: JSON.stringify({ name, claimToken, relation }),
     }),
 
   getPhotos: (projectId: string) => request<Photo[]>(`/api/projects/${projectId}/photos`),

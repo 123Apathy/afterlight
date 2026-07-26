@@ -201,12 +201,13 @@ function mapMember(row, { withToken = false } = {}) {
     id: row.id,
     displayName: row.display_name === OWNER_PLACEHOLDER ? '' : row.display_name,
     role: row.role,
+    relation: row.relation ?? null,
   };
   if (withToken) out.transferToken = row.transfer_token;
   return out;
 }
 
-async function findOrCreateMember(projectId, name) {
+async function findOrCreateMember(projectId, name, relation = null) {
   const trimmed = name.trim();
   const { data: existing } = await supabase
     .from('afterlight_members')
@@ -215,16 +216,21 @@ async function findOrCreateMember(projectId, name) {
     .ilike('display_name', trimmed)
     .maybeSingle();
   if (existing) {
+    // A freshly declared relation sticks to an adopted member too (backfilled
+    // members have none, and people's declarations should win over silence).
+    const patch = { last_seen_at: new Date().toISOString() };
+    if (relation) patch.relation = relation;
     supabase
       .from('afterlight_members')
-      .update({ last_seen_at: new Date().toISOString() })
+      .update(patch)
       .eq('id', existing.id)
       .then(() => {}, () => {});
+    if (relation) existing.relation = relation;
     return existing;
   }
   const { data, error } = await supabase
     .from('afterlight_members')
-    .insert({ project_id: projectId, display_name: trimmed })
+    .insert({ project_id: projectId, display_name: trimmed, relation })
     .select()
     .single();
   if (error) {
@@ -496,11 +502,13 @@ app.post('/api/projects', rateLimit(5), async (req, res, next) => {
 // person themselves, authorised by the invite code they arrived with.
 app.post('/api/projects/:projectId/members', rateLimit(30), requireInvite(projectFromParam), async (req, res, next) => {
   try {
-    const { name, claimToken } = req.body || {};
+    const { name, claimToken, relation } = req.body || {};
     if (!name || typeof name !== 'string' || !name.trim()) {
       return res.status(400).json({ error: 'name is required' });
     }
     const trimmed = name.trim().slice(0, 80);
+    const relationClean =
+      typeof relation === 'string' && relation.trim() ? relation.trim().slice(0, 60) : null;
 
     if (claimToken && typeof claimToken === 'string') {
       const { data: ownerRow } = await supabase
@@ -517,7 +525,11 @@ app.post('/api/projects/:projectId/members', rateLimit(30), requireInvite(projec
         }
         const { data: named, error: nameError } = await supabase
           .from('afterlight_members')
-          .update({ display_name: trimmed, last_seen_at: new Date().toISOString() })
+          .update({
+            display_name: trimmed,
+            relation: relationClean || ownerRow.relation,
+            last_seen_at: new Date().toISOString(),
+          })
           .eq('id', ownerRow.id)
           .select()
           .single();
@@ -527,7 +539,7 @@ app.post('/api/projects/:projectId/members', rateLimit(30), requireInvite(projec
           // creator did. Promote that member to owner (it IS the creator's
           // identity by the app's name rule), move the contact over, and
           // retire the placeholder.
-          const existing = await findOrCreateMember(req.params.projectId, trimmed);
+          const existing = await findOrCreateMember(req.params.projectId, trimmed, relationClean);
           const { data: promoted, error: promoteError } = await supabase
             .from('afterlight_members')
             .update({ role: 'owner', contact: existing.contact || ownerRow.contact })
@@ -543,7 +555,7 @@ app.post('/api/projects/:projectId/members', rateLimit(30), requireInvite(projec
       // Unknown claim token: fall through to a normal entry.
     }
 
-    const member = await findOrCreateMember(req.params.projectId, trimmed);
+    const member = await findOrCreateMember(req.params.projectId, trimmed, relationClean);
     // Trust boundary: bare name entry may ADOPT an owner member (it is how
     // the creator's attribution stays continuous on a new device), but it
     // never receives the owner's transfer token -- that would let anyone who

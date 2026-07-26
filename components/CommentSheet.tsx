@@ -23,8 +23,8 @@ type CommentSheetProps = {
   onReact: (photo: Photo, commentId: string, emoji: string) => void;
   onSaveDetails: (photo: Photo, details: { photoDate: string; location: string }) => void;
   raterName: string;
-  // Auto-close after posting only the first time for this photo; after that
-  // the sheet stays open so people can keep adding comments.
+  // Auto-close shortly after every post (Deon's call 2026-07-27: the pause is
+  // long enough to see the memory land, and closing returns you to the photo).
   autoCloseOnPost?: boolean;
 };
 
@@ -219,7 +219,16 @@ export default function CommentSheet({ photo, onClose, onSubmit, onReact, onSave
               <Text style={styles.detailsEdit}>Edit</Text>
             </>
           ) : (
-            <Text style={styles.detailsInvite}>When and where was this taken? Even just the year helps.</Text>
+            <>
+              {/* An OBVIOUS button, not just a line of invitation text -- the
+                  plain sentence read as a caption, and nobody realised the
+                  when-and-where could be added at all. */}
+              <Text style={styles.detailsInvite}>When and where was this taken?</Text>
+              <View style={styles.detailsAddButton}>
+                <Text style={styles.detailsAddPlus}>+</Text>
+                <Text style={styles.detailsAddLabel}>Add</Text>
+              </View>
+            </>
           )}
         </PressableScale>
       ) : (
@@ -415,10 +424,34 @@ const styles = StyleSheet.create({
     color: colors.textFainter,
   },
   detailsInvite: {
+    flex: 1,
     fontFamily: 'Poppins_400Regular',
     fontSize: 13.5,
     lineHeight: 20,
     color: colors.textFainter,
+  },
+  // The obvious affordance: a small gold pill that reads as a button.
+  detailsAddButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(212, 169, 118, 0.55)',
+    backgroundColor: 'rgba(212, 169, 118, 0.16)',
+  },
+  detailsAddPlus: {
+    fontFamily: 'Poppins_500Medium',
+    fontSize: 15,
+    lineHeight: 17,
+    color: colors.goldWarm,
+  },
+  detailsAddLabel: {
+    fontFamily: 'Poppins_500Medium',
+    fontSize: 13.5,
+    color: colors.goldWarm,
   },
   detailsForm: {
     paddingTop: 2,
