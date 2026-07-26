@@ -10,7 +10,14 @@ type HamburgerButtonProps = {
 
 export default function HamburgerButton({ onPress, light = true }: HamburgerButtonProps) {
   return (
-    <PressableScale onPress={onPress} hitSlop={12} style={styles.hamburger} scaleTo={0.85}>
+    <PressableScale
+      onPress={onPress}
+      hitSlop={12}
+      style={styles.hamburger}
+      scaleTo={0.85}
+      accessibilityRole="button"
+      accessibilityLabel="Open menu"
+    >
       <View style={[styles.line, { width: 22 }, !light && styles.lineDark]} />
       <View style={[styles.line, { width: 22 }, !light && styles.lineDark]} />
       <View style={[styles.line, { width: 13 }, !light && styles.lineDark]} />

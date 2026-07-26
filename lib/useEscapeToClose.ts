@@ -13,7 +13,10 @@ export default function useEscapeToClose(active: boolean, onClose: () => void) {
       e.preventDefault();
       onClose();
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    // Capture phase: react-native-web's TextInput handles Escape itself and
+    // stops it bubbling, so a bubble-phase listener never fired while the
+    // comment box had focus -- exactly when Escape matters most.
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
   }, [active, onClose]);
 }

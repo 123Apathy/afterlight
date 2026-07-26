@@ -507,7 +507,14 @@ export default function SwipeScreen() {
         <HorizonGlow />
         <View style={styles.headerOverlay} pointerEvents="box-none">
           <View style={styles.header}>
-            <PressableScale onPress={goHome} scaleTo={0.96} hitSlop={8} style={styles.brand}>
+            <PressableScale
+              onPress={goHome}
+              scaleTo={0.96}
+              hitSlop={8}
+              style={styles.brand}
+              accessibilityRole="button"
+              accessibilityLabel="Back to the Everlit home page"
+            >
               <Image source={images.logoGold} style={styles.logo} resizeMode="contain" />
               <Text style={styles.brandText}>Everlit</Text>
             </PressableScale>
@@ -593,7 +600,14 @@ export default function SwipeScreen() {
         <HorizonGlow />
         <View style={styles.headerOverlay} pointerEvents="box-none">
           <View style={styles.header}>
-            <PressableScale onPress={goHome} scaleTo={0.96} hitSlop={8} style={styles.brand}>
+            <PressableScale
+              onPress={goHome}
+              scaleTo={0.96}
+              hitSlop={8}
+              style={styles.brand}
+              accessibilityRole="button"
+              accessibilityLabel="Back to the Everlit home page"
+            >
               <Image source={images.logoGold} style={styles.logo} resizeMode="contain" />
               <Text style={styles.brandText}>Everlit</Text>
             </PressableScale>
@@ -632,7 +646,14 @@ export default function SwipeScreen() {
         <HorizonGlow />
         <View style={styles.headerOverlay} pointerEvents="box-none">
           <View style={styles.header}>
-            <PressableScale onPress={goHome} scaleTo={0.96} hitSlop={8} style={styles.brand}>
+            <PressableScale
+              onPress={goHome}
+              scaleTo={0.96}
+              hitSlop={8}
+              style={styles.brand}
+              accessibilityRole="button"
+              accessibilityLabel="Back to the Everlit home page"
+            >
               <Image source={images.logoGold} style={styles.logo} resizeMode="contain" />
               <Text style={styles.brandText}>Everlit</Text>
             </PressableScale>
@@ -923,7 +944,13 @@ export default function SwipeScreen() {
             ]}
             pointerEvents="box-none"
           >
-            <PressableScale onPress={goHome} scaleTo={0.96} hitSlop={8}>
+            <PressableScale
+              onPress={goHome}
+              scaleTo={0.96}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Back to the Everlit home page"
+            >
               <Text style={[styles.brandText, { fontSize: endWordSize, lineHeight: endWordSize * 1.34 }]}>
                 Everlit
               </Text>
@@ -938,7 +965,14 @@ export default function SwipeScreen() {
             pointerEvents={onEndSlide ? 'auto' : 'none'}
           >
             <View style={{ transform: [{ scale: shareScale }], transformOrigin: 'left center' }}>
-              <PressableScale onPress={() => setMenuOpen(true)} scaleTo={0.95} style={styles.shareCta}>
+              <PressableScale
+                onPress={() => setMenuOpen(true)}
+                scaleTo={0.95}
+                style={styles.shareCta}
+                accessibilityRole="button"
+                tabIndex={onEndSlide ? 0 : -1}
+                aria-hidden={!onEndSlide}
+              >
                 <Text style={styles.shareCtaText}>Share with family</Text>
               </PressableScale>
             </View>
@@ -950,7 +984,14 @@ export default function SwipeScreen() {
             style={[styles.centerContent, { position: 'absolute', left: 19, top: 0, bottom: 0, zIndex: 1 }, flameFlyStyle]}
             pointerEvents="box-none"
           >
-            <PressableScale onPress={goHome} scaleTo={0.96} hitSlop={8} style={styles.flameBox}>
+            <PressableScale
+              onPress={goHome}
+              scaleTo={0.96}
+              hitSlop={8}
+              style={styles.flameBox}
+              accessibilityRole="button"
+              accessibilityLabel="Back to the Everlit home page"
+            >
               <Animated.Image source={images.logoGold} style={[styles.logo, flamePlainStyle]} resizeMode="contain" />
               <Animated.Image source={images.logoRing} style={[styles.flameRing, flameRingStyle]} resizeMode="contain" />
             </PressableScale>
@@ -971,6 +1012,8 @@ export default function SwipeScreen() {
                 scaleTo={0.94}
                 hitSlop={12}
                 style={styles.counterPress}
+                accessibilityRole="button"
+                accessibilityLabel="Jump to a photo"
               >
                 <Text style={styles.counterText}>
                   {String(Math.min(liveIndex, photos.length - 1) + 1).padStart(2, '0')}
@@ -1344,6 +1387,7 @@ function PhotoDeck({
               key={photo.id}
               photo={photo}
               index={i}
+              isCurrent={i === index}
               scrollX={scrollX}
               width={width}
               height={height}
@@ -1363,6 +1407,7 @@ function PhotoDeck({
           projectName={projectName}
           photos={photos}
           reduceMotion={reduceMotion}
+          active={index >= photos.length}
         />
       </ScrollView>
 
@@ -1393,6 +1438,8 @@ function PhotoDeck({
                 scaleTo={0.96}
                 hitSlop={12}
                 style={commentPulseStyle}
+                accessibilityRole="button"
+                accessibilityLabel={`Comments and details for this photo${currentPhoto.comments.length ? `, ${currentPhoto.comments.length} so far` : ''}`}
               >
                 <View style={[styles.glassCircle, glassSurface, glassBlur, styles.navButtonContrast]}>
                   <CommentIcon active={currentPhoto.comments.length > 0 || !!(currentPhoto.photoDate || currentPhoto.location)} />
@@ -1415,6 +1462,9 @@ function PhotoDeck({
               scaleTo={0.9}
               hitSlop={10}
               style={[styles.navButtonBig, glassSurface, glassBlur, styles.navButtonLight, index === 0 && styles.navButtonDisabled]}
+              accessibilityRole="button"
+              accessibilityLabel="Previous photo"
+              accessibilityState={{ disabled: index === 0 }}
             >
               <NavChevron direction="left" />
             </PressableScale>
@@ -1428,6 +1478,9 @@ function PhotoDeck({
               scaleTo={0.9}
               hitSlop={10}
               style={[styles.navButtonBig, glassSurface, glassBlur, styles.navButtonLight, index === lastIndex && styles.navButtonDisabled]}
+              accessibilityRole="button"
+              accessibilityLabel="Next photo"
+              accessibilityState={{ disabled: index === lastIndex }}
             >
               <NavChevron direction="right" />
             </PressableScale>
@@ -1440,7 +1493,13 @@ function PhotoDeck({
               <Animated.View style={[styles.glowPulse, glowStyle]} pointerEvents="none">
                 <RadialGlow color={colors.heart} />
               </Animated.View>
-              <PressableScale onPress={handleHeartPress} scaleTo={0.82} hitSlop={16}>
+              <PressableScale
+                onPress={handleHeartPress}
+                scaleTo={0.82}
+                hitSlop={16}
+                accessibilityRole="button"
+                accessibilityLabel={favorited ? 'Remove this photo from your favourites' : 'Favourite this photo'}
+              >
                 <View style={[styles.glassCircle, styles.glassCircleFav, glassSurface, glassBlur, styles.navButtonContrast]}>
                   <Animated.Text style={[styles.heartIconGlass, favorited && styles.heartIconActive, heartStyle]}>
                     {favorited ? '♥' : '♡'}
@@ -1569,6 +1628,10 @@ type EndOfDeckSlideProps = {
   projectName: string;
   photos: Photo[];
   reduceMotion: boolean;
+  // True only while the deck is actually parked on this slide. Off the slide
+  // its CTA is invisible, so it must be neither tabbable nor in the
+  // accessibility tree.
+  active: boolean;
 };
 
 // One layer of the goodbye montage — fades itself in/out as `active` flips.
@@ -1585,7 +1648,7 @@ function MontageLayer({ uri, active }: { uri: string; active: boolean }) {
   );
 }
 
-function EndOfDeckSlide({ width, height, projectName, photos, reduceMotion }: EndOfDeckSlideProps) {
+function EndOfDeckSlide({ width, height, projectName, photos, reduceMotion, active }: EndOfDeckSlideProps) {
   const router = useRouter();
   // "Here's what you all chose": the most-hearted photos drift behind the
   // goodbye text — a quiet preview of the film this becomes.
@@ -1638,7 +1701,7 @@ function EndOfDeckSlide({ width, height, projectName, photos, reduceMotion }: En
         Now you can see the moments your whole family chose to hold onto. Tap below to see the
         favourites, and the memories everyone shared.
       </Text>
-      <GoldButton label="See What We All Loved" onPress={openFavourites} style={styles.endButton} />
+      <GoldButton label="See What We All Loved" onPress={openFavourites} style={styles.endButton} focusable={active} />
     </View>
   );
 }
@@ -1646,6 +1709,9 @@ function EndOfDeckSlide({ width, height, projectName, photos, reduceMotion }: En
 type PhotoSlideProps = {
   photo: Photo;
   index: number;
+  // Offscreen slides (the mounted neighbours) must not be tabbable or read by
+  // screen readers -- Tab was landing on invisible slides before any control.
+  isCurrent: boolean;
   scrollX: SharedValue<number>;
   width: number;
   height: number;
@@ -1693,7 +1759,7 @@ function Ember({ progress, spec }: { progress: SharedValue<number>; spec: EmberS
 // animation. Everything else that used to live here (counter, comment
 // button, heart button) is now a fixed overlay in PhotoDeck instead, so it
 // doesn't slide away with the photo mid-swipe -- see PhotoDeck.
-function PhotoSlide({ photo, index, scrollX, width, height, raterName, onToggleFavorite, reduceMotion, projectName, total }: PhotoSlideProps) {
+function PhotoSlide({ photo, index, isCurrent, scrollX, width, height, raterName, onToggleFavorite, reduceMotion, projectName, total }: PhotoSlideProps) {
   const favorited = isFavoritedBy(photo, raterName);
   const burst = useSharedValue(0);
   const emberP = useSharedValue(0);
@@ -1780,7 +1846,19 @@ function PhotoSlide({ photo, index, scrollX, width, height, raterName, onToggleF
   const source = photo.localSource ?? { uri: photoUrl(photo) };
 
   return (
-    <Pressable onPress={handleTap} style={{ width, height, overflow: 'hidden' }}>
+    // The slide itself is the labelled, focusable element (double-tap surface)
+    // -- and only while it IS the current slide; the mounted neighbours are
+    // invisible and must stay out of the Tab order and accessibility tree.
+    <Pressable
+      onPress={handleTap}
+      style={{ width, height, overflow: 'hidden' }}
+      // tabIndex, not focusable: react-native-web's Pressable keeps its
+      // rendered tabindex at 0 regardless of focusable={false}.
+      tabIndex={isCurrent ? 0 : -1}
+      aria-hidden={!isCurrent}
+      accessibilityRole="button"
+      accessibilityLabel={`${photoAltText(photo, projectName)}, photo ${index + 1} of ${total}. Double-tap to favourite`}
+    >
       <Animated.View style={[StyleSheet.absoluteFill, pageStyle]}>
         {/* Blurred, dimmed, slowly-breathing copy behind the framed print. */}
         <Animated.View style={[StyleSheet.absoluteFill, bgStyle]}>
@@ -1799,13 +1877,16 @@ function PhotoSlide({ photo, index, scrollX, width, height, raterName, onToggleF
         {/* The whole photo, fit to screen (no cropping / bleed) — the framed
             "print" treatment was tried and reverted: against this near-black
             backdrop the border read as a floating rectangle, not a print. */}
-        {/* The one image that matters to a screen reader. The blurred copy
-            above it is decorative and is hidden. */}
+        {/* The label lives on the slide's Pressable (which is also the
+            double-tap-to-favourite surface); labelling the image too would
+            announce the photograph twice. */}
         <Image
           source={source}
           style={StyleSheet.absoluteFill}
           resizeMode="contain"
-          accessibilityLabel={`${photoAltText(photo, projectName)}, photo ${index + 1} of ${total}`}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          accessibilityLabel=""
         />
 
         <LinearGradient colors={['rgba(0,0,0,0.4)', 'transparent']} style={styles.topScrim} pointerEvents="none" />

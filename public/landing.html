@@ -1177,7 +1177,9 @@
     .invfx-wa-text { font-family: 'Poppins', sans-serif; font-size: 9.5px; line-height: 1.5; color: var(--primary-80); }
     .invfx-wa-link { font-family: 'Poppins', sans-serif; font-size: 9.5px; color: var(--accent); margin-top: 3px; text-decoration: underline; text-underline-offset: 2px; }
     .invfx-wa-meta { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 6px; }
-    .invfx-wa-time { font-family: 'Poppins', sans-serif; font-size: 8px; color: var(--gray-500); }
+    /* Lifted from var(--gray-500): 3.82:1 against the green bubble failed
+       WCAG AA (axe); this grey-green reads the same muted way at ~5.6:1. */
+    .invfx-wa-time { font-family: 'Poppins', sans-serif; font-size: 8px; color: #A5B3AA; }
     .invfx-wa-ticks {
       font-size: 10px;
       line-height: 1;
@@ -2864,6 +2866,27 @@
     })();
     observeWords(document.getElementById('features-title'));
     observeWords(document.getElementById('features-subtitle'));
+
+    // WCAG 2.2.2: the hero candle and the how-it-works film loop start on
+    // their own and never stop. Under prefers-reduced-motion they hold as
+    // stills instead (the CSS keyframe loops already stop via media queries;
+    // videos need JS). Live-updates if the OS setting changes.
+    (function () {
+      var mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+      function apply() {
+        document.querySelectorAll('video[autoplay]').forEach(function (v) {
+          if (mq.matches) {
+            v.pause();
+          } else {
+            var p = v.play();
+            if (p && p.catch) p.catch(function () {});
+          }
+        });
+      }
+      if (mq.addEventListener) mq.addEventListener('change', apply);
+      else if (mq.addListener) mq.addListener(apply);
+      apply();
+    })();
 
     // Scroll-based character reveal for About body
     function updateCharReveal() {

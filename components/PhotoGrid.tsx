@@ -290,7 +290,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 2,
     textTransform: 'uppercase',
-    color: 'rgba(212, 169, 118, 0.55)',
+    // Was 0.55 alpha: 3.4:1 on the near-black page, under WCAG AA's 4.5.
+    // 0.78 measures ~4.9:1 and still reads as the quiet dim-gold caption.
+    color: 'rgba(212, 169, 118, 0.78)',
   },
   // Popup
   scrim: {

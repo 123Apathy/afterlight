@@ -65,6 +65,18 @@ export default function CommentSheet({ photo, onClose, onSubmit, onReact, onSave
   const visible = !!photo;
   // Desktop web: Escape closes the sheet, as every dialog on the web does.
   useEscapeToClose(visible, onClose);
+  // display:none once the exit fade finishes -- pointerEvents:none alone left
+  // the closed sheet's input, Post button and reactions keyboard-tabbable
+  // behind the deck.
+  const [rendered, setRendered] = useState(visible);
+  useEffect(() => {
+    if (visible) {
+      setRendered(true);
+      return;
+    }
+    const t = setTimeout(() => setRendered(false), 240);
+    return () => clearTimeout(t);
+  }, [visible]);
   const listRef = useRef<ScrollView>(null);
   const autoCloseRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dateUnreadable = dateBlurred && !!photoDate.trim() && !hasReadableYear(photoDate);
@@ -174,7 +186,11 @@ export default function CommentSheet({ photo, onClose, onSubmit, onReact, onSave
   const savedSummary = [photo?.photoDate, photo?.location].filter(Boolean).join(' · ');
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents={visible ? 'auto' : 'none'}>
+    <View
+      style={[StyleSheet.absoluteFill, !rendered && { display: 'none' as const }]}
+      pointerEvents={visible ? 'auto' : 'none'}
+      aria-hidden={!visible}
+    >
       <Animated.View style={[styles.backdrop, backdropStyle]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={close} />
       </Animated.View>

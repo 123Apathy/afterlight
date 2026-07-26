@@ -10,13 +10,26 @@ type GoldButtonProps = {
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
   pill?: boolean;
+  // Keyboard focusability, on by default. The end-of-deck slide passes false
+  // while it is offscreen so Tab cannot land on an invisible button.
+  focusable?: boolean;
 };
 
 // The primary action, everywhere. A soft top-to-bottom gold gradient with a
 // warm shadow reads more refined than a flat bright fill.
-export default function GoldButton({ label, onPress, style, textStyle, pill }: GoldButtonProps) {
+export default function GoldButton({ label, onPress, style, textStyle, pill, focusable = true }: GoldButtonProps) {
   return (
-    <PressableScale onPress={onPress} scaleTo={0.98} style={[styles.wrap, pill && styles.pill, style]}>
+    <PressableScale
+      onPress={onPress}
+      scaleTo={0.98}
+      style={[styles.wrap, pill && styles.pill, style]}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      // tabIndex, not focusable: react-native-web's Pressable keeps its
+      // rendered tabindex at 0 regardless of focusable={false}.
+      tabIndex={focusable ? 0 : -1}
+      aria-hidden={!focusable}
+    >
       <LinearGradient
         colors={[colors.goldWarm, colors.goldDeep]}
         start={{ x: 0.5, y: 0 }}

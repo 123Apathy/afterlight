@@ -13,7 +13,14 @@ type ViewModeButtonProps = {
 // grid (tap to go back to swiping).
 export default function ViewModeButton({ mode, onPress }: ViewModeButtonProps) {
   return (
-    <PressableScale onPress={onPress} hitSlop={12} style={styles.button} scaleTo={0.85}>
+    <PressableScale
+      onPress={onPress}
+      hitSlop={12}
+      style={styles.button}
+      scaleTo={0.85}
+      accessibilityRole="button"
+      accessibilityLabel={mode === 'deck' ? 'See all photos as a grid' : 'Back to swiping photos'}
+    >
       {mode === 'deck' ? (
         <View style={styles.grid}>
           {Array.from({ length: 9 }).map((_, i) => (

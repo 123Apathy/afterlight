@@ -43,6 +43,19 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
   // Desktop web: Escape closes the menu, as every dialog on the web does.
   useEscapeToClose(visible, onClose);
 
+  // display:none once the exit fade finishes -- pointerEvents:none alone left
+  // every menu control keyboard-tabbable behind a closed, invisible menu
+  // (Tab reached its Close button from the deck).
+  const [rendered, setRendered] = useState(visible);
+  useEffect(() => {
+    if (visible) {
+      setRendered(true);
+      return;
+    }
+    const t = setTimeout(() => setRendered(false), 240);
+    return () => clearTimeout(t);
+  }, [visible]);
+
   useEffect(() => {
     const duration = reduceMotion ? 0 : visible ? 220 : 180;
     progress.value = withTiming(visible ? 1 : 0, {
@@ -177,7 +190,10 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
   };
 
   return (
-    <Animated.View style={[styles.overlay, overlayStyle]}>
+    <Animated.View
+      style={[styles.overlay, overlayStyle, !rendered && { display: 'none' as const }]}
+      aria-hidden={!visible}
+    >
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         <BackdropVideo />
       </View>
