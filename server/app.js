@@ -165,7 +165,7 @@ async function signProjectVideo(row) {
 }
 
 function mapRating(row) {
-  return { id: row.id, photoId: row.photo_id, rater: row.rater, score: row.score, createdAt: row.created_at };
+  return { id: row.id, photoId: row.photo_id, rater: row.rater, memberId: row.member_id ?? null, score: row.score, createdAt: row.created_at };
 }
 
 function mapComment(row, reactions = []) {
@@ -173,6 +173,7 @@ function mapComment(row, reactions = []) {
     id: row.id,
     photoId: row.photo_id,
     author: row.author,
+    memberId: row.member_id ?? null,
     text: row.body,
     createdAt: row.created_at,
     reactions: reactions.map(mapReaction),
@@ -180,7 +181,79 @@ function mapComment(row, reactions = []) {
 }
 
 function mapReaction(row) {
-  return { id: row.id, commentId: row.comment_id, rater: row.rater, emoji: row.emoji, createdAt: row.created_at };
+  return { id: row.id, commentId: row.comment_id, rater: row.rater, memberId: row.member_id ?? null, emoji: row.emoji, createdAt: row.created_at };
+}
+
+// --- Members: durable passwordless identity behind the name-based UX ---
+// A member is a (project, person) pair. Entering a name adopts the existing
+// member of that name (exactly the identity rule the app always had) or
+// creates one. transferToken is the member's own secret: it powers the
+// "keep your place on another phone" link and the creator's owner claim.
+// It is only ever returned to the member themselves.
+
+// Placeholder display name for an owner member minted at project creation,
+// before the creator has told us their name at the "Who's here?" gate.
+// Starts with a control-ish sentinel so no real name can collide with it.
+const OWNER_PLACEHOLDER = '~organiser~';
+
+function mapMember(row, { withToken = false } = {}) {
+  const out = {
+    id: row.id,
+    displayName: row.display_name === OWNER_PLACEHOLDER ? '' : row.display_name,
+    role: row.role,
+  };
+  if (withToken) out.transferToken = row.transfer_token;
+  return out;
+}
+
+async function findOrCreateMember(projectId, name) {
+  const trimmed = name.trim();
+  const { data: existing } = await supabase
+    .from('afterlight_members')
+    .select('*')
+    .eq('project_id', projectId)
+    .ilike('display_name', trimmed)
+    .maybeSingle();
+  if (existing) {
+    supabase
+      .from('afterlight_members')
+      .update({ last_seen_at: new Date().toISOString() })
+      .eq('id', existing.id)
+      .then(() => {}, () => {});
+    return existing;
+  }
+  const { data, error } = await supabase
+    .from('afterlight_members')
+    .insert({ project_id: projectId, display_name: trimmed })
+    .select()
+    .single();
+  if (error) {
+    // Unique race (two devices, same new name at once): adopt the winner.
+    if (error.code === '23505') {
+      const { data: raced } = await supabase
+        .from('afterlight_members')
+        .select('*')
+        .eq('project_id', projectId)
+        .ilike('display_name', trimmed)
+        .maybeSingle();
+      if (raced) return raced;
+    }
+    throw Object.assign(new Error(error.message), { status: 500 });
+  }
+  return data;
+}
+
+// Resolve a memberId sent with a write to a verified member of the project
+// the write targets. Bad or foreign ids degrade to null rather than failing
+// the family's action -- the name column always still carries the identity.
+async function memberIdForWrite(memberId, projectId) {
+  if (!memberId || typeof memberId !== 'string') return null;
+  const { data } = await supabase
+    .from('afterlight_members')
+    .select('id, project_id')
+    .eq('id', memberId)
+    .maybeSingle();
+  return data && data.project_id === projectId ? data.id : null;
 }
 
 function mapColumn(row) {
@@ -349,7 +422,7 @@ async function seedProjectKanban(projectId) {
 
 app.post('/api/projects', rateLimit(5), async (req, res, next) => {
   try {
-    const { name } = req.body || {};
+    const { name, contact } = req.body || {};
     if (!name || typeof name !== 'string' || !name.trim()) {
       return res.status(400).json({ error: 'name is required' });
     }
@@ -371,8 +444,88 @@ app.post('/api/projects', rateLimit(5), async (req, res, next) => {
     if (!project) throw Object.assign(new Error('could not allocate a unique project slug'), { status: 500 });
 
     await seedProjectKanban(project.id);
+
+    // Mint the owner member now, under a placeholder name; the creator claims
+    // it (and names it) at the "Who's here?" gate with this token. `contact`
+    // is the optional "where should we send the film?" answer.
+    const { data: owner, error: ownerError } = await supabase
+      .from('afterlight_members')
+      .insert({
+        project_id: project.id,
+        display_name: OWNER_PLACEHOLDER,
+        role: 'owner',
+        contact: typeof contact === 'string' && contact.trim() ? contact.trim().slice(0, 200) : null,
+      })
+      .select()
+      .single();
+    assertOk(ownerError);
+
     const defaults = await getButtonDefaults();
-    res.status(201).json(mapProject(project, resolveEnabledButtons(project.enabled_buttons, defaults)));
+    res.status(201).json({
+      ...mapProject(project, resolveEnabledButtons(project.enabled_buttons, defaults)),
+      owner: { claimToken: owner.transfer_token },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Enter a memorial as a named person. Adopts the existing member of that name
+// (the identity rule the app always had) or creates one. A creator passing
+// their project's owner claimToken claims the owner member instead, giving it
+// their real name. Returns the member WITH its transfer token -- this is the
+// person themselves, authorised by the invite code they arrived with.
+app.post('/api/projects/:projectId/members', rateLimit(30), requireInvite(projectFromParam), async (req, res, next) => {
+  try {
+    const { name, claimToken } = req.body || {};
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ error: 'name is required' });
+    }
+    const trimmed = name.trim().slice(0, 80);
+
+    if (claimToken && typeof claimToken === 'string') {
+      const { data: ownerRow } = await supabase
+        .from('afterlight_members')
+        .select('*')
+        .eq('project_id', req.params.projectId)
+        .eq('transfer_token', claimToken)
+        .eq('role', 'owner')
+        .maybeSingle();
+      if (ownerRow) {
+        if (ownerRow.display_name !== OWNER_PLACEHOLDER) {
+          // Already claimed (same creator, another device): just hand it back.
+          return res.json(mapMember(ownerRow, { withToken: true }));
+        }
+        const { data: named, error: nameError } = await supabase
+          .from('afterlight_members')
+          .update({ display_name: trimmed, last_seen_at: new Date().toISOString() })
+          .eq('id', ownerRow.id)
+          .select()
+          .single();
+        if (!nameError) return res.json(mapMember(named, { withToken: true }));
+        if (nameError.code === '23505') {
+          // Someone already entered under the creator's name before the
+          // creator did. Promote that member to owner (it IS the creator's
+          // identity by the app's name rule), move the contact over, and
+          // retire the placeholder.
+          const existing = await findOrCreateMember(req.params.projectId, trimmed);
+          const { data: promoted, error: promoteError } = await supabase
+            .from('afterlight_members')
+            .update({ role: 'owner', contact: existing.contact || ownerRow.contact })
+            .eq('id', existing.id)
+            .select()
+            .single();
+          assertOk(promoteError);
+          await supabase.from('afterlight_members').delete().eq('id', ownerRow.id);
+          return res.json(mapMember(promoted, { withToken: true }));
+        }
+        throw Object.assign(new Error(nameError.message), { status: 500 });
+      }
+      // Unknown claim token: fall through to a normal entry.
+    }
+
+    const member = await findOrCreateMember(req.params.projectId, trimmed);
+    res.json(mapMember(member, { withToken: true }));
   } catch (err) {
     next(err);
   }
@@ -402,7 +555,29 @@ app.get('/api/projects/by-invite/:inviteCode', async (req, res, next) => {
       .single();
     if (error || !data) return res.status(404).json({ error: 'invite not found' });
     const defaults = await getButtonDefaults();
-    res.json(mapProject(data, resolveEnabledButtons(data.enabled_buttons, defaults), await signProjectVideo(data)));
+    const payload = mapProject(data, resolveEnabledButtons(data.enabled_buttons, defaults), await signProjectVideo(data));
+
+    // "Keep your place" links carry ?m=<transferToken>: the person walks in
+    // on a new device already recognised, skipping the name gate. An invalid
+    // token just opens the memorial normally.
+    const transfer = String(req.query.m || '').trim();
+    if (transfer) {
+      const { data: member } = await supabase
+        .from('afterlight_members')
+        .select('*')
+        .eq('project_id', data.id)
+        .eq('transfer_token', transfer)
+        .maybeSingle();
+      if (member && member.display_name !== OWNER_PLACEHOLDER) {
+        payload.member = mapMember(member, { withToken: true });
+        supabase
+          .from('afterlight_members')
+          .update({ last_seen_at: new Date().toISOString() })
+          .eq('id', member.id)
+          .then(() => {}, () => {});
+      }
+    }
+    res.json(payload);
   } catch (err) {
     next(err);
   }
@@ -656,15 +831,16 @@ app.patch('/api/photos/:photoId/details', rateLimit(30), requireInvite(projectFr
 
 app.post('/api/photos/:photoId/favorite', rateLimit(60), requireInvite(projectFromPhoto), async (req, res, next) => {
   try {
-    const { rater } = req.body || {};
+    const { rater, memberId } = req.body || {};
     if (!rater || typeof rater !== 'string' || !rater.trim()) {
       return res.status(400).json({ error: 'rater is required' });
     }
 
+    const verifiedMember = await memberIdForWrite(memberId, req.projectId);
     const { data, error } = await supabase
       .from('afterlight_ratings')
       .upsert(
-        { photo_id: req.params.photoId, rater: rater.trim(), score: 1, updated_at: new Date().toISOString() },
+        { photo_id: req.params.photoId, rater: rater.trim(), member_id: verifiedMember, score: 1, updated_at: new Date().toISOString() },
         { onConflict: 'photo_id,rater' }
       )
       .select()
@@ -700,7 +876,7 @@ app.delete('/api/photos/:photoId/favorite', rateLimit(60), requireInvite(project
 // --- Tribute intake ---
 app.post('/api/projects/:projectId/tribute', rateLimit(10), requireInvite(projectFromParam), async (req, res, next) => {
   try {
-    const { respondent, answers } = req.body || {};
+    const { respondent, answers, memberId } = req.body || {};
     if (!respondent || typeof respondent !== 'string' || !respondent.trim()) {
       return res.status(400).json({ error: 'respondent is required' });
     }
@@ -708,9 +884,11 @@ app.post('/api/projects/:projectId/tribute', rateLimit(10), requireInvite(projec
       return res.status(400).json({ error: 'answers is required' });
     }
 
+    const verifiedMember = await memberIdForWrite(memberId, req.projectId);
     const { error } = await supabase.from('afterlight_tribute_responses').insert({
       project_id: req.params.projectId,
       respondent: respondent.trim(),
+      member_id: verifiedMember,
       answers,
     });
     if (error) {
@@ -742,16 +920,18 @@ app.post('/api/projects/:projectId/tribute', rateLimit(10), requireInvite(projec
 
 app.post('/api/photos/:photoId/comments', rateLimit(30), requireInvite(projectFromPhoto), async (req, res, next) => {
   try {
-    const { author, text } = req.body || {};
+    const { author, text, memberId } = req.body || {};
     if (!text || typeof text !== 'string' || !text.trim()) {
       return res.status(400).json({ error: 'text is required' });
     }
 
+    const verifiedMember = await memberIdForWrite(memberId, req.projectId);
     const { data, error } = await supabase
       .from('afterlight_comments')
       .insert({
         photo_id: req.params.photoId,
         author: (author || 'Anonymous').trim() || 'Anonymous',
+        member_id: verifiedMember,
         body: text.trim(),
       })
       .select()
@@ -786,7 +966,7 @@ const COMMENT_REACTION_EMOJI = ['❤️', '😂', '😢', '🙏', '😊'];
 app.post('/api/comments/:commentId/reactions', rateLimit(60), requireInvite(projectFromComment), async (req, res, next) => {
   try {
     const { commentId } = req.params;
-    const { rater, emoji } = req.body || {};
+    const { rater, emoji, memberId } = req.body || {};
     if (!rater || typeof rater !== 'string' || !rater.trim()) {
       return res.status(400).json({ error: 'rater is required' });
     }
@@ -794,6 +974,7 @@ app.post('/api/comments/:commentId/reactions', rateLimit(60), requireInvite(proj
       return res.status(400).json({ error: 'unsupported emoji' });
     }
     const raterTrimmed = rater.trim();
+    const verifiedMember = await memberIdForWrite(memberId, req.projectId);
 
     // Atomic toggle against the (comment_id, rater, emoji) unique constraint:
     // delete-by-key first — if a row died, this tap was a remove and we're
@@ -812,7 +993,7 @@ app.post('/api/comments/:commentId/reactions', rateLimit(60), requireInvite(proj
     if (!removed || removed.length === 0) {
       const { error } = await supabase
         .from('afterlight_comment_reactions')
-        .insert({ comment_id: commentId, rater: raterTrimmed, emoji });
+        .insert({ comment_id: commentId, rater: raterTrimmed, member_id: verifiedMember, emoji });
       if (error) {
         if (error.code === '23503') return res.status(404).json({ error: 'comment not found' });
         if (error.code === '23505') {

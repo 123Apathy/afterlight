@@ -1,8 +1,18 @@
 import { useEffect } from 'react';
 import { useLocalStorage } from './useLocalStorage';
-import { setInviteCode, type Project } from './api';
+import { setInviteCode, type Member, type Project } from './api';
 
-export type KnownProject = { id: string; name: string; inviteCode?: string };
+export type KnownProject = {
+  id: string;
+  name: string;
+  inviteCode?: string;
+  // Durable identity in this memorial, once the person has entered a name.
+  memberId?: string;
+  memberToken?: string;
+  memberRole?: 'owner' | 'member';
+  // Held from creation until the creator claims the owner member at the gate.
+  ownerClaimToken?: string;
+};
 
 function parseKnown(raw: string): KnownProject[] {
   try {
@@ -30,9 +40,23 @@ export function useActiveProject() {
   }, [projectId, knownRaw]);
 
   // Add/refresh a memorial in the remembered list (most-recent first).
+  // Identity fields merge with what is already remembered, so re-opening a
+  // memorial never wipes the member identity attached to it.
   const remember = (p: KnownProject) => {
+    const prev = known.find((k) => k.id === p.id);
     const next = [
-      { id: p.id, name: p.name, inviteCode: p.inviteCode },
+      {
+        id: p.id,
+        name: p.name,
+        inviteCode: p.inviteCode ?? prev?.inviteCode,
+        memberId: p.memberId ?? prev?.memberId,
+        memberToken: p.memberToken ?? prev?.memberToken,
+        memberRole: p.memberRole ?? prev?.memberRole,
+        // '' means "spend it" (set after the owner claim succeeds); undefined
+        // means "keep whatever was remembered".
+        ownerClaimToken:
+          p.ownerClaimToken !== undefined ? p.ownerClaimToken || undefined : prev?.ownerClaimToken,
+      },
       ...known.filter((k) => k.id !== p.id),
     ];
     setKnownRaw(JSON.stringify(next));
@@ -41,8 +65,34 @@ export function useActiveProject() {
   const setProject = (project: Project | KnownProject) => {
     setProjectId(project.id);
     setProjectName(project.name);
-    remember({ id: project.id, name: project.name, inviteCode: (project as Project).inviteCode });
+    const asProject = project as Project;
+    remember({
+      id: project.id,
+      name: project.name,
+      inviteCode: asProject.inviteCode,
+      ownerClaimToken: asProject.owner?.claimToken,
+      memberId: asProject.member?.id ?? (project as KnownProject).memberId,
+      memberToken: asProject.member?.transferToken ?? (project as KnownProject).memberToken,
+      memberRole: asProject.member?.role ?? (project as KnownProject).memberRole,
+    });
   };
+
+  // Attach (or refresh) the durable identity for a memorial after the person
+  // has entered their name -- or arrived via a keep-your-place link.
+  const rememberMember = (projectId2: string, name: string, member: Member) => {
+    const entry = known.find((k) => k.id === projectId2);
+    remember({
+      id: projectId2,
+      name: entry?.name || name,
+      memberId: member.id,
+      memberToken: member.transferToken,
+      memberRole: member.role,
+      // The claim is spent once a member exists ('' = clear, see remember).
+      ownerClaimToken: '',
+    });
+  };
+
+  const activeEntry = known.find((k) => k.id === projectId);
 
   // Leave the current memorial but KEEP it in the remembered list so the
   // welcome screen can reopen it. This is what "switch memorial" calls.
@@ -51,5 +101,5 @@ export function useActiveProject() {
     setProjectName('');
   };
 
-  return { projectId, projectName, known, setProject, clearProject, remember };
+  return { projectId, projectName, known, activeEntry, setProject, clearProject, remember, rememberMember };
 }

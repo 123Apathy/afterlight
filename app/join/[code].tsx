@@ -17,7 +17,7 @@ const WHATSAPP_URL = 'https://wa.me/27626607269';
 // the same candle as the gates it hands off to, and its failure state offers a
 // way forward instead of stopping dead.
 export default function JoinScreen() {
-  const { code } = useLocalSearchParams<{ code: string }>();
+  const { code, m } = useLocalSearchParams<{ code: string; m?: string }>();
   const router = useRouter();
   const { setProject } = useActiveProject();
   const reduceMotion = useReducedMotion();
@@ -36,10 +36,20 @@ export default function JoinScreen() {
     let cancelled = false;
     setError(null);
     api
-      .getProjectByInvite(code)
+      // ?m= is a "keep your place" transfer token: this device walks in
+      // already recognised, skipping the name gate entirely.
+      .getProjectByInvite(code, typeof m === 'string' ? m : undefined)
       .then((project) => {
         if (cancelled) return;
         setProject(project);
+        // Raw string, matching useLocalStorage's convention (no JSON).
+        if (project.member?.displayName) {
+          try {
+            localStorage.setItem('everlit.rater', project.member.displayName);
+          } catch {
+            /* storage blocked: the name gate simply asks as usual */
+          }
+        }
         router.replace('/app');
       })
       .catch(() => {
@@ -48,7 +58,7 @@ export default function JoinScreen() {
     return () => {
       cancelled = true;
     };
-  }, [code, attempt]);
+  }, [code, m, attempt]);
 
   const openWhatsApp = useCallback(() => {
     Linking.openURL(WHATSAPP_URL).catch(() => {});

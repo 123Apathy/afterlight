@@ -8,6 +8,16 @@ export const API_BASE =
 // Keep in sync with BUTTON_KEYS in server/app.js.
 export type ButtonKey = 'addPhotos' | 'inviteFamily' | 'seeFavourites' | 'shareMemories';
 
+// A durable identity inside one memorial. transferToken is the member's own
+// secret (present only in responses addressed to that member): it powers the
+// "keep your place on another phone" link and the creator's owner claim.
+export type Member = {
+  id: string;
+  displayName: string;
+  role: 'owner' | 'member';
+  transferToken?: string;
+};
+
 export type Project = {
   id: string;
   name: string;
@@ -17,12 +27,18 @@ export type Project = {
   enabledButtons: Record<ButtonKey, boolean>;
   // Signed URL of the finished tribute film, present only once published.
   videoUrl?: string | null;
+  // Present on the create response only: the token the creator later uses at
+  // the name gate to claim the owner member.
+  owner?: { claimToken: string };
+  // Present on by-invite responses that carried a valid ?m= transfer token.
+  member?: Member;
 };
 
 export type Reaction = {
   id: string;
   commentId: string;
   rater: string;
+  memberId?: string | null;
   emoji: string;
   createdAt: string;
 };
@@ -31,6 +47,7 @@ export type Comment = {
   id: string;
   photoId: string;
   author: string;
+  memberId?: string | null;
   text: string;
   createdAt: string;
   reactions: Reaction[];
@@ -45,6 +62,7 @@ export type Rating = {
   id: string;
   photoId: string;
   rater: string;
+  memberId?: string | null;
   score: number;
   createdAt: string;
 };
@@ -208,17 +226,37 @@ export function inviteUrl(project: Project) {
   return `${origin}/join/${project.inviteCode}`;
 }
 
+// The "keep your place" link: the invite link plus the member's own transfer
+// token, so a new device walks in already recognised.
+export function keepPlaceUrl(project: Project | { inviteCode: string }, transferToken: string) {
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  return `${origin}/join/${project.inviteCode}?m=${encodeURIComponent(transferToken)}`;
+}
+
 export const api = {
-  createProject: (name: string) =>
+  createProject: (name: string, contact?: string) =>
     request<Project>('/api/projects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, contact }),
     }),
 
   getProject: (projectId: string) => request<Project>(`/api/projects/${projectId}`),
 
-  getProjectByInvite: (inviteCode: string) => request<Project>(`/api/projects/by-invite/${inviteCode}`),
+  getProjectByInvite: (inviteCode: string, transferToken?: string) =>
+    request<Project>(
+      `/api/projects/by-invite/${inviteCode}${transferToken ? `?m=${encodeURIComponent(transferToken)}` : ''}`
+    ),
+
+  // Enter a memorial as a named person: adopts the existing member of that
+  // name or creates one. The creator passes their claimToken here once to
+  // claim (and name) the owner member.
+  enterProject: (projectId: string, name: string, claimToken?: string) =>
+    request<Member>(`/api/projects/${projectId}/members`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, claimToken }),
+    }),
 
   getPhotos: (projectId: string) => request<Photo[]>(`/api/projects/${projectId}/photos`),
 
@@ -284,28 +322,28 @@ export const api = {
       body: JSON.stringify({ photoId }),
     }),
 
-  submitTribute: (projectId: string, respondent: string, answers: { question: string; answer: string }[]) =>
+  submitTribute: (projectId: string, respondent: string, answers: { question: string; answer: string }[], memberId?: string) =>
     request<{ ok: true }>(`/api/projects/${projectId}/tribute`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ respondent, answers }),
+      body: JSON.stringify({ respondent, answers, memberId }),
     }),
 
-  favoritePhoto: (photoId: string, rater: string) =>
+  favoritePhoto: (photoId: string, rater: string, memberId?: string) =>
     request<Rating>(`/api/photos/${photoId}/favorite`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rater }),
+      body: JSON.stringify({ rater, memberId }),
     }),
 
   unfavoritePhoto: (photoId: string, rater: string) =>
     request<void>(`/api/photos/${photoId}/favorite?rater=${encodeURIComponent(rater)}`, { method: 'DELETE' }),
 
-  addComment: (photoId: string, author: string, text: string) =>
+  addComment: (photoId: string, author: string, text: string, memberId?: string) =>
     request<Comment>(`/api/photos/${photoId}/comments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ author, text }),
+      body: JSON.stringify({ author, text, memberId }),
     }),
 
   updatePhotoDetails: (photoId: string, details: { photoDate: string; location: string }) =>
@@ -318,11 +356,11 @@ export const api = {
       }
     ),
 
-  toggleCommentReaction: (commentId: string, rater: string, emoji: string) =>
+  toggleCommentReaction: (commentId: string, rater: string, emoji: string, memberId?: string) =>
     request<Reaction[]>(`/api/comments/${commentId}/reactions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rater, emoji }),
+      body: JSON.stringify({ rater, emoji, memberId }),
     }),
 
   getKanban: (projectId: string) =>

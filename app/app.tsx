@@ -62,12 +62,17 @@ export default function SwipeScreen() {
   const gridColsApp = width >= 1400 ? 6 : width >= 1000 ? 5 : width >= 700 ? 4 : 3;
   const gridCellApp = (width - 2 * (gridColsApp - 1)) / gridColsApp;
   const reduceMotion = useReducedMotion();
-  const { projectId, setProject, known } = useActiveProject();
+  const { projectId, setProject, known, activeEntry, rememberMember } = useActiveProject();
   const [raterName, setRaterName] = useLocalStorage('everlit.rater', '');
+  // Durable identity for the active memorial (minted server-side when the
+  // person enters their name). Writes carry it; the name stays the display.
+  const memberId = activeEntry?.memberId;
   const [nameDraft, setNameDraft] = useState('');
   // Gentle hint when Enter is tapped with no name (mirrors tribute's fix).
   const [nameGateHint, setNameGateHint] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
+  // Optional "where should we send the film?" answer, stored on the owner.
+  const [newProjectContact, setNewProjectContact] = useState('');
   const [creatingProject, setCreatingProject] = useState(false);
   // Set only right after THIS session creates a new project (never on a
   // returning visit or a join-link open) -- prompts the creator, once, to
@@ -217,15 +222,38 @@ export default function SwipeScreen() {
     setResetSeq((s) => s + 1);
   };
 
+  // Passing the "Who's here?" gate: the name is the experience, the durable
+  // member behind it is the identity. Entering never blocks on the network --
+  // if minting the member fails, the name alone still works exactly as it
+  // always did, and the next successful write re-attaches quietly.
+  const enterMemorial = () => {
+    const name = nameDraft.trim();
+    if (!name) {
+      setNameGateHint(true);
+      return;
+    }
+    setRaterName(name);
+    api
+      .enterProject(projectId, name, activeEntry?.ownerClaimToken)
+      .then((member) => {
+        rememberMember(projectId, name, member);
+        // The owner claim can hand back the creator's earlier display name
+        // (same person re-entering from another device).
+        if (member.displayName && member.displayName !== name) setRaterName(member.displayName);
+      })
+      .catch(() => {});
+  };
+
   const handleCreateProject = async () => {
     // creatingProject guard: a double-tap on Begin fired two createProject
     // calls and made two memorials before the first response landed.
     if (creatingProject || !newProjectName.trim()) return;
     setCreatingProject(true);
     try {
-      const created = await api.createProject(newProjectName.trim());
+      const created = await api.createProject(newProjectName.trim(), newProjectContact.trim() || undefined);
       setProject(created);
       setNewProjectName('');
+      setNewProjectContact('');
       setPickingCover(created);
     } catch {
       showToast("Couldn't create the memorial. Check your connection and try again.");
@@ -272,7 +300,7 @@ export default function SwipeScreen() {
       if (alreadyFavorited) {
         await api.unfavoritePhoto(photo.id, raterName);
       } else {
-        await api.favoritePhoto(photo.id, raterName);
+        await api.favoritePhoto(photo.id, raterName, memberId);
       }
     } catch {
       showToast("That didn't save. Check your connection and try again.");
@@ -295,7 +323,7 @@ export default function SwipeScreen() {
     postedPhotos.current.add(photo.id);
     if (DEMO) return; // in-memory only, no backend
     try {
-      await api.addComment(photo.id, raterName, text);
+      await api.addComment(photo.id, raterName, text, memberId);
     } catch {
       showToast("That comment didn't save. Check your connection and try again.");
       refresh();
@@ -494,7 +522,7 @@ export default function SwipeScreen() {
     );
     if (DEMO) return; // in-memory only, no backend
     try {
-      await api.toggleCommentReaction(commentId, raterName, emoji);
+      await api.toggleCommentReaction(commentId, raterName, emoji, memberId);
     } catch {
       showToast("That reaction didn't save. Check your connection and try again.");
       refresh();
@@ -551,6 +579,18 @@ export default function SwipeScreen() {
                 style={[styles.gateInput, inputFocused && styles.gateInputFocused]}
                 onFocus={() => setInputFocused(true)}
                 onBlur={() => setInputFocused(false)}
+                onSubmitEditing={handleCreateProject}
+              />
+              {/* Not a sign-up field: it is the film's delivery address. The
+                  product's no-passwords promise holds -- this is optional and
+                  the only thing it gates is where the finished film gets sent. */}
+              <TextInput
+                value={newProjectContact}
+                onChangeText={setNewProjectContact}
+                accessibilityLabel="Where should we send the film? WhatsApp number or email, optional"
+                placeholder="Where should we send the film? (optional)"
+                placeholderTextColor={colors.textFaintest}
+                style={styles.gateInput}
                 onSubmitEditing={handleCreateProject}
               />
               <GoldButton
@@ -685,19 +725,13 @@ export default function SwipeScreen() {
               placeholder="Your name"
               placeholderTextColor="rgba(255,255,255,0.6)"
               style={styles.gateInput}
-              onSubmitEditing={() => {
-                if (nameDraft.trim()) setRaterName(nameDraft.trim());
-                else setNameGateHint(true);
-              }}
+              onSubmitEditing={enterMemorial}
             />
             {/* "Come in", not "Enter": completes the doorway the screen opens
                 with ("Who's here?"), and "Enter" reads like a keyboard key. */}
             <GoldButton
               label="Come in"
-              onPress={() => {
-                if (nameDraft.trim()) setRaterName(nameDraft.trim());
-                else setNameGateHint(true);
-              }}
+              onPress={enterMemorial}
               style={styles.gateButton}
             />
             {nameGateHint && (

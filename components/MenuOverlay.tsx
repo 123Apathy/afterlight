@@ -13,7 +13,7 @@ import Animated, {
 import { showToast } from './Toast';
 import { colors, images } from '../constants/theme';
 import { DEMO } from '../constants/demo';
-import { api, inviteUrl, type ButtonKey, type Project } from '../lib/api';
+import { api, inviteUrl, keepPlaceUrl, type ButtonKey, type Project } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
 import useEscapeToClose from '../lib/useEscapeToClose';
 import BackdropVideo from './BackdropVideo';
@@ -29,7 +29,7 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
   const progress = useSharedValue(0);
-  const { projectId, projectName, clearProject, remember } = useActiveProject();
+  const { projectId, projectName, clearProject, remember, activeEntry } = useActiveProject();
   const [project, setProjectDetails] = useState<Project | null>(null);
   const [copied, setCopied] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -106,6 +106,21 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
     }
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.open(`https://wa.me/?text=${encodeURIComponent(inviteMessage(project))}`, '_blank');
+    }
+  };
+
+  // "Keep your place": a link to THIS memorial carrying THIS person's own
+  // transfer token -- opened on any other phone, it walks them in already
+  // recognised (no name gate, same favourites and comments). Shared to
+  // themselves on WhatsApp, the same channel everything else here uses.
+  const handleKeepPlace = () => {
+    if (!project || !activeEntry?.memberToken) {
+      showToast("We couldn't get your link just now. Please close this, check your internet, and try again.");
+      return;
+    }
+    const message = `Your place in ${project.name}'s memorial on Everlit. Open this on any phone and it will remember you: ${keepPlaceUrl(project, activeEntry.memberToken)}`;
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
     }
   };
 
@@ -291,6 +306,13 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
                   router.push('/tribute');
                 }}
               />
+            )}
+            {/* Quiet by design: recovery comfort, not a headline action. Only
+                appears once this device holds a member identity to transfer. */}
+            {!!activeEntry?.memberToken && (
+              <PressableScale onPress={handleKeepPlace} style={styles.whatsappLink} scaleTo={0.97}>
+                <Text style={styles.copyLinkText}>Keep your place on another phone</Text>
+              </PressableScale>
             )}
           </View>
 

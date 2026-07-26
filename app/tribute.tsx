@@ -24,7 +24,7 @@ type Phase = 'intro' | 'questions' | 'thanks';
 
 export default function TributeScreen() {
   const router = useRouter();
-  const { projectId, projectName } = useActiveProject();
+  const { projectId, projectName, activeEntry } = useActiveProject();
   const [rater, setRater] = useLocalStorage('everlit.rater', '');
   const [nameDraft, setNameDraft] = useState('');
   const [nameHint, setNameHint] = useState(false);
@@ -86,7 +86,7 @@ export default function TributeScreen() {
       .filter((qa) => qa.answer.length > 0);
     if (!projectId || payload.length === 0) return;
     try {
-      await api.submitTribute(projectId, (rater || nameDraft).trim(), payload);
+      await api.submitTribute(projectId, (rater || nameDraft).trim(), payload, activeEntry?.memberId);
       // Confirmed on the server; only now is the local draft safe to clear.
       setDraftRaw('[]');
     } catch {
