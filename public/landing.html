@@ -370,12 +370,14 @@
     /* Comment card in the app's comment language: a small "Comments" heading
        with a gold hairline underline, then the memory (author gold, text
        white) with a little heart reaction -- the same card the CommentSheet
-       uses, floated above the controls (clear of the bigger nav row). */
+       uses, floated above the single controls row. */
     .mock-comment-bubble {
       position: absolute;
       left: 6cqw;
       right: 6cqw;
-      bottom: 45cqw;
+      /* Was 45cqw, clearing the old separate arrow row; the controls are one
+         row now (top edge at 9 + 20.5cqw), so the card floats just above it. */
+      bottom: 34cqw;
       background: rgba(24, 19, 17, 0.95);
       border: 0.3cqw solid rgba(255, 255, 255, 0.1);
       border-radius: 4cqw;
@@ -405,20 +407,10 @@
       color: rgba(255, 255, 255, 0.9);
     }
 
-    /* Bottom UI mirrors the real app: a prev/next arrow row sitting ABOVE a
-       row of three labelled glass circles (Comment / Favourites / Details),
-       Favourites bigger + centre. All cqw so it scales with the phone. */
-    .mock-navrow {
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: 21cqw;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      /* Lands the two arrows near the 1/3 + 2/3 marks, as in the app. */
-      gap: 26cqw;
-    }
+    /* Bottom UI mirrors the real app's ONE-row layout: four equal quarter
+       slots so the circles centre on the band's eighths exactly like the
+       app's quarterCenterStyle -- Comment 1/8, Prev 3/8, Next 5/8,
+       Favourites 7/8. All cqw so it scales with the phone. */
     .mock-nav-btn {
       /* Biggest buttons on the screen, as in the app (navButtonBig 80 vs the
          50-56 control circles) -- so they read as the primary "move through
@@ -456,19 +448,23 @@
       position: absolute;
       left: 0;
       right: 0;
-      bottom: 6cqw;
+      /* Lifted off the screen edge (was 6cqw) and inset like the app's band:
+         the screen mask's 13%/6% corner ellipse was clipping the corner of
+         the Comment label's first glyph (measured: clip boundary at ~7.6px
+         where the label began at 5.6px on the mobile-hero mock). */
+      bottom: 9cqw;
       display: flex;
-      align-items: flex-start;
-      justify-content: space-around;
-      padding: 0 5cqw;
+      align-items: center;
+      padding: 0 4cqw;
     }
-    /* Each control: circle centred on one shared line (row height = the
-       tallest circle, Favourites) with its label hanging below, so all three
-       labels align regardless of circle size -- exactly the app's controlColumn. */
+    /* Each slot: an equal flex quarter whose circle centres on one shared
+       line (row height = the tallest circle, the nav arrows) with the label
+       hanging below via absolute offset -- the app's controlColumn trick, so
+       the differently-sized circles all sit centred on the same axis. */
     .mock-ctrl {
       position: relative;
-      width: 22cqw;
-      height: 14.5cqw;
+      flex: 1 1 0;
+      height: 20.5cqw;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -487,13 +483,12 @@
     /* Favourites is the emotional primary -- bigger than its siblings, as in-app. */
     .mock-ctrl-circle-fav { width: 14.5cqw; height: 14.5cqw; }
     .mock-comment-btn .mock-ctrl-circle svg { width: 7.2cqw; height: 6.2cqw; display: block; animation: mockCommentActive 7s infinite; }
-    .mock-details-btn .mock-ctrl-circle svg { width: 6.7cqw; height: 6.7cqw; display: block; }
     .mock-ctrl-label {
       position: absolute;
       top: 100%;
-      left: -4cqw;
-      right: -4cqw;
-      margin-top: 1.3cqw;
+      left: 0;
+      right: 0;
+      margin-top: 0.9cqw;
       text-align: center;
       font-family: 'Poppins', sans-serif;
       font-weight: 500;
@@ -2436,13 +2431,11 @@
                   <span class="mock-bubble-react">❤️ 2</span>
                 </div>
               </div>
-              <!-- Prev/next arrow row (app's navRowUp): gold engraved-swoosh
-                   chevrons, left one mirrored -- same artwork as NavChevron. -->
-              <div class="mock-navrow">
-                <div class="mock-nav-btn"><svg viewBox="0 0 28 24" style="transform:scaleX(-1)"><path d="M9 6 C 14 9, 19 11, 24 12 C 19 13, 14 15, 9 18" stroke="#D4A976" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></div>
-                <div class="mock-nav-btn"><svg viewBox="0 0 28 24"><path d="M9 6 C 14 9, 19 11, 24 12 C 19 13, 14 15, 9 18" stroke="#D4A976" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></div>
-              </div>
-              <!-- Comment / Favourites / Details -- the app's real controlsRow. -->
+              <!-- The app's real controlsRow (one line, band eighths):
+                   Comment left, the bare Prev/Next arrows dead centre
+                   (movement owns the middle), Favourites right. Details no
+                   longer exists -- it merged into the comment sheet. Arrow
+                   artwork = NavChevron's engraved gold swoosh, left mirrored. -->
               <div class="mock-controls">
                 <div class="mock-ctrl mock-comment-btn">
                   <div class="mock-ctrl-circle">
@@ -2451,6 +2444,12 @@
                   </div>
                   <span class="mock-ctrl-label">Comment</span>
                 </div>
+                <div class="mock-ctrl">
+                  <div class="mock-nav-btn"><svg viewBox="0 0 28 24" style="transform:scaleX(-1)"><path d="M9 6 C 14 9, 19 11, 24 12 C 19 13, 14 15, 9 18" stroke="#D4A976" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></div>
+                </div>
+                <div class="mock-ctrl">
+                  <div class="mock-nav-btn"><svg viewBox="0 0 28 24"><path d="M9 6 C 14 9, 19 11, 24 12 C 19 13, 14 15, 9 18" stroke="#D4A976" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></div>
+                </div>
                 <div class="mock-ctrl mock-heart-btn">
                   <div class="mock-ctrl-circle mock-ctrl-circle-fav">
                     <span class="mock-heart-outline">♡</span>
@@ -2458,12 +2457,6 @@
                     <span class="mock-ctrl-badge">3</span>
                   </div>
                   <span class="mock-ctrl-label">Favourites</span>
-                </div>
-                <div class="mock-ctrl mock-details-btn">
-                  <div class="mock-ctrl-circle">
-                    <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" stroke="rgba(255,255,255,0.85)" stroke-width="1.5" fill="none"/><circle cx="10" cy="6.2" r="1" fill="rgba(255,255,255,0.85)"/><path d="M10 9 L10 14" stroke="rgba(255,255,255,0.85)" stroke-width="1.5" stroke-linecap="round"/></svg>
-                  </div>
-                  <span class="mock-ctrl-label">Details</span>
                 </div>
               </div>
             </div>
