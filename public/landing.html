@@ -580,6 +580,11 @@
 
 
     @media (prefers-reduced-motion: reduce) {
+      .hero-btn {
+        animation: none;
+        opacity: 1;
+        transform: none;
+      }
       .phone-mock-screen,
       .mock-photo,
       .mock-comment-btn .mock-ctrl-circle svg,
@@ -720,6 +725,29 @@
       animation: pullUp 0.6s forwards;
     }
 
+    /* The flame emblem replaces the i's dot ("keep their light lit": the
+       light IS the tittle). A dotless 1 carries the stem so the font
+       renders no dot of its own; the emblem sits where the dot would, sized
+       and placed in em so it tracks the responsive wordmark exactly. */
+    .hero-title .i-flame {
+      position: relative;
+      display: inline-block;
+    }
+    .hero-title .flame-tittle {
+      position: absolute;
+      left: 50%;
+      bottom: 0.44em;
+      transform: translateX(-50%);
+      /* The 512-square PNG holds the flame at ~20% of its width and ~58% of
+         its height, lower-centre weighted: 0.56em of box yields a ~0.11em
+         wide, ~0.32em tall flame whose tip rises above the stem like a lit
+         wick. The dark drop-shadow hugs the strokes so the gold stays
+         legible where the wordmark crosses the phone's gold bokeh. */
+      width: 0.56em;
+      height: auto;
+      filter: drop-shadow(0 0 0.02em rgba(10, 8, 7, 0.85));
+    }
+
     .hero-title .asterisk {
       position: absolute;
       top: 0.65em;
@@ -770,22 +798,34 @@
       animation: pullUp 0.8s 0.5s forwards;
     }
 
+    /* The page's one conversion action, upgraded (Deon, 2026-07-26) from a
+       flat cream pill with a black disc into the page's own light: warm
+       candlelit gradient, a gold ember disc carrying the arrow, and a slow
+       breathing glow that echoes "keep their light lit". The breathe starts
+       after the entrance animation lands and only ever touches box-shadow,
+       so it composes with pullUp's opacity/transform. */
     .hero-btn {
       display: inline-flex;
       align-items: center;
       gap: 8px;
       max-width: 100%;
-      background: var(--primary);
+      background: linear-gradient(160deg, #FAF4E8, #E8D7BA);
       border-radius: 9999px;
       border: none;
       cursor: pointer;
-      padding: 4px 4px 4px 0;
+      padding: 5px 5px 5px 0;
       text-decoration: none;
       width: fit-content;
       transition: gap 0.3s;
       opacity: 0;
       transform: translateY(20px);
-      animation: pullUp 0.8s 0.7s forwards;
+      box-shadow: 0 6px 26px rgba(196, 154, 108, 0.24), 0 2px 10px rgba(0, 0, 0, 0.4);
+      animation: pullUp 0.8s 0.7s forwards, ctaBreathe 3.8s 1.9s ease-in-out infinite;
+    }
+
+    @keyframes ctaBreathe {
+      0%, 100% { box-shadow: 0 6px 26px rgba(196, 154, 108, 0.22), 0 2px 10px rgba(0, 0, 0, 0.4); }
+      50% { box-shadow: 0 8px 36px rgba(196, 154, 108, 0.44), 0 2px 10px rgba(0, 0, 0, 0.4); }
     }
 
     .hero-btn:hover {
@@ -795,18 +835,20 @@
     .hero-btn-text {
       padding-left: 32px;
       padding-right: 8px;
-      font-size: 16px;
+      font-size: 17px;
       color: #1A1613;
-      font-weight: 500;
+      font-weight: 600;
+      letter-spacing: 0.01em;
     }
 
     .hero-btn-icon {
       display: flex;
+      flex: none;
       align-items: center;
       justify-content: center;
-      width: 40px;
-      height: 40px;
-      background: #000;
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(150deg, #C49A6C, #A47C4F);
       border-radius: 50%;
       transition: transform 0.3s;
     }
@@ -818,7 +860,7 @@
     .hero-btn-icon svg {
       width: 20px;
       height: 20px;
-      stroke: var(--primary);
+      stroke: #1A1613;
       fill: none;
       stroke-width: 2;
       stroke-linecap: round;
@@ -1790,15 +1832,23 @@
          (phone 1 < scrim 2 < text 3 < wordmark 4), so the gradient's tail
          gently dims the phone's left edge exactly where the paragraph's
          line-ends cross its bright, Ken-Burns-moving photo. */
+      /* No detectable boundary anywhere (Deon, 2026-07-26: "I don't like it
+         being so obvious"): the background fades it out to the RIGHT, and the
+         mask fades its TOP and BOTTOM edges, which were hard cuts that read
+         as a card the moment the scrim started overlapping the phone frame.
+         The left edge sits off-screen. The box extends past the text block so
+         the mask's fade bands land outside the copy they protect. */
       .hero-content::before {
         content: '';
         position: absolute;
-        top: -16px;
-        bottom: -8px;
+        top: -32px;
+        bottom: -20px;
         left: -4px;
-        width: 76%;
+        width: 82%;
         z-index: 2;
-        background: linear-gradient(102deg, rgba(10, 8, 7, 0.74) 44%, rgba(10, 8, 7, 0.34) 66%, transparent 84%);
+        background: linear-gradient(96deg, rgba(10, 8, 7, 0.72) 38%, rgba(10, 8, 7, 0.30) 60%, transparent 80%);
+        -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 13%, #000 87%, transparent 100%);
+        mask-image: linear-gradient(to bottom, transparent 0, #000 13%, #000 87%, transparent 100%);
         pointer-events: none;
       }
       .phone-mock { z-index: 1; }
@@ -1819,7 +1869,14 @@
            at 375px (no visual change there or at nearby real phone widths),
            while scaling safely -- with a small built-in margin -- at every
            other width instead of a single tuned breakpoint. */
-        font-size: min(calc((100vw - 48px) / 2.618), 26vh);
+        /* Deon (2026-07-26): the right margin must MATCH the left. The left
+           gap is fixed at 32px (16px hero + 16px content padding); the old
+           divisor only guaranteed no overflow, landing the visual right edge
+           (the asterisk's tip, which deliberately overhangs the "t") at
+           ~20px. Sizing against (100vw - 64px) with the measured
+           width-to-font ratio (2.582, overhang included) puts the asterisk
+           tip at exactly 32px from the right edge at every width. */
+        font-size: min(calc((100vw - 64px) / 2.582), 26vh);
       }
 
       .hero-right {
@@ -1837,22 +1894,23 @@
          the (pointer-events:none, lower z) mock it simply renders on top,
          so neither element sizes the other. */
       .hero-btn-text {
-        font-size: 15px;
-        padding-left: 20px;
-        padding-right: 8px;
+        font-size: 16px;
+        padding-left: 24px;
+        padding-right: 10px;
         /* One line: "Create a / memorial" wrapping inside a pill next to a
            round arrow reads as a squeezed button rather than a confident one. */
         white-space: nowrap;
       }
 
       .hero-btn-icon {
-        width: 36px;
-        height: 36px;
+        width: 44px;
+        height: 44px;
       }
 
       .hero-btn {
-        gap: 6px;
-        padding: 4px 4px 4px 0;
+        gap: 8px;
+        padding: 5px 5px 5px 0;
+        max-width: none;
       }
 
       /* On mobile the phone owns the right column at full height, mirroring
@@ -1902,8 +1960,31 @@
         height: 28px;
       }
 
+      /* Same disease as the hero scrim, same cure (Deon, 2026-07-26): the
+         #101010 slab read as an obvious grey card floating on the page black,
+         colour-matched to nothing in the warm palette. On mobile the copy
+         sits directly on the page; the section's own spacing carries the
+         rhythm. Desktop keeps its card, where the wide viewport needs the
+         containment. */
       .about-card {
-        padding: 40px 24px;
+        background: transparent;
+        padding: 8px 8px 0;
+      }
+
+      /* The hero's video block ended in a hard rounded-corner cut exactly
+         where the pulled-up about heading crosses it, so the heading
+         straddled warm footage above and flat black below with a visible
+         card edge behind it. Melt the video (and its texture overlays) into
+         the page black over its last quarter instead. Content inside
+         .hero-card (wordmark, CTA) ends well above the fade band at every
+         supported height, and the mask layers sit inset:0 of the card, so
+         nothing interactive is touched. */
+      .hero-video-container,
+      .hero-noise,
+      .hero-gradient,
+      .hero-fluid-canvas {
+        -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent 98%);
+        mask-image: linear-gradient(to bottom, #000 72%, transparent 98%);
       }
 
       .about-heading {
@@ -2246,7 +2327,6 @@
       <!-- Navbar -->
       <nav class="navbar">
         <div class="navbar-inner">
-          <img src="/logo-mark-gold.png" alt="Everlit" class="navbar-mark" />
           <ul class="navbar-links">
             <li><a href="#why">Why Everlit</a></li>
             <li><a href="#how">How it works</a></li>
@@ -2274,7 +2354,7 @@
           </a>
         </div>
         <h1 class="hero-title">
-          <span class="word" style="animation-delay: 0s;">Everlit<span class="asterisk">*</span></span>
+          <span class="word" style="animation-delay: 0s;">Everl<span class="i-flame">ı<img src="/logo-mark-gold.png" alt="" class="flame-tittle" /></span>t<span class="asterisk">*</span></span>
         </h1>
 
         <!-- Device mockup: live CSS recreation of the real app.tsx swipe/heart/
@@ -2356,7 +2436,7 @@
         <!-- The gold italic phrase wraps as ONE unit (nowrap) so the line
              break can never split it mid-phrase ("never / in one place"
              was landing wherever the width happened to run out). -->
-        <h2 class="about-heading" id="about-heading"><span class="word">The</span> <span class="word">best</span> <span class="word">photos</span> <span class="word">are</span> <span style="white-space:nowrap"><span class="word italic-text">never</span> <span class="word italic-text">in</span> <span class="word italic-text">one</span> <span class="word italic-text">place.</span></span></h2>
+        <h2 class="about-heading" id="about-heading"><span class="word">The</span> <span class="word">best</span> <span style="white-space:nowrap"><span class="word">photos</span> <span class="word">are</span></span> <span style="white-space:nowrap"><span class="word italic-text">never</span> <span class="word italic-text">in</span> <span class="word italic-text">one</span> <span class="word italic-text">place.</span></span></h2>
         <div class="streak-divider" aria-hidden="true"></div>
 
         <div class="about-body" id="about-body">When someone we love passes, grief scatters the family, and the memories scatter with it, spread across a hundred phones. Everlit gathers both into one gentle place, so nothing is lost.</div>
