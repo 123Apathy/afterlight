@@ -2795,6 +2795,49 @@
     }
 
     observeWords(document.getElementById('about-heading'));
+
+    // Place the flame tittle from the DEVICE'S OWN rendered metrics. The CSS
+    // em values are only a no-JS fallback: they position against the span's
+    // line box, whose relationship to the actual glyph ink shifts per device
+    // with font loading, per-glyph fallback and rendering differences (it sat
+    // perfectly in headless Chromium and drifted high-right on Deon's phone).
+    // Canvas text metrics report where the dotless ı's ink really is in
+    // whatever font actually rendered, so the flame self-corrects everywhere.
+    (function () {
+      var stem = document.querySelector('.hero-title .i-flame');
+      var img = stem && stem.querySelector('.flame-tittle');
+      if (!stem || !img) return;
+      // Flame geometry inside the 512-square PNG: bottom sits 25.8% up from
+      // the box's bottom edge, centre at 49.8% across.
+      var FLAME_BOTTOM_FRACTION = 0.258;
+      var GAP_EM = 0.045;
+      function place() {
+        try {
+          var cs = getComputedStyle(stem);
+          var fs = parseFloat(cs.fontSize);
+          var ctx = document.createElement('canvas').getContext('2d');
+          ctx.font = cs.fontStyle + ' ' + cs.fontWeight + ' ' + fs + 'px ' + cs.fontFamily;
+          var m = ctx.measureText('ı');
+          if (!m.actualBoundingBoxAscent) return; // ancient browser: CSS fallback stands
+          // Baseline offset inside the span's line box, from the box's own
+          // maths: half-leading above the font box, then the font ascent.
+          var lineH = parseFloat(cs.lineHeight) || fs * 0.85;
+          var asc = m.fontBoundingBoxAscent || fs * 0.9;
+          var desc = m.fontBoundingBoxDescent || fs * 0.25;
+          var baselineFromTop = (lineH - (asc + desc)) / 2 + asc;
+          var rect = stem.getBoundingClientRect();
+          var inkTopFromBottom = rect.height - (baselineFromTop - m.actualBoundingBoxAscent);
+          var imgH = img.getBoundingClientRect().width; // square PNG, width is set in em
+          img.style.bottom = (inkTopFromBottom + GAP_EM * fs - FLAME_BOTTOM_FRACTION * imgH) + 'px';
+          // Centre on the glyph's advance, not the span box: the title's
+          // negative letter-spacing lives in the box, not the ink.
+          img.style.left = (m.width / 2) + 'px';
+        } catch (e) { /* CSS fallback stands */ }
+      }
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(place);
+      place();
+      window.addEventListener('resize', place);
+    })();
     observeWords(document.getElementById('features-title'));
     observeWords(document.getElementById('features-subtitle'));
 
