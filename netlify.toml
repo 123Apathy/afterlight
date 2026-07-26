@@ -1,6 +1,11 @@
 [build]
   command = "npx expo export --platform web"
   publish = "dist"
+  # Kill switch for git-triggered builds: the ignore command exiting 0 makes
+  # Netlify skip the build, so a push can never burn build credits. Deploys
+  # happen ONLY via the CLI (Deploy Everlit.cmd), which ignores this setting.
+  # To ever re-enable git builds, delete this line.
+  ignore = "exit 0"
 
 [functions]
   directory = "netlify/functions"
