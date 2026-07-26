@@ -1209,6 +1209,17 @@ app.get('/', (req, res, next) => {
   });
 });
 
+// Extensionless legal pages, the local-dev equivalent of netlify.toml's
+// /terms and /privacy redirects. Without these the SPA fallback swallows
+// the footer's links and serves the app shell instead.
+for (const page of ['terms', 'privacy']) {
+  app.get(`/${page}`, (req, res, next) => {
+    res.sendFile(path.join(distDir, `${page}.html`), (err) => {
+      if (err) next();
+    });
+  });
+}
+
 app.use(express.static(distDir));
 
 // Invite links: inject project-specific preview meta so a shared /join/<code>
