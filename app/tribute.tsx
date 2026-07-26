@@ -296,7 +296,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     color: colors.white,
     fontFamily: 'Poppins_400Regular',
-    fontSize: 15,
+    // 16, not 15: inputs under 16px make iOS Safari zoom the page in on
+    // focus and never zoom back out. Every focusable input stays at 16+.
+    fontSize: 16,
     marginTop: 28,
   },
   nameHint: {
@@ -381,7 +383,9 @@ const styles = StyleSheet.create({
     padding: 16,
     color: colors.white,
     fontFamily: 'Poppins_400Regular',
-    fontSize: 15,
+    // 16+ like every focusable input: under 16 iOS Safari zooms in on focus
+    // and stays zoomed (see nameInput above).
+    fontSize: 16,
     lineHeight: 24,
   },
   qButtons: {

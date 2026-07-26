@@ -24,6 +24,24 @@ import { colors } from '../constants/theme';
 // element that never repaints again keeps its original fringed rasterization.
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
   document.title = 'Everlit';
+
+  // iOS Safari zooms the whole page in when a sub-16px input gets focus and
+  // never zooms back out, so after posting a comment the app was left cropped
+  // into a zoomed viewport. All inputs are now 16px+ (the real fix); this cap
+  // is the guard against any future sub-16 input. iOS ONLY: Safari ignores
+  // maximum-scale for pinch gestures (accessibility keeps working) but honours
+  // it for the focus auto-zoom, while Android Chrome would honour it by
+  // disabling pinch zoom entirely, which we do not want.
+  const isIOS =
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (isIOS) {
+    const meta = document.querySelector('meta[name="viewport"]');
+    const content = meta?.getAttribute('content') || '';
+    if (meta && !/maximum-scale/.test(content)) {
+      meta.setAttribute('content', `${content}, maximum-scale=1`);
+    }
+  }
   const style = document.createElement('style');
   style.textContent = `
     [class^="css-text"], [class*=" css-text"] {

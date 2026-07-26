@@ -419,7 +419,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     color: colors.white,
     fontFamily: 'Poppins_400Regular',
-    fontSize: 15,
+    // 16+ everywhere an input can focus: under 16 iOS Safari zooms the page
+    // in on focus and leaves it zoomed (see styles.input below).
+    fontSize: 16,
     marginBottom: 14,
   },
   // The hint sits in the gap the input's own margin would have left, so
@@ -551,7 +553,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     color: colors.white,
     fontFamily: 'Poppins_400Regular',
-    fontSize: 15,
+    // 16, not 15: iOS Safari auto-zooms the page when an input under 16px
+    // gets focus, and never zooms back out after posting. Applies to every
+    // focusable input in the app -- keep them all at 16+.
+    fontSize: 16,
   },
   sendButton: {
     height: 48,
