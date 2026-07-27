@@ -81,13 +81,33 @@ Run 2: 18/20 Excellent (a11y 3->4, perf 3->4), detector clean again.
 4. Scrubber momentum/flick + keyboard arrows DONE
 5. Gold-lit edge (goldLitEdge in lib/glass.ts) on menu cards DONE
 
-## WHAT'S ACTUALLY LEFT (for a future session)
-- Testimonials section on the landing: BLOCKED on a real family quote,
-  never fabricate one. Patterns banked in motionsite-techniques.md.
-- Scrubber: no visual cue the counter is tappable (minor, noted run 2).
-- Tribute: 25 questions is a lot; consider progress/exit messaging.
-- Favourites: fixed 340px card image height could become aspect-ratio.
-- Deploy: everything is committed LOCAL only on netlify-migration.
+## WHAT'S ACTUALLY LEFT
+Re-verified 2026-07-28 against the code. Three of the four items below had
+already been implemented since this list was written; only one is still open.
+
+- **STILL OPEN. Testimonials section on the landing:** BLOCKED on a real family
+  quote, never fabricate one. Patterns banked in motionsite-techniques.md.
+  This is the only remaining UI item, and it is blocked on Deon, not on work.
+- ~~Scrubber: no visual cue the counter is tappable.~~ DONE, `counterPressTappable`
+  in app.tsx adds a faint gold underline, web only so native does not advertise
+  a dead affordance.
+- ~~Tribute: 25 questions is a lot; consider progress/exit messaging.~~ DONE,
+  app/tribute.tsx has "N of 25", a progress bar, a Close button, and the note
+  "Your answers are kept on this device. You can close and come back."
+- ~~Favourites: fixed 340px card image height could become aspect-ratio.~~ DONE,
+  favourites.tsx uses `aspectRatio: 1`.
+
+### Fixed 2026-07-28 (not from the audit, found while closing it out)
+- **Comment-reaction optimistic-ID race.** `addComment` created a comment with a
+  placeholder `optimistic-<photoId>-<ts>` id and never reconciled it with the
+  saved row, so reacting to your own just-posted comment POSTed to
+  `/api/comments/optimistic-.../reactions`, which cannot resolve. The person got
+  "that reaction didn't save" and their heart vanished. `addComment` now swaps in
+  the server's row, and `reactToComment` guards the in-flight window with a
+  gentle message instead of an error.
+
+- Deploy: everything is committed LOCAL only on netlify-migration, pending the
+  next `Deploy Everlit.cmd` run.
 
 ## Session facts a fresh run needs
 - Test memorial "Preview Test" (id a65be5f2-d36b-4b82-b926-f6d2c0a1ca6d)

@@ -331,8 +331,9 @@ export default function SwipeScreen() {
   };
 
   const addComment = async (photo: Photo, text: string) => {
+    const optimisticId = `optimistic-${photo.id}-${Date.now()}`;
     const optimistic = {
-      id: `optimistic-${photo.id}-${Date.now()}`,
+      id: optimisticId,
       photoId: photo.id,
       author: raterName,
       text,
@@ -344,7 +345,19 @@ export default function SwipeScreen() {
     );
     if (DEMO) return; // in-memory only, no backend
     try {
-      await api.addComment(photo.id, raterName, text, memberId);
+      const saved = await api.addComment(photo.id, raterName, text, memberId);
+      // Swap the placeholder for the real saved row. Without this the comment
+      // kept its fake `optimistic-...` id until the next refresh, so reacting
+      // to your own just-posted comment in that window POSTed to
+      // /api/comments/optimistic-.../reactions, which cannot resolve: the
+      // person got "that reaction didn't save" and their heart disappeared.
+      setPhotos((prev) =>
+        prev.map((p) =>
+          p.id !== photo.id
+            ? p
+            : { ...p, comments: p.comments.map((c) => (c.id === optimisticId ? saved : c)) }
+        )
+      );
     } catch {
       showToast("That comment didn't save. Check your connection and try again.");
       refresh();
@@ -535,6 +548,13 @@ export default function SwipeScreen() {
   const reactToComment = async (photo: Photo, commentId: string, emoji: string) => {
     const comment = photo.comments.find((c) => c.id === commentId);
     if (!comment) return;
+    // The comment is still in flight and has no real id yet (addComment swaps
+    // it the moment the server answers). Reacting now would post to a
+    // placeholder id and fail. Say so gently instead of showing an error.
+    if (commentId.startsWith('optimistic-')) {
+      showToast('Give that a moment to save, then add your reaction.');
+      return;
+    }
     const already = comment.reactions.some(
       (r) => r.emoji === emoji && r.rater.toLowerCase() === raterName.toLowerCase()
     );
