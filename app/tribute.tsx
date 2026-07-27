@@ -161,6 +161,7 @@ export default function TributeScreen() {
               <View style={styles.progressTrack}>
                 <View style={[styles.progressFill, { width: `${((index + 1) / total) * 100}%` }]} />
               </View>
+              <Text style={styles.progressSaveNote}>{tributeCopy.progressSaveNote}</Text>
             </View>
 
             <ScrollView
@@ -362,9 +363,20 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: 'rgba(255,255,255,0.1)',
     overflow: 'hidden',
-    marginBottom: 40,
+    // The 40px that used to sit here now lives below the save note, so the
+    // note reads as part of the progress block rather than floating.
+    marginBottom: 10,
   },
   progressFill: { height: 3, borderRadius: 2, backgroundColor: colors.goldWarm },
+  progressSaveNote: {
+    fontFamily: 'Poppins_400Regular',
+    // 13px / textFainter, matching the gateTerms contrast fix rather than the
+    // textFaintest the earlier a11y pass deliberately moved small copy off.
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textFainter,
+    marginBottom: 30,
+  },
   question: {
     fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 30,

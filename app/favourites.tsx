@@ -246,7 +246,11 @@ const styles = StyleSheet.create({
   },
   cardImage: {
     width: '100%',
-    height: 340,
+    // Square rather than a fixed 340px tall: at phone width the two are
+    // near-identical (a full-bleed card is ~343 wide), but the card grows to
+    // maxWidth 640 on a tablet or desktop, where a locked 340 turned every
+    // photograph into a ~1.9:1 letterbox and cropped the top of people's heads.
+    aspectRatio: 1,
     backgroundColor: colors.ink,
   },
   cardBody: {

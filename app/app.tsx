@@ -1141,7 +1141,10 @@ export default function SwipeScreen() {
                 }}
                 scaleTo={0.94}
                 hitSlop={12}
-                style={styles.counterPress}
+                style={[
+                  styles.counterPress,
+                  Platform.OS === 'web' && styles.counterPressTappable,
+                ]}
                 accessibilityRole="button"
                 accessibilityLabel="Jump to a photo"
               >
@@ -2097,6 +2100,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  // The counter opens the photo scrubber, but nothing said so: run 2 of the UI
+  // audit logged that it reads as a plain label. A faint gold underline is the
+  // quietest thing that still says "this is a control". Web only, because the
+  // press itself is web only -- native must not advertise a dead affordance.
+  counterPressTappable: {
+    paddingBottom: 3,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(196, 154, 108, 0.42)',
   },
   brand: {
     flexDirection: 'row',
