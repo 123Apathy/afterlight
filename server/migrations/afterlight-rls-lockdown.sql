@@ -1,26 +1,44 @@
--- ⚠️ DO NOT APPLY until the server runs on the SECRET (service-role) key.
+-- ✅ APPLIED to the live database on 2026-07-27. Kept for the record and so
+--    any future Supabase project gets the same posture. Re-running it is a
+--    no-op (there are no permissive policies left to drop).
 --
--- ── PREREQUISITE STATUS, verified 2026-07-27 ─────────────────────────────────
---   PRODUCTION: READY. SUPABASE_SERVICE_ROLE_KEY is set on Netlify at context
---     "all" with the functions+runtime scopes, and the deployed function bundle
---     reads that exact name (supabaseClient.js lists it first). Prod will keep
---     working after the lockdown.
---   LOCAL DEV: **NOT READY — this is the blocker.** server/.env holds only
---     SUPABASE_KEY (the anon/publishable key). Applying this migration as-is
---     breaks localhost immediately: every read and write from `node
---     server/index.js` starts failing.
---     Proof it behaves exactly that way: afterlight_members was created on
---     2026-07-26T17:53Z with RLS on and NO policies. Local dev hit
---     "new row violates row-level security policy for table
---     afterlight_members" twice at 18:05Z, and an anon ALL policy was added at
---     18:07Z purely to unbreak it. Prod did not carry the members code until
---     the 2026-07-27 deploy, so those denials were local, not production.
---   TO UNBLOCK: add SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SECRET_KEY) to
---     server/.env, restart the local server, confirm it reads and writes, then
---     apply. Keep the ability to smoke-test a live endpoint immediately after.
---   ROLLBACK, if the live app breaks (one statement per table, e.g.):
---     create policy afterlight_members_anon_all on public.afterlight_members
---       for all to anon using (true) with check (true);
+-- ── WHAT UNBLOCKED IT ────────────────────────────────────────────────────────
+--   The blocker was never production. Prod already had
+--   SUPABASE_SERVICE_ROLE_KEY on Netlify (context "all", functions+runtime),
+--   and the deployed bundle reads that name. LOCAL DEV was the blocker:
+--   server/.env held only the anon key, so the lockdown would have killed
+--   localhost on the first read. Deon added SUPABASE_SERVICE_ROLE_KEY to
+--   server/.env on 2026-07-27, the local server was restarted onto it, and
+--   then this ran.
+--
+--   Corroborating history: afterlight_members was created 2026-07-26T17:53Z
+--   with RLS on and NO policies; local dev hit "new row violates row-level
+--   security policy" twice at 18:05Z; an anon ALL policy was added at 18:07Z
+--   purely to unbreak it. Prod had no members code until the 07-27 deploy, so
+--   those denials were local, not production. That table is now locked too.
+--
+-- ── VERIFIED AFTER APPLYING (all measured, not assumed) ──────────────────────
+--   App still works:
+--     prod  GET /api/projects/:id            200
+--     prod  GET /api/projects/:id/photos     200, byte-identical to baseline
+--     prod  signed photo fetch               200, 116002 bytes (identical)
+--     prod  POST /api/projects/:id/members   200
+--     local GET project + photos             200
+--     local POST /api/photos/:id/favorite    201, row created (then deleted)
+--     browser: 7 photos rendered from signed URLs, naturalWidth non-zero
+--   Anon (publishable key) is genuinely locked out:
+--     GET  /rest/v1/afterlight_{projects,photos,comments,tribute_responses,
+--          members}          -> 200 []          (RLS filters every row)
+--     POST /rest/v1/afterlight_{projects,comments,members}
+--                            -> 401 "new row violates row-level security policy"
+--     GET  /storage/v1/object/afterlight-photos/<path> (unsigned)
+--                            -> 400 "Object not found"
+--     POST /storage/v1/object/list/afterlight-photos   -> 200 []
+--   Client data intact: Brenda 40 photos/31 favourites/19 comments/2 members,
+--   Mary 191/27/19/3.
+--
+--   ROLLBACK: server/migrations/afterlight-rls-lockdown-ROLLBACK.sql restores
+--   the exact pre-lockdown policies. Only use it to stop an outage.
 -- ─────────────────────────────────────────────────────────────────────────────
 --
 -- Order of operations (breaking either step's order kills the live app):
