@@ -24,7 +24,10 @@ export type Project = {
   id: string;
   name: string;
   slug: string;
-  inviteCode: string;
+  // The family write capability. Present only when the caller proved it already
+  // holds one for this project: the creator, an arrival via the invite code, or
+  // a member presenting a valid transfer token. Absent otherwise, by design.
+  inviteCode?: string;
   createdAt: string;
   enabledButtons: Record<ButtonKey, boolean>;
   // Signed URL of the finished tribute film, present only once published.
@@ -137,10 +140,10 @@ function inviteCodeHeader(): Record<string, string> {
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const method = options?.method || 'GET';
-  const headers =
-    method === 'GET'
-      ? options?.headers
-      : { ...inviteCodeHeader(), ...(options?.headers as Record<string, string>) };
+  // The invite code goes on EVERY request, reads included. Reads are now
+  // invite-authed server-side, because the project id is embedded in every
+  // signed photo URL and so was never secret enough to guard a memorial.
+  const headers = { ...inviteCodeHeader(), ...(options?.headers as Record<string, string>) };
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
   if (!res.ok) {
     const body = await res.text().catch(() => '');
@@ -243,6 +246,8 @@ export const api = {
       body: JSON.stringify({ name, contact, startCode }),
     }),
 
+  // Invite-authed via the X-Invite-Code header that request() now attaches to
+  // every call. Returns 403 for a caller that does not hold the code.
   getProject: (projectId: string) => request<Project>(`/api/projects/${projectId}`),
 
   getProjectByInvite: (inviteCode: string, transferToken?: string) =>

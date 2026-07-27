@@ -30,6 +30,20 @@ app.use(
     },
   })
 );
+// Capabilities in this app live in URLs: /join/<inviteCode> and /admin/<secret>.
+// Without an explicit policy the browser sends that full URL as the Referer to
+// every third-party font, stylesheet, or image those pages load, handing the
+// capability to someone else's access logs. no-referrer costs us nothing (we do
+// not read Referer anywhere) and closes that leak. nosniff and DENY are the two
+// other zero-risk headers; a full CSP is deliberately NOT set here because the
+// Expo web build relies on inline script and would need testing first.
+app.use((req, res, next) => {
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  next();
+});
+
 app.use(express.json({ limit: '2mb' }));
 
 // Minimal per-IP sliding-window rate limiter for write endpoints. In-memory
@@ -142,19 +156,37 @@ function resolveEnabledButtons(overrides, defaults) {
   return result;
 }
 
-function mapProject(row, enabledButtons, videoUrl = null) {
-  return {
+// `inviteCode` is deliberately OPT-IN and off by default. The invite code IS
+// the family write capability (requireInvite compares against it), so echoing
+// it to a caller who merely knows the project id turns any leak of a project
+// UUID -- share links, browser history, a Referer header, a screenshot -- into
+// full write and permanent delete control of that memorial. Only callers who
+// have already proved they hold the code get it back: the creator at
+// POST /api/projects, anyone who arrived via /api/projects/by-invite/:code, and
+// any caller that passed requireInvite. That makes the echo a confirmation of
+// something already held, never a disclosure.
+function mapProject(row, enabledButtons, videoUrl = null, { withInviteCode = false } = {}) {
+  const out = {
     id: row.id,
     name: row.name,
     slug: row.slug,
-    inviteCode: row.invite_code,
     createdAt: row.created_at,
     enabledButtons,
     // Signed URL for the finished tribute film — only when the admin has
     // published it. Families see the in-app film screen the moment this is set.
     videoUrl,
   };
+  if (withInviteCode) out.inviteCode = row.invite_code;
+  return out;
 }
+
+// NOTE: an earlier version of this fix also accepted a member transfer token in
+// ?m= as proof. That was wrong twice over: it put a capability in a URL query
+// string (logged by the platform, leaked via Referer, pasted into WhatsApp), and
+// it let the weaker member token be traded up for the invite code, which is the
+// delete capability. Both are gone. Proof of the invite code is now the only way
+// to be handed the invite code back, which makes the echo a no-op confirmation
+// rather than an escalation path.
 
 // Sign the tribute film's URL for a project row, when published. Long TTL —
 // families keep the tab open / return to it.
@@ -206,14 +238,29 @@ function mapMember(row, { withToken = false } = {}) {
   return out;
 }
 
+// Identity here means "the member of this project whose name matches, ignoring
+// case". This deliberately does NOT use .ilike(). PostgREST treats % and _ as
+// LIKE metacharacters AND converts * into %, so ANY pattern-based filter on an
+// attacker-supplied name is a LIKE-injection: typing "*" or "%" would match
+// whichever member the database returned first and adopt that person's identity,
+// inheriting their member row without knowing any real name. Escaping is
+// error-prone across those two layers, so we do not pattern-match at all.
+// A project's member list is single digits, so an exact comparison in JS is
+// cheaper to reason about and cannot be injected.
+function sameName(a, b) {
+  return String(a ?? '').trim().toLocaleLowerCase() === String(b ?? '').trim().toLocaleLowerCase();
+}
+
+async function findMemberByName(projectId, name) {
+  const { data } = await supabase.from('afterlight_members').select('*').eq('project_id', projectId);
+  // Never match the owner sentinel by name: it is a real row, so without this a
+  // caller could simply type the placeholder to adopt the organiser's member.
+  return (data || []).find((m) => m.display_name !== OWNER_PLACEHOLDER && sameName(m.display_name, name)) || null;
+}
+
 async function findOrCreateMember(projectId, name, relation = null) {
   const trimmed = name.trim();
-  const { data: existing } = await supabase
-    .from('afterlight_members')
-    .select('*')
-    .eq('project_id', projectId)
-    .ilike('display_name', trimmed)
-    .maybeSingle();
+  const existing = await findMemberByName(projectId, trimmed);
   if (existing) {
     // A freshly declared relation sticks to an adopted member too (backfilled
     // members have none, and people's declarations should win over silence).
@@ -235,12 +282,7 @@ async function findOrCreateMember(projectId, name, relation = null) {
   if (error) {
     // Unique race (two devices, same new name at once): adopt the winner.
     if (error.code === '23505') {
-      const { data: raced } = await supabase
-        .from('afterlight_members')
-        .select('*')
-        .eq('project_id', projectId)
-        .ilike('display_name', trimmed)
-        .maybeSingle();
+      const raced = await findMemberByName(projectId, trimmed);
       if (raced) return raced;
     }
     throw Object.assign(new Error(error.message), { status: 500 });
@@ -486,7 +528,9 @@ app.post('/api/projects', rateLimit(5), async (req, res, next) => {
 
     const defaults = await getButtonDefaults();
     res.status(201).json({
-      ...mapProject(project, resolveEnabledButtons(project.enabled_buttons, defaults)),
+      // The creator gets the invite code: they just minted it, and they need it
+      // to share the memorial with the rest of the family.
+      ...mapProject(project, resolveEnabledButtons(project.enabled_buttons, defaults), null, { withInviteCode: true }),
       owner: { claimToken: owner.transfer_token },
     });
   } catch (err) {
@@ -566,7 +610,11 @@ app.post('/api/projects/:projectId/members', rateLimit(30), requireInvite(projec
   }
 });
 
-app.get('/api/projects/:projectId', async (req, res, next) => {
+// Reads are invite-authed like writes. The project UUID is NOT a secret: every
+// photo's storage key is `<projectId>/<uuid>`, so the id is embedded in every
+// signed image URL the app renders, and any one of those forwarded out of a
+// family WhatsApp group would otherwise expose the whole memorial.
+app.get('/api/projects/:projectId', rateLimit(60), requireInvite(projectFromParam), async (req, res, next) => {
   try {
     const { data, error } = await supabase
       .from('afterlight_projects')
@@ -575,7 +623,9 @@ app.get('/api/projects/:projectId', async (req, res, next) => {
       .single();
     if (error || !data) return res.status(404).json({ error: 'project not found' });
     const defaults = await getButtonDefaults();
-    res.json(mapProject(data, resolveEnabledButtons(data.enabled_buttons, defaults), await signProjectVideo(data)));
+    // requireInvite already proved the caller holds the code, so echoing it is a
+    // confirmation, not a disclosure.
+    res.json(mapProject(data, resolveEnabledButtons(data.enabled_buttons, defaults), await signProjectVideo(data), { withInviteCode: true }));
   } catch (err) {
     next(err);
   }
@@ -590,7 +640,8 @@ app.get('/api/projects/by-invite/:inviteCode', async (req, res, next) => {
       .single();
     if (error || !data) return res.status(404).json({ error: 'invite not found' });
     const defaults = await getButtonDefaults();
-    const payload = mapProject(data, resolveEnabledButtons(data.enabled_buttons, defaults), await signProjectVideo(data));
+    // Reached BY the invite code, so the caller demonstrably already holds it.
+    const payload = mapProject(data, resolveEnabledButtons(data.enabled_buttons, defaults), await signProjectVideo(data), { withInviteCode: true });
 
     // "Keep your place" links carry ?m=<transferToken>: the person walks in
     // on a new device already recognised, skipping the name gate. An invalid
@@ -620,7 +671,7 @@ app.get('/api/projects/by-invite/:inviteCode', async (req, res, next) => {
 
 // --- Photos (project-scoped) ---
 
-app.get('/api/projects/:projectId/photos', async (req, res, next) => {
+app.get('/api/projects/:projectId/photos', rateLimit(60), requireInvite(projectFromParam), async (req, res, next) => {
   try {
     const { projectId } = req.params;
     const { data: photos, error: photosError } = await supabase
@@ -921,8 +972,17 @@ app.post('/api/projects/:projectId/tribute', rateLimit(10), requireInvite(projec
     if (!respondent || typeof respondent !== 'string' || !respondent.trim()) {
       return res.status(400).json({ error: 'respondent is required' });
     }
+    // A name is a name. Uncapped, this string is stored and then interpolated
+    // into the operator notification, so it was a free way to push ~2MB of
+    // attacker text into that channel on every submission.
+    if (respondent.trim().length > 120) {
+      return res.status(400).json({ error: 'respondent name is too long' });
+    }
     if (!Array.isArray(answers) || answers.length === 0) {
       return res.status(400).json({ error: 'answers is required' });
+    }
+    if (answers.length > tributeQuestions.length) {
+      return res.status(400).json({ error: 'too many answers' });
     }
 
     const verifiedMember = await memberIdForWrite(memberId, req.projectId);
@@ -1064,7 +1124,7 @@ app.post('/api/comments/:commentId/reactions', rateLimit(60), requireInvite(proj
 
 // --- Kanban (project-scoped) ---
 
-app.get('/api/projects/:projectId/kanban', async (req, res, next) => {
+app.get('/api/projects/:projectId/kanban', rateLimit(60), requireInvite(projectFromParam), async (req, res, next) => {
   try {
     const { projectId } = req.params;
     const { data: columns, error: columnsError } = await supabase
@@ -1692,7 +1752,7 @@ app.delete('/api/admin/projects/:projectId', requireAdmin, async (req, res, next
 
     const { data: photos } = await supabase
       .from('afterlight_photos')
-      .select('id, storage_path')
+      .select('id, storage_path, thumb_path')
       .eq('project_id', projectId);
     const photoIds = (photos || []).map((p) => p.id);
 
@@ -1709,25 +1769,60 @@ app.delete('/api/admin/projects/:projectId', requireAdmin, async (req, res, next
 
     // Best-effort storage cleanup — a storage hiccup shouldn't block removing
     // the memorial itself, so failures here are swallowed intentionally.
-    const storagePaths = (photos || []).map((p) => p.storage_path).filter(Boolean);
+    // Thumbnails MUST be included: they are full, legible 640px copies of the
+    // family's photos, so omitting them left "permanently delete this memorial"
+    // silently retaining a viewable copy of every picture forever.
+    const storagePaths = (photos || [])
+      .flatMap((p) => [p.storage_path, p.thumb_path])
+      .filter(Boolean);
     if (project?.video_storage_path) storagePaths.push(project.video_storage_path);
+    // The admin archive feature zips EVERY photo of the memorial into
+    // archives/<projectId>/*.zip in this same bucket. Those zips are not rows,
+    // so nothing above finds them, and leaving them behind meant "permanently
+    // delete this memorial" kept a complete copy of the family's photos.
+    const { data: archiveFiles } = await supabase.storage
+      .from(PHOTOS_BUCKET)
+      .list(`archives/${projectId}`);
+    for (const f of archiveFiles || []) storagePaths.push(`archives/${projectId}/${f.name}`);
+
     if (storagePaths.length) {
-      try {
-        await supabase.storage.from(PHOTOS_BUCKET).remove(storagePaths);
-      } catch {
-        /* swallow */
+      const { error: storageError } = await supabase.storage.from(PHOTOS_BUCKET).remove(storagePaths);
+      // Do NOT swallow this. A family asking to be deleted is a promise (and
+      // under POPIA an obligation); reporting success while their photos are
+      // still in the bucket is the one outcome that must never happen quietly.
+      if (storageError) {
+        throw Object.assign(new Error(`storage cleanup failed, memorial NOT deleted: ${storageError.message}`), {
+          status: 500,
+        });
       }
     }
 
-    if (cardIds.length) await supabase.from('afterlight_card_notes').delete().in('card_id', cardIds);
-    if (columnIds.length) await supabase.from('afterlight_kanban_cards').delete().in('column_id', columnIds);
-    await supabase.from('afterlight_kanban_columns').delete().eq('project_id', projectId);
+    // Every delete is checked. Previously only the final one was, so a failure
+    // anywhere above still returned 204 and the operator believed the memorial
+    // was gone.
+    if (cardIds.length) assertOk((await supabase.from('afterlight_card_notes').delete().in('card_id', cardIds)).error);
+    if (columnIds.length) assertOk((await supabase.from('afterlight_kanban_cards').delete().in('column_id', columnIds)).error);
+    assertOk((await supabase.from('afterlight_kanban_columns').delete().eq('project_id', projectId)).error);
     if (photoIds.length) {
-      await supabase.from('afterlight_ratings').delete().in('photo_id', photoIds);
-      await supabase.from('afterlight_comments').delete().in('photo_id', photoIds);
+      assertOk((await supabase.from('afterlight_ratings').delete().in('photo_id', photoIds)).error);
+      // Reactions hang off comment ids, not project id, so nothing else in this
+      // cascade reaches them. They must go BEFORE the comments they reference,
+      // or they are orphaned in the database after the memorial is "deleted".
+      const { data: doomedComments } = await supabase
+        .from('afterlight_comments')
+        .select('id')
+        .in('photo_id', photoIds);
+      const doomedCommentIds = (doomedComments || []).map((c) => c.id);
+      if (doomedCommentIds.length) {
+        assertOk(
+          (await supabase.from('afterlight_comment_reactions').delete().in('comment_id', doomedCommentIds)).error
+        );
+      }
+      assertOk((await supabase.from('afterlight_comments').delete().in('photo_id', photoIds)).error);
     }
-    await supabase.from('afterlight_photos').delete().eq('project_id', projectId);
-    await supabase.from('afterlight_tribute_responses').delete().eq('project_id', projectId);
+    assertOk((await supabase.from('afterlight_photos').delete().eq('project_id', projectId)).error);
+    assertOk((await supabase.from('afterlight_tribute_responses').delete().eq('project_id', projectId)).error);
+    assertOk((await supabase.from('afterlight_members').delete().eq('project_id', projectId)).error);
 
     const { error } = await supabase.from('afterlight_projects').delete().eq('id', projectId);
     assertOk(error);

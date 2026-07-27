@@ -1,5 +1,12 @@
 -- EMERGENCY ROLLBACK for afterlight-rls-lockdown.sql
 --
+-- ⚠️ THIS FILE LIVES OUTSIDE server/migrations/ ON PURPOSE. Moved 2026-07-27.
+--    It used to sit alongside the real migrations, where any "apply every .sql
+--    in migrations/" loop (a script, a new dev, an agent) would have run it and
+--    silently re-opened anon read AND write on all 11 tables plus the photo
+--    bucket. It is not a migration. It is a fire extinguisher. Run it only by
+--    hand, deliberately, to stop a live outage.
+--
 -- Captured from pg_policies on 2026-07-27, immediately before the lockdown was
 -- applied. These are the EXACT policies that existed, reproduced verbatim:
 -- 11 public tables on `anon / ALL / using(true) with check(true)`, plus the 3

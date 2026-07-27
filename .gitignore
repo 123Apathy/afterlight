@@ -54,3 +54,8 @@ assets/demo/
 # built web export
 dist/
 .netlify/
+
+# Security audit reports: detailed, exploitable vulnerability maps of this app.
+# The GitHub repo (123Apathy/afterlight) is PUBLIC, so these must never be
+# committed while that remains true. Kept locally only.
+docs/RED-TEAM-*.md

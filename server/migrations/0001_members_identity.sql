@@ -25,11 +25,15 @@ create unique index if not exists afterlight_members_project_name_key
 
 alter table public.afterlight_members enable row level security;
 
--- Matches the posture every other afterlight table has today (anon ALL, with
--- authorisation enforced at the Express layer via invite codes). The parked
--- RLS lockdown migration will tighten members together with the rest.
-create policy afterlight_members_anon_all on public.afterlight_members
-  for all to anon using (true) with check (true);
+-- HISTORICAL, DELIBERATELY REMOVED on 2026-07-27. This migration used to create:
+--   create policy afterlight_members_anon_all on public.afterlight_members
+--     for all to anon using (true) with check (true);
+-- which matched the pre-lockdown posture (anon ALL, authorisation enforced in
+-- Express). afterlight-rls-lockdown.sql has since dropped every such policy, so
+-- re-running this file as written would have silently re-opened anon read AND
+-- write on the members table, undoing the lockdown without any error.
+-- RLS stays enabled with NO policies: deny-all for anon, service-role bypasses.
+-- Do not add a policy back here.
 
 alter table public.afterlight_ratings
   add column if not exists member_id uuid references public.afterlight_members(id) on delete set null;

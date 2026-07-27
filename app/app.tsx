@@ -223,9 +223,9 @@ export default function SwipeScreen() {
       .getProject(projectId)
       .then((details) => {
         setProjectDetails(details);
-        // Server-fresh invite code backfills older remembered projects that
-        // were stored before inviteCode was kept client-side (write auth).
-        setInviteCode(details.inviteCode);
+        // Echo-back of the code we just proved we hold. Guarded so a response
+        // without it can never clobber the code remembered locally.
+        if (details.inviteCode) setInviteCode(details.inviteCode);
       })
       .catch(() => setProjectDetails(null));
   }, [projectId]);

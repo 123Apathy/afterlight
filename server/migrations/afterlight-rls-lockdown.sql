@@ -37,7 +37,7 @@
 --   Client data intact: Brenda 40 photos/31 favourites/19 comments/2 members,
 --   Mary 191/27/19/3.
 --
---   ROLLBACK: server/migrations/afterlight-rls-lockdown-ROLLBACK.sql restores
+--   ROLLBACK: server/emergency/afterlight-rls-lockdown-ROLLBACK.sql restores
 --   the exact pre-lockdown policies. Only use it to stop an outage.
 -- ─────────────────────────────────────────────────────────────────────────────
 --
