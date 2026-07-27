@@ -21,10 +21,32 @@ server-side Netlify build credit. First run needs a one-time browser login.
 **Before every deploy, check `.env` has no `EXPO_PUBLIC_DEMO=1` line.** It is
 baked into the local build, so leaving it in ships demo mode to production.
 
-**Do not deploy by pushing.** Netlify auto-publish is still enabled for the
-`netlify-migration` branch, so a plain `git push` can trigger a real deploy and
-burn build minutes. Standing rule: commit locally, and only push or deploy when
-Deon explicitly asks.
+**Pushing does NOT deploy. Corrected 2026-07-27.** This section used to warn that
+a `git push` could trigger a real deploy. It cannot. `netlify.toml` sets
+`ignore = "exit 0"`, which makes Netlify skip the build on every git-triggered
+attempt, so no push has ever published anything. That matters in the opposite
+direction to the old warning: **never assume a fix is live because you pushed
+it.** Nothing reaches production except a local `netlify deploy --prod` (the
+`Deploy Everlit.cmd` script), which ignores that setting. Standing rule stays:
+commit locally, and only push or deploy when Deon explicitly asks.
+
+### Emergency deploy from another machine
+
+The usual path needs one Windows desktop. If it is unavailable and a security fix
+has to ship, from any machine with Node 22+:
+
+```
+git clone https://github.com/123Apathy/afterlight.git && cd afterlight
+git checkout netlify-migration
+npm ci && npm --prefix server ci
+npx netlify login          # one-time browser auth
+npx expo export --platform web
+npx netlify deploy --prod --dir dist
+```
+
+Check `.env` has no `EXPO_PUBLIC_DEMO=1` and no dev API base before exporting.
+The Netlify env already holds `SUPABASE_SERVICE_ROLE_KEY` and `ADMIN_SECRET`, so
+nothing secret needs to exist on the temporary machine.
 
 ## Google Cloud Run: gone, do not use
 
@@ -38,7 +60,8 @@ because the VPS path below can still use it.
 ## Alternative: a plain VPS
 
 Not in use, kept as a fallback. One Node process behind nginx + certbot.
-Prereqs: Node 22+, nginx, certbot, a subdomain. Clone the private repo,
+Prereqs: Node 22+, nginx, certbot, a subdomain. Clone the repo (note: it is
+currently PUBLIC at `github.com/123Apathy/afterlight`, not private),
 `npm install` (root + `server/`), create `server/.env` with `SUPABASE_URL`,
 `SUPABASE_KEY`, `PORT` and `ADMIN_SECRET`, build with
 `npx expo export --platform web` (with no root `.env`, so the API resolves to

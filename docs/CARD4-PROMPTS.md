@@ -1,9 +1,13 @@
 # Landing card 4 — "Receive the film" still-image prompts
 
 Six generation prompts for Deon to run on Higgsfield. Written 2026-07-25 to
-**replace `public/tribute-taster.mp4`**, which is real footage from Brenda's
-finished tribute film currently playing as the background of card 4 on the
-landing page. A real client's memorial film should not be a marketing asset.
+**replace `public/tribute-taster.mp4`**, which was real footage from a client's
+finished tribute film, playing as the background of card 4 on the landing page.
+A real client's memorial film should not be a marketing asset.
+
+> Status 2026-07-27: that video has now been deleted from `public/` and `dist/`.
+> It was still shipping to the public CDN on every deploy because `expo export`
+> does not prune `dist/`. These prompts are the replacement path.
 
 ## The decision behind these prompts
 
@@ -125,5 +129,6 @@ Remaining steps, agent side:
 4. Verify at 375px and desktop that the "In loving memory" and "An original song"
    overlays stay legible over every frame in the rotation, measuring contrast
    rather than eyeballing it.
-5. Delete `public/tribute-taster.mp4` once nothing references it, so Brenda's
-   footage stops shipping in the bundle.
+5. ✅ DONE 2026-07-27. `tribute-taster.mp4` is deleted from `public/` and `dist/`,
+   so the client's footage stops shipping in the bundle. It stays live on the CDN
+   until the next deploy.

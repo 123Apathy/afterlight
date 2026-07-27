@@ -1,13 +1,22 @@
 import fs from 'fs';
 import path from 'path';
 
-const SOURCE_DIR = 'D:\\Hermes Work\\HQ Vault\\projects\\memorial-video\\runs\\run-001\\drive-material';
-const API_BASE = 'http://localhost:4400';
+// Both arguments are supplied on the command line. They used to be hardcoded,
+// which put a real grieving client's name and the operator's local folder
+// layout into a PUBLIC repo for anyone to read.
 const PROJECT_ID = process.argv[2];
+const SOURCE_DIR = process.argv[3];
+const API_BASE = process.env.API_BASE || 'http://localhost:4400';
 const BATCH_SIZE = 12;
 
-if (!PROJECT_ID) {
-  console.error('usage: node upload-brenda-photos.mjs <projectId>');
+if (!PROJECT_ID || !SOURCE_DIR) {
+  console.error('usage: node upload-photos.mjs <projectId> <sourceDir>');
+  console.error('  optional: API_BASE=https://... (defaults to http://localhost:4400)');
+  process.exit(1);
+}
+
+if (!fs.existsSync(SOURCE_DIR)) {
+  console.error(`source directory not found: ${SOURCE_DIR}`);
   process.exit(1);
 }
 

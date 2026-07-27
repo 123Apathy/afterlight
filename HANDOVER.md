@@ -35,13 +35,20 @@ Date: 2026-07-23. All work is **local only, NOT committed or pushed** (standing 
 - Section spacing tightened (`.about`, `.about-card`, `.features` [removed `min-height:100vh`], `.contact-section` paddings).
 
 ## Card 4 video — how it was built (to rebuild/retune)
-- Source render: `D:\Hermes Work\HQ Vault\projects\memorial-video\videos-preview\Brenda-memorial-v5-2026-07-19T16-23-18.mp4`.
-- 4 clips extracted with ffmpeg at **t=17.5, 83, 110.5, 148.5** (3s each), `-an` (no audio), cropped bottom 8% to drop the baked "Brenda Mary Du Plessis" caption, scaled to 720w, crossfaded (`xfade fade 0.6s`) → `public/tribute-taster.mp4` (~255KB, 10.2s, 720×376).
+> ⚠️ REMOVED 2026-07-27. This asset was real footage from a real client's tribute
+> film, used on the public marketing page without a documented permission record.
+> It was deleted from `public/` and from `dist/`. Do not reinstate it, or any
+> client footage, without written family permission. Rebuild notes kept only so
+> the technique is not lost. Client names and local paths deliberately omitted:
+> this repo is public.
+- Source render: the client's finished memorial render, in the local
+  memorial-video preview folder (path intentionally not recorded here).
+- 4 clips extracted with ffmpeg at **t=17.5, 83, 110.5, 148.5** (3s each), `-an` (no audio), cropped bottom 8% to drop the baked-in name caption, scaled to 720w, crossfaded (`xfade fade 0.6s`) → `public/tribute-taster.mp4` (~255KB, 10.2s, 720×376).
 - To change clips: re-run the extract+xfade (contact-sheet the render at `fps=1/7` to pick timestamps).
 
 ## Not dealt with / watch-outs
 - **Scroll-reveal text** (`.about-heading`, `.features-title/subtitle`) is `opacity:0` until an IntersectionObserver adds `.visible`/`.lit`. In headless screenshots it looks blank — it fills on the real site. If you want it robust, make the base state visible.
-- **Sample name mismatch:** cards 1–3 say "Margaret"; Card 4's real footage is Brenda (unnamed on screen). Fine for a taster; unify if desired.
+- **Sample name mismatch:** cards 1–3 use the fictional sample name "Margaret"; Card 4 used real client footage (unnamed on screen). Moot now that Card 4's video is removed, see the warning above.
 - Mobile phone `top/height` are hardcoded — re-check if hero copy length changes.
 - Dev server on `localhost:8081` may be another session's; the in-app Browser pane can't render this page below the fold (WebGL/backdrop-filter) — used Playwright captures instead (`~/.claude/skills/capture-fullpage-screenshots/shoot.mjs`).
 
