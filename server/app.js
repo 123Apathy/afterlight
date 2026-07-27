@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
-const sharp = require('sharp');
 const archiver = require('archiver');
 const crypto = require('crypto');
 const path = require('path');
@@ -684,6 +683,12 @@ const ORIENTABLE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 
 async function normalizeOrientation(buffer, mimetype) {
   if (!ORIENTABLE_MIME_TYPES.has(mimetype)) return buffer;
   try {
+    // Lazy require: sharp ships platform-specific binaries, and a bundle
+    // built on Windows crashed the whole function at boot on Netlify Linux
+    // (502 on every endpoint, 2026-07-27). Only this legacy multipart path
+    // uses it; loading it here keeps a missing binary from taking down the
+    // API, and the catch below already degrades to the unrotated buffer.
+    const sharp = require('sharp');
     return await sharp(buffer).rotate().toBuffer();
   } catch {
     return buffer;
