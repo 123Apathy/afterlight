@@ -50,7 +50,25 @@ if ($who -notmatch '"id"') {
 }
 
 Write-Host 'Building locally (expo export) and uploading -- no Netlify build credits used.' -ForegroundColor Gray
-npx netlify deploy --prod --site $SiteId
+
+# CRITICAL (learned 2026-07-27): the dev .env bakes EXPO_PUBLIC_API_BASE
+# (the PC's LAN IP) into the production bundle, which pointed the LIVE site's
+# API at Deon's desktop -- photos broke for everyone off this network and
+# browsers showed a local-network permission prompt. The .env is moved aside
+# for the build, and --clear defeats Metro's transform cache, which otherwise
+# keeps the OLD inlined value even after the env changes.
+$envMoved = $false
+if (Test-Path '.env') { Rename-Item '.env' '.env.deploy-bak'; $envMoved = $true }
+try {
+    npx expo export --platform web --clear
+    if ($LASTEXITCODE -ne 0) { throw 'expo export failed' }
+    # Landing page + legal pages + card images live in public/, overlaid onto
+    # the export output (expo copies public/ itself, this is belt-and-braces).
+    Copy-Item -Path 'public\*' -Destination 'dist' -Recurse -Force
+    npx netlify deploy --prod --no-build --site $SiteId
+} finally {
+    if ($envMoved -and (Test-Path '.env.deploy-bak')) { Rename-Item '.env.deploy-bak' '.env' }
+}
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host ''

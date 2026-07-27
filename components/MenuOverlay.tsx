@@ -1,7 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Image, Platform, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   Easing,
@@ -220,7 +220,15 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
-      <View style={styles.content}>
+      {/* ScrollView, not View: on shorter phones the card (film + favourites
+          + share + memories + add photos + settings) is taller than the
+          screen and the bottom simply cut off, unreachable. Centred when it
+          fits, scrolls when it does not. */}
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentInner}
+        showsVerticalScrollIndicator={false}
+      >
       <View style={[styles.glassCard, glassBlur]}>
       <View style={styles.header}>
         <Text style={styles.title}>Menu</Text>
@@ -443,7 +451,7 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
         <Image source={images.logo} style={styles.footerMark} resizeMode="contain" />
         <Text style={styles.footerText}>Everlit</Text>
       </View>
-      </View>
+      </ScrollView>
     </Animated.View>
   );
 }
@@ -588,7 +596,14 @@ const styles = StyleSheet.create({
   content: {
     width: '100%',
     maxWidth: 620,
-    flex: 1, // keeps the footer's marginTop:'auto' pinned to the bottom
+    flex: 1,
+  },
+  // flexGrow so the footer's marginTop:'auto' still pins to the bottom when
+  // the menu is shorter than the screen; padding keeps the last row clear of
+  // the screen edge when it scrolls.
+  contentInner: {
+    flexGrow: 1,
+    paddingBottom: 24,
   },
   // Frosted glass card matching CommentSheet/DetailsSheet's `sheet` treatment,
   // so the menu reads as one floating panel over the dimmed backdrop rather

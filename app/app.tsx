@@ -709,7 +709,12 @@ export default function SwipeScreen() {
             </PressableScale>
           </View>
         </View>
-        <View style={styles.gate}>
+        <ScrollView
+          style={styles.gateScroll}
+          contentContainerStyle={styles.gate}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <Animated.View style={[styles.gateSegment, enterStyleA]}>
             <Text style={styles.gateOverline}>Everlit · Memorial Films</Text>
           </Animated.View>
@@ -731,7 +736,7 @@ export default function SwipeScreen() {
               <Text style={styles.switchText}>Skip for now</Text>
             </PressableScale>
           </Animated.View>
-        </View>
+        </ScrollView>
       </View>
     );
   }
@@ -755,7 +760,14 @@ export default function SwipeScreen() {
             </PressableScale>
           </View>
         </View>
-        <View style={styles.gate}>
+        {/* ScrollView: the relation chips made this gate taller than short
+            phones, and the keyboard needs the inputs reachable regardless. */}
+        <ScrollView
+          style={styles.gateScroll}
+          contentContainerStyle={styles.gate}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <Animated.View style={[styles.gateSegment, enterStyleA]}>
             <Text style={styles.gateOverline}>Everlit · Memorial Films</Text>
           </Animated.View>
@@ -849,7 +861,7 @@ export default function SwipeScreen() {
               .
             </Text>
           </Animated.View>
-        </View>
+        </ScrollView>
       </View>
     );
   }
