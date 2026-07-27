@@ -53,3 +53,4 @@ metro.log
 assets/demo/
 # built web export
 dist/
+.netlify/
