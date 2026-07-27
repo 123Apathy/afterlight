@@ -39,13 +39,27 @@ if ($pending) {
 # One-time login if needed (opens browser, waits for you to approve).
 # NOTE: `netlify api getCurrentUser` exits 0 even when unauthorized, so we must
 # inspect its OUTPUT (a logged-in reply contains the account "id"), not $?.
-$who = (npx netlify api getCurrentUser 2>&1 | Out-String)
+#
+# BUG FIXED 2026-07-27: under $ErrorActionPreference = 'Stop', PowerShell 5.1
+# turns a native command's stderr (merged in via 2>&1) into a TERMINATING
+# NativeCommandError -- so an expired login didn't hit the "not logged in,
+# opening browser" branch below, it crashed the whole script before that
+# check ever ran (Deon saw a raw "Unauthorized" NativeCommandError and the
+# deploy silently never happened, no browser opened). This check now runs
+# with errors set to non-terminating, restored right after either way.
+function Get-NetlifyWhoAmI {
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try { npx netlify api getCurrentUser 2>&1 | Out-String }
+    finally { $ErrorActionPreference = $prev }
+}
+$who = Get-NetlifyWhoAmI
 if ($who -notmatch '"id"') {
-    Write-Host 'Not logged in to Netlify yet -- opening browser for one-time login...' -ForegroundColor Yellow
+    Write-Host 'Not logged in to Netlify (or the login expired) -- opening browser to log in again...' -ForegroundColor Yellow
     npx netlify login
     if ($LASTEXITCODE -ne 0) { Write-Host 'Login failed/cancelled. Nothing deployed.' -ForegroundColor Red; exit 1 }
     # Re-check after login.
-    $who = (npx netlify api getCurrentUser 2>&1 | Out-String)
+    $who = Get-NetlifyWhoAmI
     if ($who -notmatch '"id"') { Write-Host 'Still not authenticated. Nothing deployed.' -ForegroundColor Red; exit 1 }
 }
 
