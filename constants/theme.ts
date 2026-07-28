@@ -11,6 +11,14 @@ export function stageWidth(viewportWidth: number, _viewportHeight: number): numb
 // screens (a heart 1400px away from its comment button is not a UI).
 export const CONTROLS_BAND_MAX = 680;
 
+// How far the deck's control row sits above the bottom of the screen, BEFORE
+// the device's own safe-area inset is added. It was 26, but the row's labels
+// are positioned below the row itself, so the visible content ended 1px off the
+// bottom edge: on any phone with a home indicator or gesture bar, "Comment" and
+// "Favourites" were underneath it. 46 gives the labels real clearance even on a
+// device reporting no inset at all.
+export const CONTROLS_BOTTOM = 46;
+
 // Spreadable absolute-fill. RN 0.86 removed StyleSheet.absoluteFillObject
 // (native would silently spread undefined), and react-native-web's
 // StyleSheet.absoluteFill is a compiled style ($$css), not a plain object,

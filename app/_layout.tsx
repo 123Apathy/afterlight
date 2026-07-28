@@ -10,6 +10,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import ToastHost from '../components/Toast';
 import { colors } from '../constants/theme';
@@ -80,14 +81,22 @@ export default function RootLayout() {
 
   // Full-bleed at every viewport: the app IS the page on desktop too (the
   // earlier letterboxed "device card" treatment was reverted by request).
+  // SafeAreaProvider added 2026-07-28. react-native-safe-area-context was a
+  // dependency but was never mounted, so useSafeAreaInsets() reported zero
+  // everywhere and nothing in the app knew about the notch or the home
+  // indicator. The deck's control labels ended up 1px off the bottom of the
+  // screen, which puts "Comment" and "Favourites" underneath the gesture bar on
+  // any modern phone. Mounting the provider is what makes the insets real.
   return (
-    <GestureHandlerRootView style={styles.root}>
-      <StatusBar style="light" />
-      <View style={styles.frame}>
-        <Stack screenOptions={{ headerShown: false }} />
-        <ToastHost />
-      </View>
-    </GestureHandlerRootView>
+    <SafeAreaProvider>
+      <GestureHandlerRootView style={styles.root}>
+        <StatusBar style="light" />
+        <View style={styles.frame}>
+          <Stack screenOptions={{ headerShown: false }} />
+          <ToastHost />
+        </View>
+      </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }
 

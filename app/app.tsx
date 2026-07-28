@@ -30,7 +30,8 @@ import GoldButton from '../components/GoldButton';
 import BackdropVideo from '../components/BackdropVideo';
 import HorizonGlow from '../components/HorizonGlow';
 import { showToast } from '../components/Toast';
-import { absoluteFill, colors, copy, images, stageWidth, type, CONTROLS_BAND_MAX } from '../constants/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { absoluteFill, colors, copy, images, stageWidth, type, CONTROLS_BAND_MAX, CONTROLS_BOTTOM } from '../constants/theme';
 import { DEMO, DEMO_PHOTOS } from '../constants/demo';
 
 // Relation chips offered at the "Who's here?" gate. Short and warm; Other
@@ -1500,6 +1501,15 @@ function PhotoDeck({
   const band = Math.min(Math.max(width - 24, 0), CONTROLS_BAND_MAX);
   const bandLeft = (width - band) / 2;
 
+  // The control labels sit BELOW the row (absolute, top 60 inside a 56-tall
+  // row), so the row's own bottom offset is not where the content ends. At
+  // bottom:26 the labels measured 1px off the bottom of the screen, which hides
+  // "Comment" and "Favourites" under the home indicator on any modern phone.
+  // CONTROLS_BOTTOM lifts the row so the labels clear the edge on a device with
+  // no inset, and the safe-area inset is added on top for devices that have one.
+  const insets = useSafeAreaInsets();
+  const controlsBottom = CONTROLS_BOTTOM + insets.bottom;
+
   // On the closing slide (the logo grows + centres), there is nowhere forward
   // to go: fade the Next arrow away and glide the Prev arrow to the middle so
   // "go back" is the single, obvious control. Reverses when you step back.
@@ -1617,7 +1627,7 @@ function PhotoDeck({
           core act, so it owns the middle), Favourites on the right. Arrows
           stay bare and bigger -- direction reads instantly, and the two
           labelled buttons flanking them are the action family. */}
-      <View style={styles.controlsRow} pointerEvents="box-none">
+      <View style={[styles.controlsRow, { bottom: controlsBottom }]} pointerEvents="box-none">
         <View style={[styles.controlSlot, quarterCenterStyle(bandLeft + band / 8)]}>
           {currentPhoto && (
             <View style={styles.controlColumn}>
