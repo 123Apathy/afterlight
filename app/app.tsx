@@ -854,7 +854,12 @@ export default function SwipeScreen() {
             />
             {/* Relation chips: one tap covers most people; Other opens a small
                 free-text field. Tapping a selected chip clears it again. */}
-            <Text style={styles.relationLabel}>Your relation to them</Text>
+            {/* Says out loud that it can be skipped. It always was optional in
+                code (relation || undefined at enterMemorial), but the bare
+                label read as a required field, and the hardest chip to tap here
+                is "Parent": a mother or father being asked to classify the loss
+                of their child before they are allowed through the door. */}
+            <Text style={styles.relationLabel}>Your relation to them, if you&rsquo;d like to say</Text>
             <View style={styles.relationRow}>
               {RELATION_OPTIONS.map((r) => {
                 const selected = relationChoice === r;
@@ -2463,22 +2468,36 @@ const styles = StyleSheet.create({
   },
   relationLabel: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 13,
+    fontSize: type.label,
     color: colors.textFainter,
-    textAlign: 'center',
-    marginTop: 14,
+    // Left, to sit over the left edge of the chips it labels and the name field
+    // above them. Centred, it floated over a block that starts on the left.
+    textAlign: 'left',
+    alignSelf: 'stretch',
+    marginTop: 18,
   },
   relationRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'center',
+    // flex-start, not center. Ten chips of different widths wrapped from a
+    // centred axis produced a ragged 4/3/3 diamond that read as an accident.
+    // Against a straight left edge, aligned with the name field above it, the
+    // uneven right edge reads as intentional instead.
+    justifyContent: 'flex-start',
     gap: 8,
     marginTop: 10,
-    maxWidth: 360,
+    // Was a hard 360 at every screen size, so the same cramped wrap appeared on
+    // a 1215px monitor as on a phone. Now it fills the gate column and simply
+    // wraps to fit whatever width it is given.
+    alignSelf: 'stretch',
   },
   relationChip: {
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    // 44px minimum. These were 38px tall with 13px text: under the tap-target
+    // floor, on the first control an elderly person touches in the product.
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingVertical: 10,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: 'rgba(212, 169, 118, 0.35)',
@@ -2490,7 +2509,7 @@ const styles = StyleSheet.create({
   },
   relationChipText: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 13,
+    fontSize: type.label,
     color: 'rgba(255, 255, 255, 0.85)',
   },
   relationChipTextActive: {
