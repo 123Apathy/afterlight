@@ -127,7 +127,9 @@ export default function FilmScreen() {
               // "deadline" the product never collects or shows, and promising a
               // download on a screen with no download control. It read like a
               // courier contract on the screen that sells the whole thing.
-              ? '{name}’s film is being made now. It will appear right here, and we’ll let you know the moment it’s ready.'.replace('{name}', project?.name || 'Their')
+              // No name here: the title directly above already says "<name>'s
+              // film", and repeating it read as a stutter.
+              ? 'It’s being made now. We’ll place it right here, and let you know the moment it’s ready.'
               : 'Open your memorial first, then come back here.'}
           </Animated.Text>
         )}
