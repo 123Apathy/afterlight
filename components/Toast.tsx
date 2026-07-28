@@ -45,8 +45,14 @@ export default function ToastHost() {
       exiting={FadeOut.duration(180)}
       style={styles.wrap}
       pointerEvents="box-none"
+      accessibilityLiveRegion="polite"
     >
-      <Pressable onPress={() => setMessage(null)} style={styles.card}>
+      <Pressable
+        onPress={() => setMessage(null)}
+        style={styles.card}
+        accessibilityRole="button"
+        accessibilityLabel={`Close this message: ${message}`}
+      >
         <Text style={styles.text}>{message}</Text>
       </Pressable>
     </Animated.View>

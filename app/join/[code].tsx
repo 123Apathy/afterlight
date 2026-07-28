@@ -82,7 +82,13 @@ export default function JoinScreen() {
         {error === 'invalid' ? (
           <GoldButton label="Try again" onPress={() => setAttempt((n) => n + 1)} style={styles.button} />
         ) : null}
-        <PressableScale onPress={openWhatsApp} scaleTo={0.98} style={styles.helpRow}>
+        <PressableScale
+          onPress={openWhatsApp}
+          scaleTo={0.98}
+          style={styles.helpRow}
+          accessibilityRole="button"
+          accessibilityLabel="Message us on WhatsApp for help with this link"
+        >
           <Text style={styles.help}>Still stuck? Message us on WhatsApp</Text>
         </PressableScale>
       </View>

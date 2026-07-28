@@ -208,6 +208,7 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
     <Animated.View
       style={[styles.overlay, overlayStyle, !rendered && { display: 'none' as const }]}
       aria-hidden={!visible}
+      accessibilityViewIsModal={visible}
     >
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         <BackdropVideo />
@@ -246,10 +247,18 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
             style={styles.helpButton}
             scaleTo={0.94}
             hitSlop={6}
+            accessibilityRole="button"
+            accessibilityLabel="Show the guided tour again"
           >
             <Text style={styles.helpText}>?</Text>
           </PressableScale>
-          <PressableScale onPress={onClose} style={styles.closeButton} scaleTo={0.94}>
+          <PressableScale
+            onPress={onClose}
+            style={styles.closeButton}
+            scaleTo={0.94}
+            accessibilityRole="button"
+            accessibilityLabel="Close the menu"
+          >
             <View style={[styles.closeLine, { transform: [{ rotate: '45deg' }] }]} />
             <View style={[styles.closeLine, { transform: [{ rotate: '-45deg' }] }]} />
             <Text style={styles.closeText}>Close</Text>
@@ -299,7 +308,13 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
                   subtitle="Opens WhatsApp with a message ready to send"
                   onPress={handleWhatsAppShare}
                 />
-                <PressableScale onPress={handleCopyLink} style={styles.whatsappLink} scaleTo={0.97}>
+                <PressableScale
+                  onPress={handleCopyLink}
+                  style={styles.whatsappLink}
+                  scaleTo={0.97}
+                  accessibilityRole="button"
+                  accessibilityLabel={copied ? 'Link copied' : 'Copy the family link instead of opening WhatsApp'}
+                >
                   <Text style={styles.copyLinkText}>{copied ? 'Copied' : 'Copy link instead'}</Text>
                 </PressableScale>
               </View>
@@ -318,7 +333,13 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
             {/* Quiet by design: recovery comfort, not a headline action. Only
                 appears once this device holds a member identity to transfer. */}
             {!!activeEntry?.memberToken && (
-              <PressableScale onPress={handleKeepPlace} style={styles.whatsappLink} scaleTo={0.97}>
+              <PressableScale
+                onPress={handleKeepPlace}
+                style={styles.whatsappLink}
+                scaleTo={0.97}
+                accessibilityRole="button"
+                accessibilityLabel="Keep your place on another phone. Opens WhatsApp with a link ready to send."
+              >
                 <Text style={styles.copyLinkText}>Keep your place on another phone</Text>
               </PressableScale>
             )}
@@ -327,7 +348,14 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
           {(showButton('addPhotos') || !!projectId) && (
             <View style={styles.bottomActions}>
               {showButton('addPhotos') && (
-                <PressableScale onPress={handleUpload} style={styles.uploadPill} scaleTo={0.96}>
+                <PressableScale
+                  onPress={handleUpload}
+                  style={styles.uploadPill}
+                  scaleTo={0.96}
+                  accessibilityRole="button"
+                  accessibilityLabel="Add photos to this memorial"
+                  accessibilityState={{ busy: uploading }}
+                >
                   <View style={styles.uploadPlus}>
                     <View style={styles.uploadPlusBar} />
                     <View style={[styles.uploadPlusBar, { transform: [{ rotate: '90deg' }] }]} />
@@ -348,6 +376,8 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
                   onPress={() => setShowMore(true)}
                   style={styles.switchLink}
                   scaleTo={0.98}
+                  accessibilityRole="button"
+                  accessibilityLabel="Show more settings"
                 >
                   <Text style={styles.switchText}>More settings</Text>
                 </PressableScale>
@@ -359,6 +389,9 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
                     onPress={handleChangeCoverPhoto}
                     style={styles.switchLink}
                     scaleTo={0.98}
+                    accessibilityRole="button"
+                    accessibilityLabel="Change the cover photo for this memorial"
+                    accessibilityState={{ busy: changingCover }}
                   >
                     <Text style={styles.switchText}>
                       {changingCover ? 'Updating…' : 'Change the cover photo'}
@@ -372,6 +405,8 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
                     }}
                     style={styles.switchLink}
                     scaleTo={0.98}
+                    accessibilityRole="button"
+                    accessibilityLabel="Open the Terms and Conditions on the Everlit website, in a new tab"
                   >
                     <Text style={styles.switchText}>Terms &amp; Conditions</Text>
                   </PressableScale>
@@ -385,6 +420,8 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
                     }}
                     style={styles.switchLink}
                     scaleTo={0.98}
+                    accessibilityRole="button"
+                    accessibilityLabel="Open the Privacy Policy on the Everlit website, in a new tab"
                   >
                     <Text style={styles.switchText}>Privacy Policy</Text>
                   </PressableScale>
@@ -399,6 +436,8 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
                     }}
                     style={styles.switchLink}
                     scaleTo={0.98}
+                    accessibilityRole="button"
+                    accessibilityLabel="Run the guided tour again"
                   >
                     <Text style={styles.switchText}>Run the tutorial again</Text>
                   </PressableScale>
@@ -412,6 +451,8 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
                       onPress={() => setConfirmSwitch(true)}
                       style={styles.switchLink}
                       scaleTo={0.98}
+                      accessibilityRole="button"
+                      accessibilityLabel="Switch to a different memorial"
                     >
                       <Text style={styles.switchText}>Switch to a different memorial</Text>
                     </PressableScale>
@@ -426,6 +467,8 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
                           onPress={() => setConfirmSwitch(false)}
                           style={styles.confirmBtn}
                           scaleTo={0.97}
+                          accessibilityRole="button"
+                          accessibilityLabel="Stay in this memorial"
                         >
                           <Text style={styles.confirmCancel}>Stay here</Text>
                         </PressableScale>
@@ -433,6 +476,8 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
                           onPress={clearProject}
                           style={styles.confirmBtn}
                           scaleTo={0.97}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Leave ${projectName ? `${projectName}'s` : 'this'} memorial on this device`}
                         >
                           <Text style={styles.confirmLeave}>Leave</Text>
                         </PressableScale>
@@ -466,7 +511,13 @@ type ActionCardProps = {
 
 function ActionCard({ icon, title, subtitle, onPress, highlight }: ActionCardProps) {
   return (
-    <PressableScale onPress={onPress} style={[styles.card, goldLitEdge, highlight && styles.cardHighlight]} scaleTo={0.98}>
+    <PressableScale
+      onPress={onPress}
+      style={[styles.card, goldLitEdge, highlight && styles.cardHighlight]}
+      scaleTo={0.98}
+      accessibilityRole="button"
+      accessibilityLabel={`${title}. ${subtitle}`}
+    >
       <View style={styles.iconBox}>{icon}</View>
       <View style={styles.cardText}>
         <Text style={styles.cardTitle}>{title}</Text>

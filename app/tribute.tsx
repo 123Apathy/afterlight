@@ -141,7 +141,13 @@ export default function TributeScreen() {
             <GoldButton label={tributeCopy.introCta} onPress={begin} style={styles.cta} pill textStyle={styles.ctaText} />
             <Text style={styles.ctaSub}>{tributeCopy.introSub}</Text>
 
-            <PressableScale style={styles.textLink} onPress={goHome} scaleTo={0.98}>
+            <PressableScale
+              style={styles.textLink}
+              onPress={goHome}
+              scaleTo={0.98}
+              accessibilityRole="button"
+              accessibilityLabel="Leave the tribute questions for now"
+            >
               <Text style={styles.textLinkLabel}>Not now</Text>
             </PressableScale>
           </ScrollView>
@@ -154,7 +160,14 @@ export default function TributeScreen() {
                 <Text style={styles.progressText}>
                   {index + 1} of {total}
                 </Text>
-                <PressableScale onPress={goHome} hitSlop={10} scaleTo={0.95}>
+                <PressableScale
+                  onPress={goHome}
+                  hitSlop={10}
+                  scaleTo={0.95}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Close, question ${index + 1} of ${total}`}
+                  accessibilityHint="Your answers are saved on this device, so you can come back anytime."
+                >
                   <Text style={styles.progressClose}>Close</Text>
                 </PressableScale>
               </View>
@@ -183,7 +196,13 @@ export default function TributeScreen() {
               />
 
               <View style={styles.qButtons}>
-                <PressableScale style={styles.skipButton} onPress={advance} scaleTo={0.97}>
+                <PressableScale
+                  style={styles.skipButton}
+                  onPress={advance}
+                  scaleTo={0.97}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Skip question ${index + 1} of ${total}`}
+                >
                   <Text style={styles.skipText}>Skip</Text>
                 </PressableScale>
                 <GoldButton
@@ -194,7 +213,13 @@ export default function TributeScreen() {
               </View>
 
               {index > 0 && (
-                <PressableScale style={styles.textLink} onPress={() => setIndex(index - 1)} scaleTo={0.98}>
+                <PressableScale
+                  style={styles.textLink}
+                  onPress={() => setIndex(index - 1)}
+                  scaleTo={0.98}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Back to question ${index} of ${total}`}
+                >
                   <Text style={styles.textLinkLabel}>Back</Text>
                 </PressableScale>
               )}

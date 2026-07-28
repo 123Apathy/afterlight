@@ -147,13 +147,25 @@ export default function CoachMark({
   }
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+    <View
+      style={StyleSheet.absoluteFill}
+      pointerEvents="box-none"
+      // Only the fully-blocking steps (no hole cut for a real element) are a
+      // genuine modal: everything a screen reader needs is inside this card.
+      // Interactive steps must NOT trap navigation here, because the thing
+      // to actually tap lives outside this view entirely.
+      accessibilityViewIsModal={!interactive}
+    >
       {interactive && hole ? (
         <>
-          <Pressable style={[styles.scrim, { bottom: undefined, height: Math.max(0, hole.top) }]} onPress={() => {}} />
-          <Pressable style={[styles.scrim, { top: hole.top + hole.height }]} onPress={() => {}} />
-          <Pressable style={[styles.scrim, { top: hole.top, bottom: undefined, height: hole.height, right: undefined, width: Math.max(0, hole.left) }]} onPress={() => {}} />
-          <Pressable style={[styles.scrim, { top: hole.top, bottom: undefined, height: hole.height, left: hole.left + hole.width }]} onPress={() => {}} />
+          {/* These four panels only block touch around the cut-out hole; they
+              do nothing when pressed, so they are marked out of the
+              accessibility tree rather than given a role and label that
+              would describe an action that doesn't exist. */}
+          <Pressable accessibilityRole="none" style={[styles.scrim, { bottom: undefined, height: Math.max(0, hole.top) }]} onPress={() => {}} />
+          <Pressable accessibilityRole="none" style={[styles.scrim, { top: hole.top + hole.height }]} onPress={() => {}} />
+          <Pressable accessibilityRole="none" style={[styles.scrim, { top: hole.top, bottom: undefined, height: hole.height, right: undefined, width: Math.max(0, hole.left) }]} onPress={() => {}} />
+          <Pressable accessibilityRole="none" style={[styles.scrim, { top: hole.top, bottom: undefined, height: hole.height, left: hole.left + hole.width }]} onPress={() => {}} />
           {/* The four panels leave a SQUARE gap, but a round target should sit
               in a round spotlight: this clipped overlay re-darkens just the
               square's corners (shadow painted outside a circle, clipped to the
@@ -187,7 +199,7 @@ export default function CoachMark({
           )}
         </>
       ) : (
-        <Pressable style={styles.scrim} onPress={() => {}} />
+        <Pressable accessibilityRole="none" style={styles.scrim} onPress={() => {}} />
       )}
 
       {/* Pulsing highlight on the target. */}
@@ -257,14 +269,24 @@ export default function CoachMark({
           }
         >
           {stepIndex != null && stepCount != null && (
-            <Text style={styles.progress}>
+            <Text style={styles.progress} accessibilityLabel={`Step ${stepIndex} of ${stepCount}`}>
               Step {stepIndex} of {stepCount}
             </Text>
           )}
-          {!!title && <Text style={styles.title}>{title}</Text>}
+          {!!title && (
+            <Text style={styles.title} accessibilityRole="header">
+              {title}
+            </Text>
+          )}
           <Text style={styles.text}>{text}</Text>
           {!interactive && !!onNext && (
-            <PressableScale onPress={onNext} scaleTo={0.97} style={styles.button}>
+            <PressableScale
+              onPress={onNext}
+              scaleTo={0.97}
+              style={styles.button}
+              accessibilityRole="button"
+              accessibilityLabel={buttonLabel}
+            >
               <Text style={styles.buttonText}>{buttonLabel}</Text>
             </PressableScale>
           )}
@@ -277,11 +299,26 @@ export default function CoachMark({
             // Welcome layout: Skip on the left, the tick on the right.
             <View style={styles.footerRow}>
               {!!onSkip && (
-                <PressableScale onPress={onSkip} scaleTo={0.98} style={styles.skip} hitSlop={8}>
+                <PressableScale
+                  onPress={onSkip}
+                  scaleTo={0.98}
+                  style={styles.skip}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={skipLabel}
+                >
                   <Text style={styles.skipText}>{skipLabel}</Text>
                 </PressableScale>
               )}
-              <PressableScale onPress={onToggleCheckbox} scaleTo={0.98} style={styles.checkRow} hitSlop={6}>
+              <PressableScale
+                onPress={onToggleCheckbox}
+                scaleTo={0.98}
+                style={styles.checkRow}
+                hitSlop={6}
+                accessibilityRole="checkbox"
+                accessibilityLabel={checkboxLabel}
+                accessibilityState={{ checked: checkboxChecked }}
+              >
                 <View style={[styles.checkBox, checkboxChecked && styles.checkBoxChecked]}>
                   {checkboxChecked && <Text style={styles.checkMark}>✓</Text>}
                 </View>
@@ -292,14 +329,28 @@ export default function CoachMark({
             // Step layout: quiet corner pair, Back bottom-left, Skip bottom-right.
             <View style={styles.footerRow}>
               {onBack ? (
-                <PressableScale onPress={onBack} scaleTo={0.98} style={styles.corner} hitSlop={10}>
+                <PressableScale
+                  onPress={onBack}
+                  scaleTo={0.98}
+                  style={styles.corner}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel="Go back to the previous step"
+                >
                   <Text style={styles.cornerText}>‹ Back</Text>
                 </PressableScale>
               ) : (
                 <View />
               )}
               {onSkip ? (
-                <PressableScale onPress={onSkip} scaleTo={0.98} style={styles.corner} hitSlop={10}>
+                <PressableScale
+                  onPress={onSkip}
+                  scaleTo={0.98}
+                  style={styles.corner}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel={skipLabel}
+                >
                   <Text style={[styles.cornerText, styles.cornerTextUnderline]}>{skipLabel}</Text>
                 </PressableScale>
               ) : (

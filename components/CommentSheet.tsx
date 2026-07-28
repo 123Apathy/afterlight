@@ -45,6 +45,16 @@ type CommentSheetProps = {
 // feels stuck.
 const AUTO_CLOSE_MS = 900;
 
+// Plain-language meaning of each reaction emoji, for accessibility labels
+// only (COMMENT_REACTION_EMOJI order: heart, laugh, cry, pray, smile).
+const REACTION_MEANINGS: Record<string, string> = {
+  '❤️': 'Heart',
+  '😂': 'Laughing face',
+  '😢': 'Crying face',
+  '🙏': 'Praying hands',
+  '😊': 'Smiling face',
+};
+
 export default function CommentSheet({ photo, onClose, onSubmit, onReact, onSaveDetails, raterName, autoCloseOnPost = true }: CommentSheetProps) {
   const reduceMotion = useReducedMotion();
   const progress = useSharedValue(0);
@@ -192,12 +202,23 @@ export default function CommentSheet({ photo, onClose, onSubmit, onReact, onSave
       aria-hidden={!visible}
     >
       <Animated.View style={[styles.backdrop, backdropStyle]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={close} />
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={close}
+          accessibilityRole="button"
+          accessibilityLabel="Close this photo's comments and details"
+        />
       </Animated.View>
       <Animated.View style={[styles.sheet, glassBlur, keyboardStyle, style]}>
       <View style={styles.header}>
         <Text style={styles.title}>This moment</Text>
-        <PressableScale onPress={close} hitSlop={12} style={styles.close}>
+        <PressableScale
+          onPress={close}
+          hitSlop={12}
+          style={styles.close}
+          accessibilityRole="button"
+          accessibilityLabel="Close this photo's comments and details"
+        >
           <View style={[styles.closeLine, { transform: [{ rotate: '45deg' }] }]} />
           <View style={[styles.closeLine, { transform: [{ rotate: '-45deg' }] }]} />
           <Text style={styles.closeText}>Close</Text>
@@ -211,6 +232,7 @@ export default function CommentSheet({ photo, onClose, onSubmit, onReact, onSave
           onPress={() => setEditingDetails(true)}
           scaleTo={0.99}
           style={styles.detailsRow}
+          accessibilityRole="button"
           accessibilityLabel={savedSummary ? 'Edit when and where this was taken' : 'Add when and where this was taken'}
         >
           {savedSummary ? (
@@ -264,7 +286,12 @@ export default function CommentSheet({ photo, onClose, onSubmit, onReact, onSave
           />
           <View style={styles.detailsActions}>
             <GoldButton label="Save" onPress={saveDetails} style={styles.detailsSave} textStyle={styles.detailsSaveText} />
-            <PressableScale onPress={cancelDetails} hitSlop={8}>
+            <PressableScale
+              onPress={cancelDetails}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel without saving these details"
+            >
               <Text style={styles.detailsCancel}>Cancel</Text>
             </PressableScale>
           </View>
@@ -291,12 +318,21 @@ export default function CommentSheet({ photo, onClose, onSubmit, onReact, onSave
                       onPress={() => react(c.id, emoji)}
                       scaleTo={0.9}
                       style={[styles.reactionPill, mine && styles.reactionPillActive]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${REACTION_MEANINGS[emoji] ?? 'Reaction'} reaction, ${count} so far`}
+                      accessibilityState={{ selected: mine }}
                     >
                       <Text style={styles.reactionEmoji}>{emoji}</Text>
                       <Text style={[styles.reactionCount, mine && styles.reactionCountActive]}>{count}</Text>
                     </PressableScale>
                   ))}
-                  <PressableScale onPress={() => setPickerFor(pickerOpen ? null : c.id)} hitSlop={6}>
+                  <PressableScale
+                    onPress={() => setPickerFor(pickerOpen ? null : c.id)}
+                    hitSlop={6}
+                    accessibilityRole="button"
+                    accessibilityLabel={pickerOpen ? 'Close reaction choices' : 'Choose a reaction for this comment'}
+                    accessibilityState={{ expanded: pickerOpen }}
+                  >
                     <Text style={styles.reactLink}>React</Text>
                   </PressableScale>
                 </View>
@@ -304,7 +340,14 @@ export default function CommentSheet({ photo, onClose, onSubmit, onReact, onSave
                 {pickerOpen && (
                   <View style={[styles.picker, glassSurface, glassBlur]}>
                     {COMMENT_REACTION_EMOJI.map((emoji) => (
-                      <PressableScale key={emoji} onPress={() => react(c.id, emoji)} scaleTo={0.82} hitSlop={4}>
+                      <PressableScale
+                        key={emoji}
+                        onPress={() => react(c.id, emoji)}
+                        scaleTo={0.82}
+                        hitSlop={4}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Add a ${(REACTION_MEANINGS[emoji] ?? 'reaction').toLowerCase()} reaction`}
+                      >
                         <Text style={styles.pickerEmoji}>{emoji}</Text>
                       </PressableScale>
                     ))}

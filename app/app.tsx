@@ -35,7 +35,26 @@ import { DEMO, DEMO_PHOTOS } from '../constants/demo';
 
 // Relation chips offered at the "Who's here?" gate. Short and warm; Other
 // opens a free-text field for everything else.
-const RELATION_OPTIONS = ['Spouse', 'Child', 'Grandchild', 'Sibling', 'Cousin', 'Friend', 'Other'];
+// Paired deliberately: Spouse/Partner, Parent/Child, Grandparent/Grandchild.
+// The list used to run Spouse, Child, Grandchild, Sibling, Cousin, Friend, Other,
+// which only ever looked UP the family tree: you could say you lost a parent (by
+// picking "Child") or a grandparent (by picking "Grandchild"), but there was no
+// way to say you lost a child or a grandchild. A mother or father burying their
+// own child had to tick "Other", which is the coldest possible answer to the
+// worst thing that can happen to someone. "Partner" is here because "Spouse"
+// reads legalistic and excludes unmarried and same-sex couples.
+const RELATION_OPTIONS = [
+  'Spouse',
+  'Partner',
+  'Parent',
+  'Child',
+  'Grandparent',
+  'Grandchild',
+  'Sibling',
+  'Cousin',
+  'Friend',
+  'Other',
+];
 
 // Dev-only: append ?loading=1 to the URL to hold the loading screen on screen
 // (so its design can be iterated). Never true in a normal session.
@@ -986,7 +1005,7 @@ export default function SwipeScreen() {
         ringSize={96}
         interactive
         stepIndex={1}
-        stepCount={4}
+        stepCount={5}
         onSkip={finishTour}
         onBack={() => goTourStep('welcome')}
         screenWidth={width}
@@ -1003,7 +1022,7 @@ export default function SwipeScreen() {
         onSkip={finishTour}
         onBack={() => goTourStep('arrows')}
         stepIndex={2}
-        stepCount={4}
+        stepCount={5}
         screenWidth={width}
         screenHeight={height}
       />
@@ -1018,7 +1037,7 @@ export default function SwipeScreen() {
         onSkip={finishTour}
         onBack={() => goTourStep('favourites')}
         stepIndex={3}
-        stepCount={4}
+        stepCount={5}
         screenWidth={width}
         screenHeight={height}
       />
@@ -1033,7 +1052,7 @@ export default function SwipeScreen() {
         onSkip={finishTour}
         onBack={() => goTourStep('comments')}
         stepIndex={4}
-        stepCount={4}
+        stepCount={5}
         screenWidth={width}
         screenHeight={height}
       />
@@ -1047,6 +1066,12 @@ export default function SwipeScreen() {
         buttonLabel="Begin"
         onNext={finishTour}
         onBack={() => goTourStep('menu')}
+        // Numbered like the rest. This closer used to be unlabelled while the
+        // four steps before it counted "of 4", so the tour told you it was
+        // finished and then produced another screen. Counting it honestly is
+        // kinder than surprising someone who was promised the end.
+        stepIndex={5}
+        stepCount={5}
         screenWidth={width}
         screenHeight={height}
       />

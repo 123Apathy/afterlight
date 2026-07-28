@@ -1,0 +1,42 @@
+{
+  "detector": {
+    "ignoreRules": [
+      "marquee"
+    ],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "layout-transition",
+        "value": "*",
+        "files": [
+          "**/landing.html",
+          "public/landing.html"
+        ],
+        "createdAt": "2026-07-25",
+        "reason": "FAQ ::details-content height transition is the platform-sanctioned details animation (interpolate-size); grid-rows trick cannot work on native details. Deon-approved."
+      },
+      {
+        "rule": "codex-grid-background",
+        "value": "*",
+        "files": [
+          "**/landing.html",
+          "public/landing.html",
+          "**/Atmosphere.tsx",
+          "components/Atmosphere.tsx"
+        ],
+        "createdAt": "2026-07-25",
+        "reason": "Ember-dust dot field is the deliberately harvested brand device (dust in candlelight), not a grid overlay. Deon-approved on the landing page and again when it moved into the shared app component."
+      },
+      {
+        "rule": "dark-glow",
+        "value": "*",
+        "files": [
+          "**/landing.html",
+          "public/landing.html"
+        ],
+        "createdAt": "2026-07-28",
+        "reason": "Candlelight IS the brand, not a chromatic halo for its own sake. The product is called Everlit and the headline is 'Keep their light lit'; DESIGN.md defines the mood as 'Candlelit vigil' with goldWarm #C49A6C as the workhorse accent, and already uses glow as house language elsewhere (drop-shadow 0 0 40px on the phone mock, HorizonGlow on the gates). The flagged CTA shadow is also not a zero-offset halo: it carries a real 6px y-offset plus a separate black elevation shadow, so it reads as a lit object on a surface. Commissioned by Deon 2026-07-26 (see the comment above .hero-btn) when the CTA was upgraded from a flat cream pill into the page's own light."
+      }
+    ]
+  }
+}

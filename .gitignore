@@ -42,8 +42,14 @@ server/.env
 /ios
 /android
 
-# local tool state
-.impeccable/
+# local tool state. The cache and the generated critiques are throwaway, but
+# .impeccable/config.json is not: it records deliberate, Deon-approved design
+# decisions (why a given detector finding is a false positive here). Ignoring
+# the whole folder meant those decisions lived on one machine only, so a fresh
+# clone re-flagged brand devices that had already been signed off. Track the
+# config, keep the rest local.
+.impeccable/*
+!.impeccable/config.json
 dist/
 dist-inlined/
 .verify-shots/

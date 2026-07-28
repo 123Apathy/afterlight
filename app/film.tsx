@@ -127,7 +127,13 @@ export default function FilmScreen() {
         )}
 
         <Animated.View style={bodyStyle}>
-          <PressableScale onPress={back} style={styles.backLink} scaleTo={0.97}>
+          <PressableScale
+            onPress={back}
+            style={styles.backLink}
+            scaleTo={0.97}
+            accessibilityRole="button"
+            accessibilityLabel="Back to the photos"
+          >
             <Text style={styles.backText}>Back to the photos</Text>
           </PressableScale>
         </Animated.View>

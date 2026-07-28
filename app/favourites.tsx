@@ -156,6 +156,8 @@ export default function FavouritesScreen() {
           onPress={() => router.replace('/app')}
           scaleTo={0.96}
           style={[styles.backPill, glassBlur]}
+          accessibilityRole="button"
+          accessibilityLabel="Back to the photos"
         >
           <Text style={styles.backPillChevron}>‹</Text>
           <Text style={styles.backPillText}>Back to the photos</Text>

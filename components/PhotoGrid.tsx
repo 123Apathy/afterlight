@@ -131,6 +131,8 @@ export default function PhotoGrid({ photos, width, onSelect, onOpenComments, pro
                         onPress={() => setPopup({ type: 'likes', photo })}
                         hitSlop={8}
                         scaleTo={0.92}
+                        accessibilityRole="button"
+                        accessibilityLabel={`See who loved this photo, ${count} favourite${count === 1 ? '' : 's'}`}
                       >
                         <Text style={styles.heart}>♥</Text>
                         <Text style={styles.badgeText}>{count}</Text>
@@ -142,6 +144,8 @@ export default function PhotoGrid({ photos, width, onSelect, onOpenComments, pro
                         onPress={() => setPopup({ type: 'comments', photo })}
                         hitSlop={8}
                         scaleTo={0.92}
+                        accessibilityRole="button"
+                        accessibilityLabel={`See who commented on this photo, ${comments} comment${comments === 1 ? '' : 's'}`}
                       >
                         <CommentGlyph />
                         <Text style={styles.badgeText}>{comments}</Text>
@@ -175,7 +179,12 @@ export default function PhotoGrid({ photos, width, onSelect, onOpenComments, pro
       {/* Tapping a badge names who loved or commented; the comments popup adds a
           row that opens the full thread. Tap the dim scrim to dismiss. */}
       {popup && (
-        <Pressable style={styles.scrim} onPress={() => setPopup(null)}>
+        <Pressable
+          style={styles.scrim}
+          onPress={() => setPopup(null)}
+          accessibilityRole="button"
+          accessibilityLabel="Close this list"
+        >
           <Pressable style={[styles.popup, glassBlur]} onPress={() => {}}>
             <Text style={styles.popupTitle}>
               {popup.type === 'likes' ? 'Loved by' : 'Comments from'}
@@ -200,6 +209,8 @@ export default function PhotoGrid({ photos, width, onSelect, onOpenComments, pro
                   setPopup(null);
                   onOpenComments(p);
                 }}
+                accessibilityRole="button"
+                accessibilityLabel="Open the comments for this photo"
               >
                 <Text style={styles.rowActionText}>Open comments</Text>
                 <Text style={styles.rowActionChevron}>›</Text>
