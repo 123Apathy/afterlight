@@ -209,7 +209,9 @@
        "Everlit" always overlaps it. */
     .phone-mock {
       grid-column: 1;
-      grid-row: 1 / -1;
+      /* Rows 1-2 only (tagline block + wordmark). Was 1 / -1, but the CTA's new
+         row 3 would otherwise stretch the mock past the wordmark's bottom. */
+      grid-row: 1 / 3;
       justify-self: start;
       position: relative;
       left: calc(75vw - 24px - clamp(24px, 5.5vw, 90px));
@@ -678,10 +680,14 @@
       z-index: 10;
       display: grid;
       grid-template-columns: 1fr;
-      /* Explicit rows so .phone-mock's grid-row: 1 / -1 spans both (line -1
-         only counts the EXPLICIT grid; with implicit rows it collapses to
-         line 1 and the phone gets a zero-height track). */
-      grid-template-rows: auto auto;
+      /* Explicit rows so .phone-mock's row span resolves (line -1 only counts
+         the EXPLICIT grid; with implicit rows it collapses to line 1 and the
+         phone gets a zero-height track).
+         Third row added 2026-07-28 for the CTA, which now sits below the
+         wordmark instead of inside .hero-right. .phone-mock spans 1 / 3 (rows
+         1-2) rather than 1 / -1 so the mock's height is still exactly
+         "tagline top to wordmark bottom" and does not stretch over the button. */
+      grid-template-rows: auto auto auto;
       align-content: center;
       justify-items: start;
       padding: 0 clamp(24px, 5.5vw, 90px);
@@ -799,6 +805,12 @@
        after the entrance animation lands and only ever touches box-shadow,
        so it composes with pullUp's opacity/transform. */
     .hero-btn {
+      /* Its own row under the wordmark (2026-07-28). Explicit placement for the
+         same reason as .hero-right and .hero-title: auto-placement would dodge
+         .phone-mock's row span and land the button in a new implicit row. */
+      grid-row: 3;
+      grid-column: 1;
+      justify-self: start;
       display: inline-flex;
       align-items: center;
       gap: 8px;
@@ -1956,9 +1968,21 @@
 
       .hero-right {
         gap: 20px;
-        /* Zeroed so .hero-right's own bottom edge IS the button's bottom
-           edge -- .phone-mock below stretches to match this box exactly. */
         padding-bottom: 0;
+        /* Deon (2026-07-28): the copy must STOP at the half-way line instead of
+           running on under the phone. The shared base rule is
+           `max-width: min(52vw, 600px)`, which at 375px is 195px and puts the
+           text's right edge at 219px, while the phone's left edge lands at
+           ~202px. The 17px overlap is why the paragraph read as colliding with
+           the mock: it was relying on z-index (text 3, phone 1) to stay legible
+           on top of it rather than simply not reaching it.
+           Ending at 50vw clears the phone with room to spare and gives the
+           paragraph a straight right margin to read against, which matters
+           for the older readers this page is written for.
+           Subtracting 32px (the real mobile inset: .hero's 16px + .hero-content's
+           16px) rather than the desktop clamp is what makes the right edge land
+           on 50vw exactly instead of 8px past it. */
+        max-width: calc(50vw - 32px);
       }
 
       /* The page's only conversion action, on the device almost every
@@ -1972,8 +1996,8 @@
         font-size: 16px;
         padding-left: 24px;
         padding-right: 10px;
-        /* One line: "Create a / memorial" wrapping inside a pill next to a
-           round arrow reads as a squeezed button rather than a confident one. */
+        /* One line: a label wrapping inside a pill next to a round arrow reads
+           as a squeezed button rather than a confident one. */
         white-space: nowrap;
       }
 
@@ -1982,10 +2006,18 @@
         height: 44px;
       }
 
+      /* Full card width on its own row (2026-07-28). It no longer shares a
+         column with the copy, so it can be the biggest, easiest target on the
+         screen instead of a pill sized around the phone mock. The label sits
+         left and the arrow disc pins right, so the button reads as a bar
+         rather than a stretched lozenge with a floating icon. */
       .hero-btn {
         gap: 8px;
         padding: 5px 5px 5px 0;
         max-width: none;
+        justify-self: stretch;
+        width: 100%;
+        justify-content: space-between;
       }
 
       /* On mobile the phone owns the right column at full height, mirroring
@@ -2006,14 +2038,45 @@
          wordmark's row (380px).
          position:absolute re-asserted because the desktop base is a relative
          grid item; the containing block (.hero-content) is unchanged. */
+      /* Deon (2026-07-28): the phone's top must sit on the "Keep their light
+         lit." line, not float at a guessed offset. It was `top: 82px`, a magic
+         number that could not track the headline: .hero-content is
+         `align-content: center`, so the text block's top moves with viewport
+         height and with how many lines the copy wraps to. At 812px tall the
+         phone started level with the PARAGRAPH instead, which is what made it
+         read as colliding with the copy rather than sitting beside it.
+
+         Fix: keep it absolutely positioned (so it still cannot grow row 1 and
+         shove the wordmark down) but give it a definite grid position. An
+         abspos child of a grid container with a definite grid-row/column is
+         positioned against its GRID AREA, not the padding box, so `top: 0` now
+         means "the top of row 1" = exactly the top of .hero-tagline, at every
+         width and height, with no number to re-tune.
+
+         `right: 8px` is unchanged from before: measured, the grid area's right
+         edge resolves to the same 359px card edge the old padding-box offset
+         used, so the horizontal placement needs no compensation. (A first pass
+         here subtracted the content padding and pushed the phone 16px off the
+         card, out to the viewport edge. Measured, then reverted.)
+
+         Sized off viewport WIDTH, not height. The collision with the copy is a
+         horizontal problem, so a vh-driven height made the overlap unpredictable:
+         it cleared the text on a tall 375px phone and cut 8px into it on a short
+         320px one. `min(40vw, 170px)` keeps the mock at a fixed share of the
+         width (so the gap to the copy is the same proportion on every phone) and
+         the cap stops it turning into a 665px tower at the 768px end of this
+         query. Height follows from the base aspect-ratio. */
       .phone-mock {
         position: absolute;
+        grid-row: 1;
+        grid-column: 1;
+        top: 0;
+        bottom: auto;
         left: auto;
-        top: 82px;
-        transform: none;
-        height: clamp(300px, 44vh, 380px);
-        width: auto;
         right: 8px;
+        transform: none;
+        width: min(40vw, 170px);
+        height: auto;
       }
 
       .navbar-links {
@@ -2416,20 +2479,29 @@
           <p class="hero-description">
             We bring your family together to collect the photos and memories that matter, and turn them into a film you'll keep forever.
           </p>
-          <!-- Concierge model: creation is operator-led, so the CTA opens the
-               conversation (same prefilled WhatsApp as the contact section).
-               Families joining a memorial still use their invite link; the
-               nav's "Back to your memorial" still goes to /app. -->
-          <a href="https://wa.me/27626607269?text=Hi%20Deon%2C%20I%27d%20like%20to%20create%20a%20memorial%20with%20Everlit.%20Could%20you%20help%20me%20get%20started%3F" target="_blank" rel="noopener" class="hero-btn">
-            <span class="hero-btn-text">Create a memorial</span>
-            <div class="hero-btn-icon">
-              <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-            </div>
-          </a>
         </div>
         <h1 class="hero-title">
           <span class="word" style="animation-delay: 0s;">Everl<span class="i-flame">ı<img src="/logo-mark-gold.png" alt="" class="flame-tittle" /></span>t<span class="asterisk">*</span></span>
         </h1>
+        <!-- Deon (2026-07-28): moved OUT of .hero-right and below the wordmark,
+             and relabelled. Two reasons.
+             1. Honesty. Creation is operator-led (concierge, /app?start=code),
+                and this control has always been a prefilled WhatsApp link, not
+                a create action. "Create a memorial" promised a self-serve flow
+                that does not exist, and the label now matches what the tap
+                actually does, including which app it opens. Naming WhatsApp
+                matters for the older, less technical readers this page targets:
+                a button that silently launches another app is disorienting.
+             2. Room. Inside the text column it was a 248px pill in a ~156px
+                column, so it overhung the phone mock and relied on z-index to
+                stay usable. On its own full-width row it gets a real tap target
+                and gives the copy its column back. -->
+        <a href="https://wa.me/27626607269?text=Hi%20Deon%2C%20I%27d%20like%20a%20quote%20for%20an%20Everlit%20memorial.%20Could%20you%20help%20me%20get%20started%3F" target="_blank" rel="noopener" class="hero-btn">
+          <span class="hero-btn-text">Get a quote on WhatsApp</span>
+          <div class="hero-btn-icon">
+            <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </div>
+        </a>
 
         <!-- Device mockup: live CSS recreation of the real app.tsx swipe/heart/
              comment interaction. -->
