@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleProp, StyleSheet, Text, TextStyle, View, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '../constants/theme';
+import { colors, type } from '../constants/theme';
 import PressableScale from './PressableScale';
 
 type GoldButtonProps = {
@@ -60,7 +60,11 @@ const styles = StyleSheet.create({
   },
   label: {
     fontFamily: 'Poppins_500Medium',
-    fontSize: 15,
+    // 15 -> 17. This is the product's primary button ("Come in", "Begin",
+    // "Finish"), the one obvious action on almost every gate, and it was below
+    // the reading floor. Buttons size to their content, so growing the label
+    // grows the target too, which is the right direction for these readers.
+    fontSize: type.action,
     letterSpacing: 0.4,
     color: colors.ink,
   },

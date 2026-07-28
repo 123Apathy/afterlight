@@ -11,7 +11,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { showToast } from './Toast';
-import { colors, images } from '../constants/theme';
+import { colors, images, type } from '../constants/theme';
 import { DEMO } from '../constants/demo';
 import { api, inviteUrl, keepPlaceUrl, type ButtonKey, type Project } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
@@ -762,7 +762,9 @@ const styles = StyleSheet.create({
   },
   closeText: {
     fontFamily: 'Poppins_500Medium',
-    fontSize: 13,
+    // 13 -> 14 (2026-07-28 type pass). These are real tappable actions and the
+    // privacy reassurance, not decoration, and 13 was under the reading floor.
+    fontSize: type.label,
     color: colors.white,
     marginLeft: 14,
   },
@@ -853,7 +855,9 @@ const styles = StyleSheet.create({
   },
   copyLinkText: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 13,
+    // 13 -> 14 (2026-07-28 type pass). These are real tappable actions and the
+    // privacy reassurance, not decoration, and 13 was under the reading floor.
+    fontSize: type.label,
     color: colors.textFainter,
     textDecorationLine: 'underline',
   },
@@ -925,7 +929,9 @@ const styles = StyleSheet.create({
     maxWidth: 300,
     textAlign: 'center',
     fontFamily: 'Poppins_400Regular',
-    fontSize: 13,
+    // 13 -> 14 (2026-07-28 type pass). These are real tappable actions and the
+    // privacy reassurance, not decoration, and 13 was under the reading floor.
+    fontSize: type.label,
     lineHeight: 19,
     color: colors.textFainter,
   },

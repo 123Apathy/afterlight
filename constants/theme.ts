@@ -45,6 +45,39 @@ export const colors = {
   accent: 'rgba(212, 169, 118, 0.4)',
 };
 
+// ── Type scale ───────────────────────────────────────────────────────────────
+// DESIGN.md said tokens live in this file, but until 2026-07-28 only colour
+// actually did: all ~152 font sizes were magic numbers spread across individual
+// StyleSheets (24 separate declarations of 13, 23 of 15), so nothing could be
+// adjusted centrally and the app had no scale, only a habit.
+//
+// The floor is deliberate. Everlit's readers are usually elderly, usually on a
+// phone, often minutes after a funeral and often crying. 16 is the smallest
+// size anything they must READ as a sentence may be. Below 16 is reserved for
+// glanceable meta, where meaning is carried by position, icon and colour and
+// the digits are only a confirmation: a count inside a badge, an uppercase
+// eyebrow above a heading. If a value has to be understood on its own, it does
+// not belong under `body`.
+//
+// These are plain numbers, not fluid sizes, on purpose. react-native-web emits
+// StyleSheet font sizes as fixed px and will not accept a CSS clamp(), so the
+// landing page (real CSS) is where fluid type belongs, and does use clamp().
+// The app is phone-first by design and renders the same layout full width on
+// desktop, so the honest fix here is a correct fixed scale rather than a fake
+// responsive one. Migration is deliberately partial: the measured offenders on
+// the most-read screens are on the scale, the long tail is not yet.
+export const type = {
+  badge: 12, // counts inside a pill or circle. Never prose.
+  overline: 12, // uppercase, letter-spaced section eyebrows.
+  label: 14, // a short word captioning an icon control.
+  body: 16, // the floor for anything read as a sentence.
+  bodyLg: 17,
+  action: 17, // buttons and primary links.
+  title: 22,
+  heading: 28,
+  display: 34,
+} as const;
+
 export const images = {
   // The Everlit horizon mark (transparent PNG, from brand/logo.html).
   logo: require('../assets/images/logo-mark.png'),

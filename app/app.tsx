@@ -30,7 +30,7 @@ import GoldButton from '../components/GoldButton';
 import BackdropVideo from '../components/BackdropVideo';
 import HorizonGlow from '../components/HorizonGlow';
 import { showToast } from '../components/Toast';
-import { absoluteFill, colors, copy, images, stageWidth, CONTROLS_BAND_MAX } from '../constants/theme';
+import { absoluteFill, colors, copy, images, stageWidth, type, CONTROLS_BAND_MAX } from '../constants/theme';
 import { DEMO, DEMO_PHOTOS } from '../constants/demo';
 
 // Relation chips offered at the "Who's here?" gate. Short and warm; Other
@@ -77,8 +77,16 @@ export default function SwipeScreen() {
   // not the whole window -- kept in lockstep with the frame in app/_layout.
   const width = stageWidth(winWidth, height);
   // Same centered-band math the controls row uses, so the tour can point at
-  // the heart button's real on-screen x (band == width on phones).
-  const bandApp = Math.min(width, CONTROLS_BAND_MAX);
+  // the heart button's real on-screen x.
+  // Inset 12px each side (2026-07-28). The band used to be the full width, which
+  // put the outer two controls' centres on the 1/8 and 7/8 lines hard against
+  // the screen edges. Their labels are centred on those points and bleed 18px
+  // past the button, so at 320px "Comment" was clipped 3px off the left and
+  // "Favourites" 6px off the right once the labels grew to a readable 14px.
+  // Insetting the band moves only the outer controls inward (about 9px at 320,
+  // nothing at all past 704px where CONTROLS_BAND_MAX already caps it), which
+  // also keeps the two most-used targets off the very edge of the glass.
+  const bandApp = Math.min(Math.max(width - 24, 0), CONTROLS_BAND_MAX);
   const bandLeftApp = (width - bandApp) / 2;
   // Mirror of PhotoGrid's own column math so the tour's first-tile highlight
   // is correct at every width (the old 3-column assumption broke on desktop).
@@ -1484,7 +1492,12 @@ function PhotoDeck({
   }, [width, photos.length, lastIndex]);
 
   // Controls band: full width on phones, capped + centered on desktop.
-  const band = Math.min(width, CONTROLS_BAND_MAX);
+  // Inset 12px each side. MUST stay identical to bandApp/bandLeftApp up in
+  // SwipeScreen, which the tour's pointer anchors and the sheet spotlight copy
+  // derive from: if the two formulas drift, the coach mark points at empty
+  // space next to the button it is describing. See the note there for why the
+  // inset exists (edge-clipped control labels at 320px).
+  const band = Math.min(Math.max(width - 24, 0), CONTROLS_BAND_MAX);
   const bandLeft = (width - band) / 2;
 
   // On the closing slide (the logo grows + centres), there is nowhere forward
@@ -2708,7 +2721,11 @@ const styles = StyleSheet.create({
     right: -18,
     textAlign: 'center',
     fontFamily: 'Poppins_500Medium',
-    fontSize: 12,
+    // 12 -> 14. "Comment" and "Favourites" caption the two controls a family
+    // member uses most, and 12 was the smallest readable text on the busiest
+    // screen. Safe to grow: this label is absolutely positioned and bleeds 18px
+    // past the button on each side, so it has more room than the control itself.
+    fontSize: type.label,
     letterSpacing: 0,
     color: colors.white,
     textShadowColor: 'rgba(0, 0, 0, 0.6)',
@@ -2733,8 +2750,10 @@ const styles = StyleSheet.create({
   },
   controlBadgeText: {
     fontFamily: 'Poppins_600SemiBold',
-    fontSize: 11,
-    lineHeight: 15,
+    // Legitimately meta: a count inside a 19px circle, where the icon carries
+    // the meaning. Still lifted 11 -> 12, which the circle absorbs.
+    fontSize: type.badge,
+    lineHeight: 16,
     color: 'rgba(255, 255, 255, 0.95)',
   },
   // Applied after glassSurface (which the array-merge would otherwise let
