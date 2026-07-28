@@ -118,6 +118,9 @@ export default function SwipeScreen() {
   // Relation to the person, declared alongside the name: one tap on a chip,
   // or Other with a few words. Optional -- never a gate within the gate.
   const [relationChoice, setRelationChoice] = useState('');
+  // Relation is optional, so it starts collapsed behind one quiet line. See the
+  // disclosure control in the name gate for why.
+  const [showRelation, setShowRelation] = useState(false);
   const [relationOther, setRelationOther] = useState('');
   // Gentle hint when Enter is tapped with no name (mirrors tribute's fix).
   const [nameGateHint, setNameGateHint] = useState(false);
@@ -854,11 +857,31 @@ export default function SwipeScreen() {
             />
             {/* Relation chips: one tap covers most people; Other opens a small
                 free-text field. Tapping a selected chip clears it again. */}
-            {/* Says out loud that it can be skipped. It always was optional in
-                code (relation || undefined at enterMemorial), but the bare
-                label read as a required field, and the hardest chip to tap here
-                is "Parent": a mother or father being asked to classify the loss
-                of their child before they are allowed through the door. */}
+            {/* Collapsed by default. This gate was doing nine jobs at once and
+                the ten-chip block, the only OPTIONAL thing on it, was the
+                tallest element by far: it pushed "Come in" 20px below the fold
+                on an 812px phone and 165px below on a 667px one, so the primary
+                action was unreachable without scrolling on exactly the small,
+                older handsets this audience carries.
+                It always was optional in code (relation || undefined), and now
+                it looks it. One quiet line, and the chips only appear for people
+                who want them. The hardest chip here is "Parent", a mother or
+                father classifying the loss of their child before they are let
+                through the door, and it should never be the wall they meet. */}
+            {!showRelation ? (
+              <PressableScale
+                onPress={() => setShowRelation(true)}
+                scaleTo={0.98}
+                style={styles.relationDisclosure}
+                accessibilityRole="button"
+                accessibilityLabel="Add how you are related to them. Optional."
+              >
+                <Text style={styles.relationDisclosureText}>
+                  + Say how you&rsquo;re related, if you&rsquo;d like
+                </Text>
+              </PressableScale>
+            ) : (
+              <>
             <Text style={styles.relationLabel}>Your relation to them, if you&rsquo;d like to say</Text>
             <View style={styles.relationRow}>
               {RELATION_OPTIONS.map((r) => {
@@ -890,6 +913,8 @@ export default function SwipeScreen() {
                 style={styles.gateInput}
                 onSubmitEditing={enterMemorial}
               />
+            )}
+              </>
             )}
             {/* "Come in", not "Enter": completes the doorway the screen opens
                 with ("Who's here?"), and "Enter" reads like a keyboard key. */}
@@ -2468,6 +2493,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: 360,
   },
+  // The collapsed state: one quiet, full-width line that reads as an offer
+  // rather than a field. Deliberately not a chip and not a button, so it does
+  // not compete with "Come in" directly below it.
+  relationDisclosure: {
+    alignSelf: 'stretch',
+    minHeight: 44,
+    justifyContent: 'center',
+    marginTop: 14,
+  },
+  relationDisclosureText: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: type.label,
+    color: colors.goldWarm,
+  },
   relationLabel: {
     fontFamily: 'Poppins_400Regular',
     fontSize: type.label,
@@ -2476,24 +2515,35 @@ const styles = StyleSheet.create({
     // above them. Centred, it floated over a block that starts on the left.
     textAlign: 'left',
     alignSelf: 'stretch',
-    marginTop: 18,
+    marginTop: 12,
   },
   relationRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    // flex-start, not center. Ten chips of different widths wrapped from a
-    // centred axis produced a ragged 4/3/3 diamond that read as an accident.
-    // Against a straight left edge, aligned with the name field above it, the
-    // uneven right edge reads as intentional instead.
+    // Two equal columns (see relationChip), aligned with the name field above.
     justifyContent: 'flex-start',
-    gap: 8,
-    marginTop: 10,
+    // 6, not 8. The two-column grid is five rows tall where the old ragged wrap
+    // was four, and that pushed "Come in" 36px below the fold on an 812px
+    // screen. Tightening the row rhythm and the label gap buys most of it back
+    // without touching the 44px targets or the copy.
+    gap: 6,
+    marginTop: 8,
     // Was a hard 360 at every screen size, so the same cramped wrap appeared on
     // a 1215px monitor as on a phone. Now it fills the gate column and simply
     // wraps to fit whatever width it is given.
     alignSelf: 'stretch',
   },
   relationChip: {
+    // Two equal columns, five rows. Free-wrapping chips of ten different widths
+    // gave a clean left edge but a staircase right edge (rows ending up to 60px
+    // apart) and stranded "Other" alone on a fourth row, which read as broken
+    // rather than composed. Equal widths give BOTH edges a straight line, and
+    // because RELATION_OPTIONS is already ordered in pairs, two columns make
+    // that structure visible: Spouse/Partner, Parent/Child,
+    // Grandparent/Grandchild, Sibling/Cousin, Friend/Other. The layout now
+    // explains the list instead of scattering it.
+    width: '48%',
+    alignItems: 'center',
     paddingHorizontal: 14,
     // 44px minimum. These were 38px tall with 13px text: under the tap-target
     // floor, on the first control an elderly person touches in the product.
@@ -2517,6 +2567,9 @@ const styles = StyleSheet.create({
   relationChipText: {
     fontFamily: 'Poppins_400Regular',
     fontSize: type.label,
+    // Centred now that every chip is the same width. Left-aligned text inside
+    // an equal-width pill leaves a ragged optical edge of its own.
+    textAlign: 'center',
     color: 'rgba(255, 255, 255, 0.85)',
   },
   relationChipTextActive: {
