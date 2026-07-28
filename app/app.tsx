@@ -2405,7 +2405,9 @@ const styles = StyleSheet.create({
     maxWidth: 340,
     height: 52,
     borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.09)',
+    // Deon 2026-07-28: a touch less opaque, so more of the candle reads through
+    // the field instead of it sitting on top as a milky slab.
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
     borderWidth: 1,
     borderColor: 'rgba(212, 169, 118, 0.2)',
     paddingHorizontal: 18,
@@ -2500,8 +2502,13 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(212, 169, 118, 0.35)',
-    backgroundColor: 'rgba(255, 255, 255, 0.07)',
+    // Receded from 0.35 gold. This block is OPTIONAL but, at 44px targets over
+    // four rows, it outweighed the one field that is actually required. The
+    // targets cannot shrink, so the unselected state gets quieter instead: the
+    // name field stays the hero, and because the selected chip still fills with
+    // full goldWarm, choosing one now reads as a much stronger change of state.
+    borderColor: 'rgba(212, 169, 118, 0.18)',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
   relationChipActive: {
     borderColor: colors.goldWarm,
