@@ -12,7 +12,7 @@ export const tributeCopy = {
   overline: 'In loving memory of {name}',
   introTitle: 'Share your memories',
   introBody:
-    'Thank you for helping us honour {name}. Share as many memories as you’d like, skip anything you can’t recall, and take your time. Enjoy remembering them.',
+    'Thank you for helping us honour {name}. Share as many memories as you’d like, skip anything you can’t recall, and take your time with them.',
   introCta: 'Begin',
   introSub: 'It only takes a few quiet minutes.',
   // 25 questions is a long way to walk in one sitting, and the Close link gave
@@ -23,6 +23,8 @@ export const tributeCopy = {
   thanksTitle: 'Thank you',
   thanksBody:
     'Your memories are a gift. Every story you’ve shared helps bring {name}’s tribute to life, and we hope this was a moment to smile, to remember, and to feel them close again.',
-  thanksSignoff: 'Have a wonderful day.',
+  // Was "Have a wonderful day." That closed 25 questions about a woman who has
+  // died, in gold italic, as if she had just been served at a counter.
+  thanksSignoff: 'With love, from all of us at Everlit.',
 };
 

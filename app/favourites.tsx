@@ -22,6 +22,7 @@ export default function FavouritesScreen() {
   const { projectId, projectName } = useActiveProject();
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     if (DEMO) {
@@ -35,8 +36,13 @@ export default function FavouritesScreen() {
     }
     api
       .getPhotos(projectId)
-      .then(setPhotos)
-      .catch(() => setPhotos([]))
+      // A failed fetch used to fall into setPhotos([]), which renders the EMPTY
+      // state: "No favourites yet." So a dropped connection told the family
+      // their memorial was empty, and told a room watching a demo that the
+      // product does not work. Failure and emptiness are different things and
+      // must not look the same.
+      .catch(() => setLoadError(true))
+      .then((p) => { if (p) setPhotos(p); })
       .finally(() => setLoaded(true));
   }, [projectId]);
 
@@ -79,7 +85,15 @@ export default function FavouritesScreen() {
             style={styles.streak}
           />
 
-          {hearted.length === 0 ? (
+          {loadError ? (
+            <View style={styles.emptyWrap}>
+              <Image source={images.logoRing} style={styles.emptyEmblem} resizeMode="contain" />
+              <Text style={styles.empty}>
+                We couldn&rsquo;t reach the memorial just now, so these are not showing. Your
+                family&rsquo;s favourites are safe. Check your connection and open this again.
+              </Text>
+            </View>
+          ) : hearted.length === 0 ? (
             <View style={styles.emptyWrap}>
               <Image source={images.logoRing} style={styles.emptyEmblem} resizeMode="contain" />
               {/* Leads with the labelled heart button, not the double-tap.
@@ -153,7 +167,11 @@ export default function FavouritesScreen() {
           visible, glass so it never fully hides the card behind it. */}
       <View style={styles.backFloatWrap} pointerEvents="box-none">
         <PressableScale
-          onPress={() => router.replace('/app')}
+          // back() when we can. replace() remounted the whole app: a second
+          // full "Gathering the moments" loading screen, all 40 photos
+          // refetched, and the deck dumped back to photo 1. Same pattern
+          // already used in tribute.tsx:56.
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/app'))}
           scaleTo={0.96}
           style={[styles.backPill, glassBlur]}
           accessibilityRole="button"

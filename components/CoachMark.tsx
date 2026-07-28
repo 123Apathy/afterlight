@@ -148,7 +148,12 @@ export default function CoachMark({
 
   return (
     <View
-      style={StyleSheet.absoluteFill}
+      // zIndex above the app header (which is 20). Without it the Everlit
+      // flame, the photo counter and the hamburger all painted and stayed
+      // CLICKABLE on top of a scrim that is meant to be modal, and the flame
+      // navigates away to the marketing site. One stray click mid-tour and you
+      // are off the app entirely with the tour half finished.
+      style={[StyleSheet.absoluteFill, { zIndex: 50 }]}
       pointerEvents="box-none"
       // Only the fully-blocking steps (no hole cut for a real element) are a
       // genuine modal: everything a screen reader needs is inside this card.

@@ -72,7 +72,9 @@ export default function FilmScreen() {
     opacity: 0.85 * (1 - Math.max(0, Math.min(1, reveal.value / 0.75))),
   }));
 
-  const back = () => router.replace('/app');
+  // back() when we can, so returning from the film does not remount the app
+  // and reset the deck to photo 1. Falls back to replace on a cold open.
+  const back = () => (router.canGoBack() ? router.back() : router.replace('/app'));
 
   if (!loaded) {
     return <LoadingState reduceMotion={reduceMotion} label="Loading your film" />;
@@ -121,7 +123,11 @@ export default function FilmScreen() {
         ) : (
           <Animated.Text style={[styles.pending, bodyStyle]}>
             {projectId
-              ? 'Your film will be ready to watch and download right here 24 hours before the due date, and within 48 hours of everyone’s choices being submitted or the deadline being reached, whichever comes first. We’ll place it in this exact spot the moment it’s ready.'
+              // Was a 43-word delivery clause naming a "due date" and a
+              // "deadline" the product never collects or shows, and promising a
+              // download on a screen with no download control. It read like a
+              // courier contract on the screen that sells the whole thing.
+              ? '{name}’s film is being made now. It will appear right here, and we’ll let you know the moment it’s ready.'.replace('{name}', project?.name || 'Their')
               : 'Open your memorial first, then come back here.'}
           </Animated.Text>
         )}

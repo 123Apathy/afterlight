@@ -236,22 +236,12 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
         <View style={styles.headerActions}>
           {/* Help: restarts the guided tour (same reset as the footer link,
               surfaced as an icon so it's findable without reading small print). */}
-          <PressableScale
-            onPress={() => {
-              onClose();
-              try {
-                localStorage.removeItem('everlit.tour.done');
-              } catch {}
-              if (typeof window !== 'undefined') window.location.reload();
-            }}
-            style={styles.helpButton}
-            scaleTo={0.94}
-            hitSlop={6}
-            accessibilityRole="button"
-            accessibilityLabel="Show the guided tour again"
-          >
-            <Text style={styles.helpText}>?</Text>
-          </PressableScale>
+          {/* The "?" icon that used to sit here was removed. It was 10px from
+              Close, and it wiped everlit.tour.done and hard-reloaded the page:
+              one misclick blanked the app, dropped the deck back to photo 1 and
+              restarted the whole guided tour. The same action still exists,
+              honestly labelled "Run the tutorial again", inside More settings,
+              where nobody hits it by accident. */}
           <PressableScale
             onPress={onClose}
             style={styles.closeButton}

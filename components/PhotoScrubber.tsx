@@ -246,7 +246,11 @@ export default function PhotoScrubber({ photos, index, onPick, onClose }: Props)
             D('img', {
               src: photoThumbUrl(photo),
               draggable: false,
-              style: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
+              // 'contain', not 'cover'. The cards are 3:2 landscape, so cover
+              // hard-cropped every upright photo of her to a horizontal band
+              // through the middle of the frame and cut the faces off. The card
+              // already has a dark fill, so portraits letterbox onto it.
+              style: { width: '100%', height: '100%', objectFit: 'contain', display: 'block' },
             }),
             D('div', {
               style: {

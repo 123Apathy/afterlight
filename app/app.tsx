@@ -88,6 +88,15 @@ export default function SwipeScreen() {
   // nothing at all past 704px where CONTROLS_BAND_MAX already caps it), which
   // also keeps the two most-used targets off the very edge of the glass.
   const bandApp = Math.min(Math.max(width - 24, 0), CONTROLS_BAND_MAX);
+  // Vertical centre of the control circles, for the tour's spotlight rings.
+  // This was hardcoded `height - 54`, which was correct only while the row sat
+  // at bottom:26 (26 + half of the 56-tall row = 54). Once the row moved up to
+  // CONTROLS_BOTTOM and gained the safe-area inset, every coach mark pointed
+  // about 20px BELOW the button it was describing, and more than that on a
+  // phone with a home indicator. Derived from the same constants now, so the
+  // ring cannot drift away from the control again.
+  const appInsets = useSafeAreaInsets();
+  const controlAnchorY = height - (CONTROLS_BOTTOM + 28) - appInsets.bottom;
   const bandLeftApp = (width - bandApp) / 2;
   // Mirror of PhotoGrid's own column math so the tour's first-tile highlight
   // is correct at every width (the old 3-column assumption broke on desktop).
@@ -946,7 +955,13 @@ export default function SwipeScreen() {
           height={height}
           raterName={raterName}
           initialIndex={deckIndex}
-          navEnabled={!commentPhotoId && !scrubberOpen}
+          // Also disabled while the menu or the tour is open. The deck's wheel
+          // listener is on window, non-passive, and preventDefault()s every
+          // vertical wheel, which cancels scrolling for the WHOLE document: the
+          // menu's own ScrollView would not scroll, and the photo behind it
+          // silently advanced instead. The same handler auto-advanced the tour
+          // if a trackpad was touched during step 1.
+          navEnabled={!commentPhotoId && !scrubberOpen && !menuOpen && !tourStep}
           onToggleFavorite={toggleFavorite}
           onOpenComments={(photo) => setCommentPhotoId(photo.id)}
           onIndexChange={setLiveIndex}
@@ -962,7 +977,10 @@ export default function SwipeScreen() {
         onReact={reactToComment}
         onSaveDetails={saveDetails}
         raterName={raterName}
-        autoCloseOnPost
+        // Was auto-closing 900ms after a post. Someone types a memory of the
+        // person who died and the sheet takes it away before they can read it
+        // back. Let them close it themselves.
+        autoCloseOnPost={false}
       />
 
 
@@ -971,7 +989,9 @@ export default function SwipeScreen() {
           Rendered after the sheets so it paints above their backdrops, and
           pinned to the bottom control row -- clear of the floating card above
           it, so it never overlaps the sheet itself. */}
-      {commentPhotoId && (
+      {/* Deck only: in grid view the real control row is not on screen, so the
+          lit copy used to hang at the bottom pointing at nothing. */}
+      {commentPhotoId && viewMode === 'deck' && (
         <View style={styles.spotlightRow} pointerEvents="none">
           <View style={[styles.controlColumn, quarterCenterStyle(bandLeftApp + bandApp / 8)]}>
             <View style={[styles.glassCircle, glassSurface, glassBlur, styles.navButtonContrast]}>
@@ -1010,7 +1030,7 @@ export default function SwipeScreen() {
         visible={tourStep === 'arrows'}
         title="Moving between photos"
         text="Tap the bright arrow to see the next photo."
-        anchor={{ x: bandLeftApp + (bandApp * 5) / 8, y: height - 54 }}
+        anchor={{ x: bandLeftApp + (bandApp * 5) / 8, y: controlAnchorY }}
         ringSize={96}
         interactive
         stepIndex={1}
@@ -1024,7 +1044,7 @@ export default function SwipeScreen() {
         visible={tourStep === 'favourites'}
         title="The heart"
         text="When a photo touches you, tap the heart. The whole family will see which moments matter."
-        anchor={{ x: bandLeftApp + (bandApp * 7) / 8, y: height - 54 }}
+        anchor={{ x: bandLeftApp + (bandApp * 7) / 8, y: controlAnchorY }}
         pulseNode={<Text style={styles.tourPulseHeart}>♥</Text>}
         buttonLabel="Next"
         onNext={advanceTour}
@@ -1039,7 +1059,7 @@ export default function SwipeScreen() {
         visible={tourStep === 'comments'}
         title="Sharing a memory"
         text="Tap the speech bubble to write a memory about this photo, and to say when and where it was taken. Even just the year helps."
-        anchor={{ x: bandLeftApp + bandApp / 8, y: height - 54 }}
+        anchor={{ x: bandLeftApp + bandApp / 8, y: controlAnchorY }}
         pulseNode={<CommentIcon active />}
         buttonLabel="Next"
         onNext={advanceTour}
@@ -2651,7 +2671,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: 26,
+    // MUST equal controlsRow's offset. It was a duplicated literal 26, so when
+    // the real row moved up to CONTROLS_BOTTOM the lit copy stayed behind and a
+    // second, brighter Comment button painted 20px below the dimmed real one,
+    // every single time a comment sheet opened.
+    bottom: CONTROLS_BOTTOM,
     height: 56,
   },
   // Prev/Next row. Its TOP edge stays where the 62px version sat (top =

@@ -3129,6 +3129,13 @@
 
   <!-- Dev-only: click-drag-move + pull-to-resize overlay, Ctrl+Shift+M.
        Inert until activated -- no visual/behavioural effect on visitors. -->
+  <!-- tweak-mode.js is a LOCAL design tool (Ctrl+Shift+M opens a drag-to-move
+       and resize overlay). It was shipping to production and arming that
+       shortcut for every visitor, plus 32KB on the one page a grieving family
+       loads first, on South African mobile data. Re-enable it locally by
+       uncommenting while you are working on this page, but do not commit it
+       live again.
   <script src="/tweak-mode.js"></script>
+  -->
 </body>
 </html>
