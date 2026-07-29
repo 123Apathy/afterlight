@@ -811,16 +811,12 @@
       grid-row: 3;
       grid-column: 1;
       justify-self: start;
-      /* Above .hero-content::before. That scrim is a near-black wash that fades
-         to the right, and it exists to keep the COPY legible over the bright
-         moving photo behind it. The button is a solid cream pill: it needs no
-         protection, and measured, the scrim was painting over 261px of its
-         311px width, which is the "fade over the button". The button was
-         position:static, so a positioned z-index:2 pseudo-element painted
-         straight over it.
-         Worth recording how this hid: elementsFromPoint() does not return
-         pseudo-elements, so probing the stack at the button reported nothing
-         above it and sent an earlier pass chasing the video mask instead. */
+      /* Kept after the .hero-content::before scrim was deleted, as cheap
+         insurance: this is the page's one conversion action, it overlaps the
+         phone mock, and a stacking bug here is expensive and hard to see. The
+         scrim it originally out-ranked had painted over 261px of this button's
+         311px width, and it stayed hidden through two debugging passes because
+         elementsFromPoint() does not report pseudo-elements. */
       position: relative;
       z-index: 3;
       display: inline-flex;
@@ -1986,33 +1982,19 @@
         margin-top: clamp(-260px, calc(566px - 100vh), 0px);
       }
 
-      /* Soft left-anchored scrim behind the hero text so the copy stays
-         legible where its lines cross over the phone, and the text zone reads
-         as its own tonal layer -- turning the overlap into deliberate depth
-         rather than a collision. Now that the mock spans the full right
-         column, the scrim must sit ABOVE the phone and BELOW the text
-         (phone 1 < scrim 2 < text 3 < wordmark 4), so the gradient's tail
-         gently dims the phone's left edge exactly where the paragraph's
-         line-ends cross its bright, Ken-Burns-moving photo. */
-      /* No detectable boundary anywhere (Deon, 2026-07-26: "I don't like it
-         being so obvious"): the background fades it out to the RIGHT, and the
-         mask fades its TOP and BOTTOM edges, which were hard cuts that read
-         as a card the moment the scrim started overlapping the phone frame.
-         The left edge sits off-screen. The box extends past the text block so
-         the mask's fade bands land outside the copy they protect. */
-      .hero-content::before {
-        content: '';
-        position: absolute;
-        top: -32px;
-        bottom: -20px;
-        left: -4px;
-        width: 82%;
-        z-index: 2;
-        background: linear-gradient(96deg, rgba(10, 8, 7, 0.72) 38%, rgba(10, 8, 7, 0.30) 60%, transparent 80%);
-        -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 13%, #000 87%, transparent 100%);
-        mask-image: linear-gradient(to bottom, transparent 0, #000 13%, #000 87%, transparent 100%);
-        pointer-events: none;
-      }
+      /* The left-anchored scrim that used to live here is GONE (Deon,
+         2026-07-28: "you found it, please remove it").
+         It was `.hero-content::before`, a near-black wash at z-index 2 fading
+         to the right, added to keep the hero copy legible where its lines
+         crossed the phone mock. Two problems in the end: it painted over 261px
+         of the 311px CTA once that button moved onto its own row, and it was
+         invisible to debugging because elementsFromPoint() does not report
+         pseudo-elements.
+         The copy keeps its own legibility: .hero-tagline and .hero-description
+         each carry a dark text-shadow halo, and .hero-gradient still dims the
+         whole card underneath. If a future video grade makes the copy hard to
+         read again, strengthen those shadows rather than reinstating a
+         full-width layer over the interactive content. */
       .phone-mock { z-index: 1; }
 
       .hero-title {
