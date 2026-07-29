@@ -1,7 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Image, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   Easing,
@@ -29,6 +29,12 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
   const progress = useSharedValue(0);
+  // Short-screen budget (second pass, 2026-07-29). With the film card present
+  // the panel measured 886px against a 641px scroller on a 667px phone: two
+  // subtitles wrapped, the privacy note ran three lines and the decorative
+  // footer added ~74px. On short screens the footer goes; the type does not.
+  const { height: winHeight } = useWindowDimensions();
+  const showFooter = winHeight >= 760;
   const { projectId, projectName, clearProject, remember, activeEntry } = useActiveProject();
   const [project, setProjectDetails] = useState<Project | null>(null);
   const [copied, setCopied] = useState(false);
@@ -287,7 +293,9 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
               <ActionCard
                 icon={<IconHeart />}
                 title="See your favourites"
-                subtitle="The moments your family loved"
+                // One line at 375px. "The moments your family loved" wrapped
+                // to two, and the wrap cost more than the extra words earned.
+                subtitle="What the family loved"
                 onPress={handleSeeFavourites}
               />
             )}
@@ -296,7 +304,10 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
                 <ActionCard
                   icon={<IconWhatsApp />}
                   title="Share with family"
-                  subtitle="Opens WhatsApp, message ready"
+                  // Says the one important thing -- tapping leaves the app for
+                  // WhatsApp -- in a single line at 375px. "Opens WhatsApp for
+                  // you" measured 195px against the ~191px column and wrapped.
+                  subtitle="Opens WhatsApp"
                   onPress={handleWhatsAppShare}
                 />
                 <PressableScale
@@ -356,10 +367,11 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
               )}
               {/* Answered at the moment of the decision, not buried in Terms:
                   this is the point where someone hesitates over uploading a
-                  relative's photographs. */}
+                  relative's photographs. Two lines at 375px, not three: same
+                  reassurance, fewer words. */}
               {showButton('addPhotos') && (
                 <Text style={styles.uploadPrivacy}>
-                  Your photos stay in this memorial. Only people with the link can see them.
+                  Only people with the family link can see your photos.
                 </Text>
               )}
               {!!projectId && !showMore && (
@@ -483,10 +495,12 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
       )}
       </View>
 
-      <View style={styles.footer} pointerEvents="none">
-        <Image source={images.logo} style={styles.footerMark} resizeMode="contain" />
-        <Text style={styles.footerText}>Everlit</Text>
-      </View>
+      {showFooter && (
+        <View style={styles.footer} pointerEvents="none">
+          <Image source={images.logo} style={styles.footerMark} resizeMode="contain" />
+          <Text style={styles.footerText}>Everlit</Text>
+        </View>
+      )}
       </ScrollView>
     </Animated.View>
   );
@@ -613,7 +627,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.dark,
     overflow: 'hidden',
     zIndex: 100,
-    paddingTop: 26,
+    paddingTop: 16,
     paddingHorizontal: 20,
     // Desktop: the overlay still covers the window, but its content column
     // stays a comfortable phone-ish width, centered. No-op on phones.
@@ -629,7 +643,7 @@ const styles = StyleSheet.create({
   // the screen edge when it scrolls.
   contentInner: {
     flexGrow: 1,
-    paddingBottom: 24,
+    paddingBottom: 6,
   },
   // Frosted glass card matching CommentSheet/DetailsSheet's `sheet` treatment,
   // so the menu reads as one floating panel over the dimmed backdrop rather
@@ -640,7 +654,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.12)',
     borderRadius: 24,
     paddingHorizontal: 18,
-    paddingVertical: 20,
+    paddingVertical: 12,
   },
   // Terms and "Run the tutorial again" moved into More settings, so the
   // 12px footer row they lived in is gone. They now share switchText's 14px,
@@ -694,7 +708,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 2,
   },
   title: {
     fontFamily: 'PlayfairDisplay_500Medium',
@@ -738,22 +752,23 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_400Regular',
     fontSize: 16,
     color: colors.goldWarm,
-    marginTop: 6,
-    marginBottom: 12,
+    marginTop: 2,
+    marginBottom: 6,
   },
   cards: {
-    gap: 10,
+    gap: 8,
   },
-  // Compacted 2026-07-28. Publishing a film adds a fifth card, which pushed the
-  // panel 531px past a 667px screen with "More settings" 412px below the fold.
-  // The savings come from chrome (padding, icon, gaps), not from the copy: the
-  // subtitles are what stop a tap being a surprise and they stay at reading size.
+  // Compacted 2026-07-28, second pass 2026-07-29. Publishing a film adds a
+  // fifth card; the first pass shaved chrome but still measured 245px past a
+  // 667px screen once subtitle wrapping and the footer were counted. The
+  // savings stay in chrome and word count -- never the type size: subtitles
+  // are what stop a tap being a surprise and they stay at reading size.
   card: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    minHeight: 68,
-    paddingVertical: 11,
+    minHeight: 64,
+    paddingVertical: 9,
     paddingHorizontal: 14,
     borderRadius: 18,
     backgroundColor: 'rgba(42, 35, 33, 0.82)',
@@ -813,10 +828,12 @@ const styles = StyleSheet.create({
     borderRightColor: 'transparent',
   },
   whatsappLink: {
-    marginTop: 8,
+    marginTop: 4,
     // Was 8, aligning to neither the card edge (0) nor the content edge (16).
     marginLeft: 16,
-    // 4 -> 12: this was a ~22px tall tap target.
+    // 4 -> 12: this was a ~22px tall tap target. paddingVertical stays 12 --
+    // 12+21+12 = 45px keeps the 44px touch floor -- so the short-screen trim
+    // above comes out of marginTop only.
     paddingVertical: 12,
   },
   copyLinkText: {
@@ -840,6 +857,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontFamily: 'Poppins_500Medium',
     fontSize: 17,
+    lineHeight: 24,
     color: colors.white,
   },
   cardSubtitle: {
@@ -860,9 +878,9 @@ const styles = StyleSheet.create({
   // Groups the small "Add photos" pill + the switch-memorial link together
   // below the main action cards.
   bottomActions: {
-    marginTop: 14,
+    marginTop: 8,
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   // Small glass pill, same shape/treatment as the header Close button, since
   // "Add photos" is now a secondary action rather than a primary card.
@@ -894,7 +912,7 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   uploadPrivacy: {
-    marginTop: 2,
+    marginTop: 0,
     maxWidth: 300,
     textAlign: 'center',
     fontFamily: 'Poppins_400Regular',
