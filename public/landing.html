@@ -2116,12 +2116,22 @@
          the page black over its last quarter instead. Content inside
          .hero-card (wordmark, CTA) ends well above the fade band at every
          supported height, and the mask layers sit inset:0 of the card, so
-         nothing interactive is touched. */
+         nothing interactive is touched.
+
+         2026-07-28: that last sentence stopped being true. The CTA used to live
+         inside .hero-right, up with the copy; it now sits on its own row below
+         the wordmark, and measured it spans 71.2% to 78.1% of the card height.
+         It straddled the old 72% fade start and ran 6% past it, so the footage
+         melted to flat black BEHIND the button and it read as a fade drawn
+         across the CTA. The wordmark still ends at 66%, comfortably clear.
+         Fade start moved to 84% so the whole button sits on unfaded footage
+         again, and the tail extended to 100% so compressing the band into the
+         last sixth does not reintroduce the hard edge this mask exists to fix. */
       .hero-video-container,
       .hero-noise,
       .hero-gradient {
-        -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent 98%);
-        mask-image: linear-gradient(to bottom, #000 72%, transparent 98%);
+        -webkit-mask-image: linear-gradient(to bottom, #000 84%, transparent 100%);
+        mask-image: linear-gradient(to bottom, #000 84%, transparent 100%);
       }
 
       .features {

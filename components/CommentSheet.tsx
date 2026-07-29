@@ -592,10 +592,12 @@ const styles = StyleSheet.create({
   reactionPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    height: 24,
-    borderRadius: 12,
+    gap: 5,
+    paddingHorizontal: 10,
+    // Grown with the glyph below. At 24px tall these were also well under any
+    // sane tap target for the older hands this app is built for.
+    height: 32,
+    borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.10)',
@@ -605,7 +607,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(212,169,118,0.55)',
   },
   reactionEmoji: {
-    fontSize: 12,
+    // 12 -> 17. At 12px the crying face and the laughing face are the same
+    // smudge. On a memorial, tapping "laughing" on a photo of someone's
+    // grandmother when you meant "crying" is not a cosmetic error.
+    fontSize: 17,
   },
   reactionCount: {
     fontFamily: 'Poppins_500Medium',
