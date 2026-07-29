@@ -149,6 +149,10 @@ export default function SwipeScreen() {
   // Relation is optional, so it starts collapsed behind one quiet line. See the
   // disclosure control in the name gate for why.
   const [showRelation, setShowRelation] = useState(false);
+  // The doorway is two beats, not one. 'moment' acknowledges the death and says
+  // whose memorial this is; 'intake' asks who is arriving. See the gate itself
+  // for why they were separated.
+  const [gateStep, setGateStep] = useState<'moment' | 'intake'>('moment');
   const [relationOther, setRelationOther] = useState('');
   // Gentle hint when Enter is tapped with no name (mirrors tribute's fix).
   const [nameGateHint, setNameGateHint] = useState(false);
@@ -862,14 +866,40 @@ export default function SwipeScreen() {
           <Animated.View style={[styles.gateSegment, enterStyleA]}>
             <Text style={styles.gateOverline}>Everlit · Memorial Films</Text>
           </Animated.View>
+          {/* TWO BEATS, NOT ONE.
+              This gate used to do nine jobs on one screen: brand, title,
+              condolence, a five-line explanation, a required field, an optional
+              field, the CTA, a privacy line and a terms link. The condolence
+              was the casualty. Squeezed between a heading and a form it read as
+              decoration above a signup, and the whole thing said "sorry for
+              your loss, now fill this in" in a single breath.
+              Almost everyone meets this screen on a phone, from a WhatsApp
+              link, often hours after a funeral. So the first beat only
+              acknowledges what happened and says whose memorial this is. The
+              second beat asks who has arrived. The extra tap is the point: it
+              is a pause, not friction. */}
+          {gateStep === 'moment' ? (
+            <Animated.View style={[styles.gateSegment, enterStyleB]}>
+              <Text style={styles.gateMomentLine}>We&rsquo;re so sorry for your loss.</Text>
+              <StreakDivider />
+              <Text style={styles.gateMomentBody}>
+                {projectDetails?.name
+                  ? `You have been invited to help remember ${projectDetails.name}.`
+                  : 'You have been invited to help remember someone who mattered.'}
+              </Text>
+              <GoldButton
+                label="Continue"
+                onPress={() => setGateStep('intake')}
+                style={styles.gateButton}
+              />
+            </Animated.View>
+          ) : (
+          <>
           <Animated.View style={[styles.gateSegment, enterStyleB]}>
             <Text style={styles.gateTitle}>Who&rsquo;s here?</Text>
             <StreakDivider />
           </Animated.View>
           <Animated.View style={[styles.gateSegment, enterStyleC]}>
-            <Text style={styles.gateCondolence}>
-              We&rsquo;re so sorry for your loss.
-            </Text>
             <Text style={styles.gateSubtitle}>
               Thank you for being here to help remember them. Add your name so your favourites carry a
               little of you with them, a quiet way of saying this moment mattered to you too.
@@ -979,6 +1009,8 @@ export default function SwipeScreen() {
               .
             </Text>
           </Animated.View>
+          </>
+          )}
         </ScrollView>
       </View>
     );
@@ -2438,6 +2470,30 @@ const styles = StyleSheet.create({
     color: colors.goldWarm,
     textAlign: 'center',
     marginBottom: 10,
+  },
+  // The condolence is the whole point of its own screen, so it carries the size
+  // the title used to. At 19px, sandwiched in the old combined gate, it read as
+  // a caption above a form.
+  gateMomentLine: {
+    fontFamily: 'PlayfairDisplay_500Medium',
+    fontSize: 30,
+    lineHeight: 40,
+    color: colors.goldWarm,
+    textAlign: 'center',
+    marginBottom: 14,
+  },
+  gateMomentBody: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: type.body,
+    lineHeight: 27,
+    color: colors.white,
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 12,
+    textAlign: 'center',
+    maxWidth: 340,
+    marginTop: 18,
+    marginBottom: 30,
   },
   gateSubtitle: {
     fontFamily: 'Poppins_400Regular',
