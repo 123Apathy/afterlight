@@ -72,6 +72,34 @@ import { glassBlur, glassSurface } from '../lib/glass';
 // too, so a missed double-tap read as "the app is broken" or "I did it wrong".
 const DOUBLE_TAP_MS = 500;
 
+// The floating header has no background of its own, so content scrolling
+// beneath it collided with the wordmark: on the name gate, "Thank you for being
+// here to help remember them" ran straight through "Everlit". The deck already
+// solved this with an inline gradient; the three gates did not have one, so the
+// fix existed but had not travelled. One component now, used by all four, so
+// they cannot drift apart again.
+//
+// A scrim rather than an opaque bar on purpose. An opaque header would cut a
+// hard band across a full-bleed photograph on the deck and lose the candlelit
+// feel; this keeps the header floating and simply gives it something to sit on,
+// matching the vertical dark gradients DESIGN.md already uses on the gates,
+// film, tribute and menu.
+function HeaderScrim() {
+  return (
+    <LinearGradient
+      // Strengthened from the deck's original 0.7/0.45. That was tuned against
+      // photographs, which are already dark at the top of the frame. The gates
+      // scroll bright gold condolence text under the same header, and at 0.7 it
+      // still competed with the wordmark. 0.9 buries it properly while the tail
+      // stays fully transparent, so nothing reads as a hard band.
+      colors={['rgba(20, 16, 14, 0.9)', 'rgba(20, 16, 14, 0.6)', 'rgba(20, 16, 14, 0)']}
+      locations={[0, 0.55, 1]}
+      style={StyleSheet.absoluteFill}
+      pointerEvents="none"
+    />
+  );
+}
+
 export default function SwipeScreen() {
   const { width: winWidth, height } = useWindowDimensions();
   // Photos size to the app card (which grows with the viewport on desktop),
@@ -625,6 +653,7 @@ export default function SwipeScreen() {
       <View style={styles.page}>
         <HorizonGlow />
         <View style={styles.headerOverlay} pointerEvents="box-none">
+          <HeaderScrim />
           <View style={styles.header}>
             <PressableScale
               onPress={goHome}
@@ -755,6 +784,7 @@ export default function SwipeScreen() {
       <View style={styles.page}>
         <HorizonGlow />
         <View style={styles.headerOverlay} pointerEvents="box-none">
+          <HeaderScrim />
           <View style={styles.header}>
             <PressableScale
               onPress={goHome}
@@ -806,6 +836,7 @@ export default function SwipeScreen() {
       <View style={styles.page}>
         <HorizonGlow />
         <View style={styles.headerOverlay} pointerEvents="box-none">
+          <HeaderScrim />
           <View style={styles.header}>
             <PressableScale
               onPress={goHome}
@@ -1152,12 +1183,7 @@ export default function SwipeScreen() {
       />
 
       <View style={styles.headerOverlay} pointerEvents="box-none">
-        <LinearGradient
-          colors={['rgba(20, 16, 14, 0.7)', 'rgba(20, 16, 14, 0.45)', 'rgba(20, 16, 14, 0)']}
-          locations={[0, 0.55, 1]}
-          style={StyleSheet.absoluteFill}
-          pointerEvents="none"
-        />
+        <HeaderScrim />
         <View style={styles.header}>
           {/* The logo lockup sits flush left, mirroring how headerActions
               sits flush right -- equal visual weight on each side rather
@@ -2497,7 +2523,12 @@ const styles = StyleSheet.create({
   // rather than a field. Deliberately not a chip and not a button, so it does
   // not compete with "Come in" directly below it.
   relationDisclosure: {
-    alignSelf: 'stretch',
+    // Matches gateInput's own width contract. `alignSelf: stretch` alone spans
+    // the whole viewport, which is invisible on a phone but threw this link
+    // against the far-left edge on desktop while every other element stayed
+    // centred on a 340 column.
+    width: '100%',
+    maxWidth: 340,
     minHeight: 44,
     justifyContent: 'center',
     marginTop: 14,
@@ -2514,7 +2545,8 @@ const styles = StyleSheet.create({
     // Left, to sit over the left edge of the chips it labels and the name field
     // above them. Centred, it floated over a block that starts on the left.
     textAlign: 'left',
-    alignSelf: 'stretch',
+    width: '100%',
+    maxWidth: 340,
     marginTop: 12,
   },
   relationRow: {
@@ -2528,10 +2560,10 @@ const styles = StyleSheet.create({
     // without touching the 44px targets or the copy.
     gap: 6,
     marginTop: 8,
-    // Was a hard 360 at every screen size, so the same cramped wrap appeared on
-    // a 1215px monitor as on a phone. Now it fills the gate column and simply
-    // wraps to fit whatever width it is given.
-    alignSelf: 'stretch',
+    // Same 340 column as gateInput and the label, so the grid stays under the
+    // name field on desktop instead of spanning the whole window.
+    width: '100%',
+    maxWidth: 340,
   },
   relationChip: {
     // Two equal columns, five rows. Free-wrapping chips of ten different widths
