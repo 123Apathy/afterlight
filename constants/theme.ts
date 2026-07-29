@@ -76,7 +76,7 @@ export const colors = {
 // the most-read screens are on the scale, the long tail is not yet.
 export const type = {
   badge: 12, // counts inside a pill or circle. Never prose.
-  overline: 12, // uppercase, letter-spaced section eyebrows.
+  overline: 11, // uppercase, letter-spaced section eyebrows. DESIGN.md says 11.
   label: 14, // a short word captioning an icon control.
   body: 16, // the floor for anything read as a sentence.
   bodyLg: 17,

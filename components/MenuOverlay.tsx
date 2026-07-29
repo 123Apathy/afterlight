@@ -246,6 +246,7 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
             onPress={onClose}
             style={styles.closeButton}
             scaleTo={0.94}
+            hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Close the menu"
           >
@@ -667,15 +668,15 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 14,
     paddingHorizontal: 18,
-    borderRadius: 18,
+    borderRadius: 24,
     backgroundColor: 'rgba(32, 26, 24, 0.72)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   confirmText: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: type.body,
+    lineHeight: 24,
     color: colors.white,
     textAlign: 'center',
   },
@@ -694,13 +695,16 @@ const styles = StyleSheet.create({
   },
   confirmCancel: {
     fontFamily: 'Poppins_500Medium',
-    fontSize: 15,
+    fontSize: type.action,
     color: colors.white,
   },
   confirmLeave: {
     fontFamily: 'Poppins_500Medium',
-    fontSize: 15,
-    color: colors.goldWarm,
+    fontSize: type.action,
+    // NOT gold. Gold is this app's primary accent, so the destructive option
+    // read as the recommended one, on the very confirm that exists because
+    // people were detaching themselves from a memorial by accident.
+    color: colors.textFainter,
   },
   header: {
     flexDirection: 'row',
@@ -840,8 +844,10 @@ const styles = StyleSheet.create({
   },
   whatsappLink: {
     marginTop: 8,
-    marginLeft: 8,
-    paddingVertical: 4,
+    // Was 8, aligning to neither the card edge (0) nor the content edge (16).
+    marginLeft: 16,
+    // 4 -> 12: this was a ~22px tall tap target.
+    paddingVertical: 12,
   },
   copyLinkText: {
     fontFamily: 'Poppins_400Regular',
@@ -921,12 +927,14 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_400Regular',
     // 13 -> 14 (2026-07-28 type pass). These are real tappable actions and the
     // privacy reassurance, not decoration, and 13 was under the reading floor.
-    fontSize: type.label,
-    lineHeight: 19,
+    // The privacy reassurance a family reads before putting a relative's
+    // photographs into a link a nephew sent on WhatsApp. Not fine print.
+    fontSize: type.body,
+    lineHeight: 22,
     color: colors.textFainter,
   },
   switchLink: {
-    height: 40,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },

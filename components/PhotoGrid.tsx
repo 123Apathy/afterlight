@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { absoluteFill, colors } from '../constants/theme';
+import { absoluteFill, colors, type } from '../constants/theme';
 import { glassBlur } from '../lib/glass';
 import { heartCount, photoAltText, photoThumbUrl, type Photo } from '../lib/api';
 import PressableScale from './PressableScale';
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   footerStreak: {
-    width: 150,
+    width: 170,
     height: 1.5,
     borderRadius: 1,
     marginBottom: 6,
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
   footerMeta: {
     fontFamily: 'Poppins_400Regular',
     fontSize: 11,
-    letterSpacing: 2,
+    letterSpacing: 3,
     textTransform: 'uppercase',
     // Was 0.55 alpha: 3.4:1 on the near-black page, under WCAG AA's 4.5.
     // 0.78 measures ~4.9:1 and still reads as the quiet dim-gold caption.
@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(28, 22, 20, 0.94)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)',
-    borderRadius: 20,
+    borderRadius: 24,
     paddingHorizontal: 8,
     paddingVertical: 10,
   },
@@ -359,6 +359,8 @@ const styles = StyleSheet.create({
   },
   rowAction: {
     marginTop: 6,
+    // Overrides the shared 38 this inherits: it is a real control.
+    height: 44,
     backgroundColor: 'rgba(212, 169, 118, 0.14)',
     borderWidth: 1,
     borderColor: 'rgba(212, 169, 118, 0.3)',

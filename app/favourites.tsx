@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Atmosphere from '../components/Atmosphere';
 import LoadingState from '../components/LoadingState';
 import PressableScale from '../components/PressableScale';
-import { colors, images } from '../constants/theme';
+import { colors, images, type } from '../constants/theme';
 import { DEMO, DEMO_PHOTOS } from '../constants/demo';
 import { api, heartCount, photoAltText, photoThumbUrl, type Photo } from '../lib/api';
 import { glassBlur } from '../lib/glass';
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   overline: {
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: 'Poppins_400Regular',
     fontSize: 11,
     letterSpacing: 3,
     textTransform: 'uppercase',
@@ -245,12 +245,11 @@ const styles = StyleSheet.create({
   },
   empty: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 15,
+    fontSize: type.body,
     lineHeight: 26,
     color: colors.textFainter,
     textAlign: 'center',
     maxWidth: 380,
-    paddingVertical: 24,
   },
   card: {
     width: '100%',
@@ -306,8 +305,8 @@ const styles = StyleSheet.create({
   },
   cardComment: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: type.body,
+    lineHeight: 24,
     color: colors.textFaint,
   },
   cardCommentAuthor: {
@@ -348,7 +347,9 @@ const styles = StyleSheet.create({
   },
   backPillText: {
     fontFamily: 'Poppins_500Medium',
-    fontSize: 15,
+    // This pill is the ONLY way off this screen: no header, no wordmark, no
+    // menu. It was smaller than the buttons it competes with.
+    fontSize: type.action,
     color: colors.white,
   },
 });

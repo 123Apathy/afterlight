@@ -14,7 +14,7 @@ import Atmosphere from '../components/Atmosphere';
 import BackdropVideo from '../components/BackdropVideo';
 import LoadingState from '../components/LoadingState';
 import PressableScale from '../components/PressableScale';
-import { colors } from '../constants/theme';
+import { colors, type } from '../constants/theme';
 import { api, type Project } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
 
@@ -196,16 +196,16 @@ const styles = StyleSheet.create({
   },
   pending: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 15,
-    lineHeight: 26,
-    color: colors.textFainter,
+    fontSize: type.body,
+    lineHeight: 27,
+    color: colors.textFaint,
     textAlign: 'center',
     maxWidth: 420,
     marginTop: 8,
   },
   backLink: {
     marginTop: 20,
-    paddingVertical: 8,
+    paddingVertical: 12,
     paddingHorizontal: 16,
   },
   backText: {

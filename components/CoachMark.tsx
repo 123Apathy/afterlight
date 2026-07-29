@@ -9,7 +9,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import { colors } from '../constants/theme';
+import { colors, type } from '../constants/theme';
 import PressableScale from './PressableScale';
 
 type CoachMarkProps = {
@@ -435,7 +435,7 @@ const styles = StyleSheet.create({
   progress: {
     fontFamily: 'Poppins_500Medium',
     fontSize: 11,
-    letterSpacing: 2.5,
+    letterSpacing: 3,
     textTransform: 'uppercase',
     color: 'rgba(212, 169, 118, 0.9)',
     textAlign: 'center',
@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
   // The interactive-step stand-in for the Next button.
   tryHint: {
     fontFamily: 'Poppins_500Medium',
-    fontSize: 13.5,
+    fontSize: type.body,
     letterSpacing: 0.4,
     color: 'rgba(212, 169, 118, 0.95)',
     textAlign: 'center',

@@ -236,7 +236,12 @@ export default function SwipeScreen() {
   const enterA = useSharedValue(0);
   const enterB = useSharedValue(0);
   const enterC = useSharedValue(0);
-  const gateKey = !projectId && !DEMO ? 'welcome' : !raterName ? 'name' : 'app';
+  // Keyed on the BEAT, not just the gate. Both halves of the doorway render
+  // from the same `!raterName` branch, so with a static 'name' key the
+  // entrance animation ran once and the intake form then appeared instantly,
+  // with no fade, while every other gate in the product arrives as a staggered
+  // three-beat. This is the newest seam and the one a client watches.
+  const gateKey = !projectId && !DEMO ? 'welcome' : !raterName ? `name-${gateStep}` : 'app';
   useEffect(() => {
     if (gateKey === 'app') return;
     const rise = (v: SharedValue<number>, delay: number) => {
@@ -720,7 +725,7 @@ export default function SwipeScreen() {
                     onChangeText={setNewProjectName}
                     accessibilityLabel="The name of the person being remembered"
                     placeholder="Their name…"
-                    placeholderTextColor={colors.textFaintest}
+                    placeholderTextColor={colors.textFainter}
                     style={[styles.gateInput, inputFocused && styles.gateInputFocused]}
                     onFocus={() => setInputFocused(true)}
                     onBlur={() => setInputFocused(false)}
@@ -734,7 +739,7 @@ export default function SwipeScreen() {
                     onChangeText={setNewProjectContact}
                     accessibilityLabel="Your WhatsApp number or email, so we can stay in touch, optional"
                     placeholder="Your WhatsApp number or email (optional)"
-                    placeholderTextColor={colors.textFaintest}
+                    placeholderTextColor={colors.textFainter}
                     style={styles.gateInput}
                     onSubmitEditing={handleCreateProject}
                   />
@@ -898,9 +903,15 @@ export default function SwipeScreen() {
               second beat asks who has arrived. The extra tap is the point: it
               is a pause, not friction. */}
           {gateStep === 'moment' ? (
+            <>
             <Animated.View style={[styles.gateSegment, enterStyleB]}>
               <Text style={styles.gateMomentLine}>We&rsquo;re so sorry for your loss.</Text>
               <StreakDivider />
+            </Animated.View>
+            {/* Second beat of the same screen: the condolence lands, then the
+                name and the way forward arrive after it, matching the staggered
+                arrival every other gate uses. */}
+            <Animated.View style={[styles.gateSegment, enterStyleC]}>
               <Text style={styles.gateMomentBody}>
                 {projectDetails?.name
                   ? `You have been invited to help remember ${projectDetails.name}.`
@@ -912,6 +923,7 @@ export default function SwipeScreen() {
                 style={styles.gateButton}
               />
             </Animated.View>
+            </>
           ) : (
           <>
           <Animated.View style={[styles.gateSegment, enterStyleB]}>
@@ -931,7 +943,7 @@ export default function SwipeScreen() {
               }}
               accessibilityLabel="Your name"
               placeholder="Your name"
-              placeholderTextColor="rgba(255,255,255,0.6)"
+              placeholderTextColor={colors.textFainter}
               style={styles.gateInput}
               onSubmitEditing={enterMemorial}
             />
@@ -989,7 +1001,7 @@ export default function SwipeScreen() {
                 onChangeText={setRelationOther}
                 accessibilityLabel="Your relation to them, in your own words"
                 placeholder="In a word or two…"
-                placeholderTextColor="rgba(255,255,255,0.6)"
+                placeholderTextColor={colors.textFainter}
                 style={styles.gateInput}
                 onSubmitEditing={enterMemorial}
               />
@@ -1102,9 +1114,15 @@ export default function SwipeScreen() {
           pinned to the bottom control row -- clear of the floating card above
           it, so it never overlaps the sheet itself. */}
       {/* Deck only: in grid view the real control row is not on screen, so the
-          lit copy used to hang at the bottom pointing at nothing. */}
+          lit copy used to hang at the bottom pointing at nothing.
+          The bottom offset carries the safe-area inset too, exactly like the
+          real controls row. The static style alone pinned this lit copy at
+          CONTROLS_BOTTOM while the real button sat at CONTROLS_BOTTOM + inset,
+          so on any phone with a home indicator you saw the dimmed real button
+          AND a bright duplicate about 34px below it. Desktop reports a 0 inset,
+          which hid the bug completely. */}
       {commentPhotoId && viewMode === 'deck' && (
-        <View style={styles.spotlightRow} pointerEvents="none">
+        <View style={[styles.spotlightRow, { bottom: CONTROLS_BOTTOM + appInsets.bottom }]} pointerEvents="none">
           <View style={[styles.controlColumn, quarterCenterStyle(bandLeftApp + bandApp / 8)]}>
             <View style={[styles.glassCircle, glassSurface, glassBlur, styles.navButtonContrast]}>
               <CommentIcon active />
@@ -2371,6 +2389,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 28,
+    // One rhythm for all three gates. Without it the segments collapsed to
+    // ~10px at the title-to-subtitle seam on the cover and name gates while
+    // sitting further apart elsewhere. No effect on the create gate, which has
+    // a single child.
+    gap: 18,
     // Was paddingBottom 80 alone: the bottom-only bias pushed the centred
     // column up until, at common phone heights (~800-870px), the lockup's
     // flame rode into the header band and sat beside the header's own flame
@@ -2511,13 +2534,16 @@ const styles = StyleSheet.create({
     textShadowRadius: 12,
     textAlign: 'center',
     maxWidth: 340,
-    marginTop: 18,
-    marginBottom: 30,
+    // The parent's gap supplies the rhythm now, so these no longer double it.
+    marginTop: 0,
+    marginBottom: 12,
   },
   gateSubtitle: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 15,
-    lineHeight: 26,
+    // Matches gateMomentBody exactly, so the two beats of the doorway are set
+    // in the same voice rather than one being a size smaller than the other.
+    fontSize: type.body,
+    lineHeight: 27,
     color: colors.white,
     textShadowColor: 'rgba(0, 0, 0, 0.6)',
     textShadowOffset: { width: 0, height: 1 },
@@ -2589,7 +2615,9 @@ const styles = StyleSheet.create({
   },
   gateNameHint: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 13,
+    // This is the message that BLOCKS someone getting in. It was the smallest
+    // text on the screen.
+    fontSize: type.body,
     color: colors.goldWarm,
     textAlign: 'center',
     maxWidth: 360,
@@ -2806,7 +2834,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(16, 14, 12, 0.55)',
+    backgroundColor: 'rgba(16, 14, 12, 0.4)',
   },
   topScrim: {
     position: 'absolute',

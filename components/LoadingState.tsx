@@ -83,7 +83,10 @@ export default function LoadingState({
       -1,
       true
     );
-  }, []);
+    // Watches reduceMotion, like the two effects below it already do. The
+    // breathing emblem kept breathing for anyone who turned motion off after
+    // this mounted.
+  }, [reduceMotion]);
 
   useEffect(() => {
     if (reduceMotion) return;

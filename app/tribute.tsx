@@ -14,7 +14,7 @@ import PressableScale from '../components/PressableScale';
 import GoldButton from '../components/GoldButton';
 import BackdropVideo from '../components/BackdropVideo';
 import { showToast } from '../components/Toast';
-import { colors } from '../constants/theme';
+import { colors, type } from '../constants/theme';
 import { fillName, tributeCopy, tributeQuestions } from '../constants/tribute';
 import { api } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
   overline: {
     fontFamily: 'Poppins_400Regular',
     fontSize: 11,
-    letterSpacing: 4,
+    letterSpacing: 3,
     color: colors.goldWarm,
     textAlign: 'center',
   },
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
   },
   textLink: {
     marginTop: 26,
-    height: 40,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -371,11 +371,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 12,
   },
+  // Matched to the deck's photo counter (app.tsx counterText). Both say the
+  // same thing, "where am I in a sequence", and they were set in two different
+  // faces at two different sizes, so the product spoke about position in two
+  // voices depending on which screen you were on.
   progressText: {
-    fontFamily: 'Poppins_500Medium',
-    fontSize: 13,
-    letterSpacing: 0.5,
-    color: colors.textFainter,
+    fontFamily: 'Courier New',
+    fontSize: 17,
+    letterSpacing: 1,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.75)',
   },
   progressClose: {
     fontFamily: 'Poppins_400Regular',

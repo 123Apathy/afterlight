@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import Animated, { FadeIn, FadeInDown, FadeOut, useReducedMotion } from 'react-native-reanimated';
-import { colors } from '../constants/theme';
+import { colors, type } from '../constants/theme';
 
 // One quiet in-theme notice at a time, bottom-centre, replacing the native
 // window.alert boxes that jarred against the candlelit screens. Module-level
@@ -79,8 +79,8 @@ const styles = StyleSheet.create({
   },
   text: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: type.body,
+    lineHeight: 24,
     color: colors.white,
     textAlign: 'center',
   },

@@ -301,7 +301,7 @@ export default function CommentSheet({ photo, onClose, onSubmit, onReact, onSave
 
       <ScrollView ref={listRef} style={styles.list} contentContainerStyle={styles.listContent}>
         {comments.length === 0 ? (
-          <Text style={styles.empty}>No comments yet. Share a memory of this moment.</Text>
+          <Text style={styles.empty}>Nothing here yet. Share a memory of this moment.</Text>
         ) : (
           comments.map((c) => {
             const summary = reactionSummary(c, raterName);
@@ -317,6 +317,7 @@ export default function CommentSheet({ photo, onClose, onSubmit, onReact, onSave
                       key={emoji}
                       onPress={() => react(c.id, emoji)}
                       scaleTo={0.9}
+                      hitSlop={10}
                       style={[styles.reactionPill, mine && styles.reactionPillActive]}
                       accessibilityRole="button"
                       accessibilityLabel={`${REACTION_MEANINGS[emoji] ?? 'Reaction'} reaction, ${count} so far`}
@@ -453,7 +454,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 10,
-    minHeight: 34,
+    minHeight: 44,
   },
   detailsSummary: {
     flex: 1,
@@ -536,12 +537,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 16,
   },
+  // Matched to the "Share" button in the same card. Two gold buttons at
+  // different heights and label sizes read as one being an afterthought; they
+  // are peers here, both saving something the family wrote.
   detailsSave: {
-    height: 40,
+    height: 48,
     paddingHorizontal: 24,
   },
   detailsSaveText: {
-    fontSize: 14,
+    fontSize: 15,
   },
   detailsCancel: {
     fontFamily: 'Poppins_500Medium',
@@ -604,7 +608,9 @@ const styles = StyleSheet.create({
   },
   reactionPillActive: {
     backgroundColor: 'rgba(212,169,118,0.22)',
-    borderColor: 'rgba(212,169,118,0.55)',
+    // The relation chips use colors.goldWarm for exactly this state. Two
+    // selectable pills in one product should agree on what 'selected' looks like.
+    borderColor: colors.goldWarm,
   },
   reactionEmoji: {
     // 12 -> 17. At 12px the crying face and the laughing face are the same
