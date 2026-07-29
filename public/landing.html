@@ -1915,6 +1915,23 @@
         height: 220px;
       }
 
+      /* The WhatsApp mock is 263px tall at phone widths (narrow bubble, more
+         wrap) inside this 220px pane: overflow:hidden was decapitating it --
+         no "Family / online" header, preview image gone, the card title cut
+         mid-line. Slim the mock instead of growing the shared pane: real
+         WhatsApp link previews render without an image strip all the time,
+         and a one-line description is exactly how WhatsApp truncates. */
+      .invfx-wa { bottom: 12px; }
+      .invfx-wa-head { margin-bottom: 6px; }
+      .invfx-wa-bubble { padding: 8px 10px; }
+      .invfx-wa-prev-img { display: none; }
+      .invfx-wa-prev-desc {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 1;
+        overflow: hidden;
+      }
+
       .hero-title {
         font-size: min(30.41vw, 35.48vh);
       }

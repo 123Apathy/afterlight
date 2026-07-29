@@ -27,6 +27,12 @@ export default function FilmScreen() {
   const { projectId } = useActiveProject();
   const [project, setProject] = useState<Project | null>(null);
   const [loaded, setLoaded] = useState(false);
+  // The film opens from black, so without a poster the player sat as a dead
+  // black rectangle until someone pressed play. The memorial's first photo is
+  // its cover art (the same image the deck opens on), which is exactly what a
+  // film case would wear. Full-size URL, not the thumb: the player renders up
+  // to 960px wide. Best-effort — no photos, no poster, same as before.
+  const [poster, setPoster] = useState<string | null>(null);
   // The film is the deliverable, so arriving at it is a moment, not a page
   // load: the room dims, the title rises out of the dark, the gold streak
   // draws itself, then the player fades up. Skipped under reduced motion.
@@ -42,6 +48,10 @@ export default function FilmScreen() {
       .then(setProject)
       .catch(() => setProject(null))
       .finally(() => setLoaded(true));
+    api
+      .getPhotos(projectId)
+      .then((photos) => setPoster(photos[0]?.url ?? null))
+      .catch(() => setPoster(null));
   }, [projectId]);
 
   useEffect(() => {
@@ -117,6 +127,8 @@ export default function FilmScreen() {
               src: project.videoUrl,
               controls: true,
               playsInline: true,
+              preload: 'metadata',
+              poster: poster ?? undefined,
               style: { width: '100%', height: '100%', objectFit: 'contain', background: '#000', borderRadius: 12 },
             })}
           </Animated.View>
