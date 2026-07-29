@@ -1221,6 +1221,45 @@
       border-radius: 14px 4px 14px 14px;
       padding: 10px 12px;
     }
+    /* WhatsApp's link-preview card, as it renders inside your own outgoing
+       bubble: a slightly lighter panel above the message text, image on top,
+       then title, description and bare host. Sizes are in the same small scale
+       as the rest of this simulated phone UI. */
+    .invfx-wa-prev {
+      margin-bottom: 4px;
+      border-radius: 6px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.07);
+    }
+    .invfx-wa-prev-img {
+      height: 46px;
+      background: url('/card-family.jpg') center / cover no-repeat;
+    }
+    .invfx-wa-prev-body {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      padding: 4px 6px 5px;
+    }
+    .invfx-wa-prev-title {
+      font-family: 'Poppins', sans-serif;
+      font-weight: 500;
+      font-size: 8.5px;
+      line-height: 1.25;
+      color: var(--primary);
+    }
+    .invfx-wa-prev-desc {
+      font-family: 'Poppins', sans-serif;
+      font-size: 7.5px;
+      line-height: 1.3;
+      color: var(--gray-500);
+    }
+    .invfx-wa-prev-host {
+      font-family: 'Poppins', sans-serif;
+      font-size: 7.5px;
+      color: var(--gray-500);
+      margin-top: 1px;
+    }
     .invfx-wa-text { font-family: 'Poppins', sans-serif; font-size: 9.5px; line-height: 1.5; color: var(--primary-80); }
     /* WhatsApp renders links inside your own outgoing bubble as a pale mint
        green, not as the app's brand colour. It was Everlit gold, which is the
@@ -2712,6 +2751,23 @@
                   </div>
                 </div>
                 <div class="invfx-wa-bubble">
+                  <!-- The link-preview card WhatsApp actually renders. This is
+                       not decoration: server/app.js serves /join/:code with real
+                       og: meta tags built from the memorial (its cover photo and
+                       the sender's name), so a family sharing the link really
+                       does get a card with their person's face on it. The mock
+                       showed a bare blue link, which undersold the one moment
+                       the product is seen by people who have never heard of it.
+                       Fictional code on purpose: a real invite code must never
+                       ship on a public page. -->
+                  <div class="invfx-wa-prev">
+                    <div class="invfx-wa-prev-img"></div>
+                    <div class="invfx-wa-prev-body">
+                      <span class="invfx-wa-prev-title">Add your photos and memories for Margaret</span>
+                      <span class="invfx-wa-prev-desc">We&rsquo;re gathering everyone&rsquo;s photos and memories in one gentle place. Add yours here, it&rsquo;s a keepsake.</span>
+                      <span class="invfx-wa-prev-host">everlit.co.za</span>
+                    </div>
+                  </div>
                   <div class="invfx-wa-text">We&rsquo;re gathering photos and memories to honour Margaret. Add yours here:</div>
                   <div class="invfx-wa-link">everlit.co.za/join/Ab3xY9</div>
                   <div class="invfx-wa-meta">
