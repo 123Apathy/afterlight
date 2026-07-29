@@ -1579,6 +1579,10 @@
       background: var(--accent);
       animation: mcCaret 9s infinite;
     }
+    /* Mirrors the app's real GoldButton: a three-stop gold with a soft sheen
+       across the top, rather than one flat fill. The mock is a picture OF the
+       app, so when the app's primary button gained dimension this had to as
+       well or the mockup stops being a likeness. */
     .mc-btn {
       position: relative;
       margin-top: 4px;
@@ -1586,7 +1590,9 @@
       max-width: 240px;
       height: 42px;
       border-radius: 12px;
-      background: var(--accent);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 60%),
+        linear-gradient(180deg, #D4A976 0%, #C49A6C 55%, #A6794A 100%);
       color: #1A1613;
       font-family: 'Poppins', sans-serif;
       font-weight: 500;
@@ -1788,7 +1794,10 @@
 
     .card-list-item p {
       color: var(--gray-400);
-      font-size: 13px;
+      /* 13 -> 15. These bullets ARE the explanation of what the product does,
+         on the section titled "How Everlit works", and they were the smallest
+         real prose on the page. */
+      font-size: 15px;
     }
 
     .card-link {
@@ -1834,7 +1843,7 @@
     .qr-card { background: var(--primary); padding: 14px; border-radius: 16px; box-shadow: 0 16px 40px rgba(0,0,0,0.4); }
     .qr-card img { display: block; width: 180px; height: 180px; }
     .contact-actions { display: flex; flex-direction: column; align-items: center; gap: 14px; }
-    .contact-wa-btn { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: #1A1613; font-weight: 500; font-size: 15px; padding: 14px 26px; border-radius: 9999px; text-decoration: none; transition: transform 0.2s; }
+    .contact-wa-btn { display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(160deg, #FAF4E8, #E8D7BA); color: #1A1613; font-weight: 500; font-size: 15px; padding: 14px 26px; border-radius: 9999px; text-decoration: none; transition: transform 0.2s; }
     .contact-wa-btn:hover { transform: translateY(-1px); }
     .contact-wa-btn svg { width: 18px; height: 18px; stroke: #1A1613; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .contact-number { font-size: 15px; color: var(--primary-70); letter-spacing: 0.5px; }

@@ -874,8 +874,11 @@ const styles = StyleSheet.create({
   },
   cardSubtitle: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 14,
-    lineHeight: 20,
+    // The line under each menu card is what explains the card. "Opens WhatsApp
+    // with a message ready to send" is the sentence that stops a tap being a
+    // surprise, so it is prose, not a caption.
+    fontSize: type.body,
+    lineHeight: 22,
     color: colors.textFainter,
   },
   chevron: {
