@@ -465,9 +465,7 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 2,
   },
-  footerRowCentered: {
-    justifyContent: 'center',
-  },
+
   // Big-tap tick row (elderly thumbs): the whole row toggles, not just the box.
   checkRow: {
     flexDirection: 'row',

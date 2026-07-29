@@ -1,4 +1,4 @@
-# DESIGN.md — Everlit visual system (as built, 2026-07-24)
+# DESIGN.md — Everlit visual system (as built, 2026-07-28)
 
 ## Mood
 
@@ -12,9 +12,29 @@ Candlelit vigil: near-black warm browns, gold accents, photography full-bleed. Q
 - Text ramp: `white` → `textFaint .77` → `textFainter .60` → `textFaintest .48`
 - Glass: `glassLight .08` / `glassMedium .12` / `glassStrong .16` white overlays
 
+## Type scale (`type` in `constants/theme.ts`)
+
+badge 12 · overline 11 · label 14 · body 16 · action 17 · title 22 · heading 28 · display 34
+
+16 is the floor for anything read as a sentence. Below it is reserved for
+glanceable meta, where an icon, position and colour carry the meaning and the
+text only confirms it: a count inside a badge, an uppercase eyebrow.
+
+**The scale has no 15 or 13 on purpose, and the app still has plenty of both**
+(roughly 22 declarations of 15 and 19 of 13 at the time of writing). When you
+touch one, round it: 15 goes to 16 if it is prose, 14 if it is a control label;
+13 goes to 14, or 12 only if it is genuinely a badge. Do not add a rung to make
+an old value fit. Migration is deliberately partial, the most-read screens
+first, so expect to find raw numbers and move them as you go.
+
+Fixed numbers, not fluid, on purpose: react-native-web emits StyleSheet font
+sizes as fixed px and will not take a CSS `clamp()`. Fluid type belongs on the
+landing page, which is real CSS and does use `clamp()`.
+
 ## Established surface languages (reuse, don't reinvent)
 
-- **Sheet/menu card**: bg `rgba(32,26,24,0.52)` + 1px border `rgba(255,255,255,0.12)` + radius 24 + `glassBlur` (backdropFilter blur). Used by CommentSheet, DetailsSheet, MenuOverlay, coach-mark bubble.
+- **Sheet/menu card**: bg `rgba(32,26,24,0.52)` + 1px border `rgba(255,255,255,0.12)` + radius 24 + `glassBlur` (backdropFilter blur). Used by CommentSheet, DetailsSheet, MenuOverlay.
+- **Coach-mark bubble**: NOT the sheet glass, despite what this file used to say. It is a near-solid warm card with a gold rim, on purpose: a tour card sits over arbitrary photographs and has to stay readable on all of them, which translucent glass cannot promise. Do not "correct" it to match the sheets.
 - **Headings**: Playfair Display 500, gold-underlined section titles in popups (`textDecorationColor: goldWarm`).
 - **Body/labels**: Poppins 300/400/500. Overlines: 11px, letterSpacing 3, uppercase, goldWarm.
 - **Gold streak divider**: horizontal gradient `rgba(196,154,108,0) → rgba(212,169,118,0.9) → 0`, 170×1.5.
@@ -30,11 +50,11 @@ reanimated `withTiming`, ease in/out cubic/quad, 200–520ms. Signature moves: h
 
 - `/favourites` no longer has a flat background (corrected 2026-07-25): it renders `landingSky` under a gradient with `Atmosphere` embers, and its cards use the same `rgba(32,26,24,0.52)` glass as the sheets. Two real breaks remain. It is the only content screen with **no app header** (no wordmark, no menu, no counter), and it is lit by *sky* while every other destination screen is lit by the *candle* (`BackdropVideo`). It also just stops scrolling, while `PhotoGrid`, a lesser screen, closes with a gold streak, the wordmark and a memory count. The payoff screen has the worse ending.
 - The floating "Back to the photos" pill on `/favourites` overlaps the card caption behind it at 375px, cutting "Loved by ..." in half.
-- Deck letterboxing on desktop: the blurred breathing backdrop is the right answer, but `fillDim` at `rgba(16,14,12,0.55)` flattens it to near-invisible. ~0.40 would let the side bands carry the photo's own colour instead of reading as dead bars.
+- ~~Deck letterboxing `fillDim` too dark at 0.55.~~ FIXED 2026-07-28, now 0.40 as prescribed here.
 - Grid view is **not** pure black edge-to-edge tiles (corrected 2026-07-25): it has `paddingTop: 84`, a 2px gap, and a designed footer (streak, wordmark, "Every photo here was chosen with love", memory count).
 - Film screen is sparse (fine while it's a placeholder state).
-- The tribute closes with "Have a wonderful day." after 25 questions about a person who has died. The one misfire in an otherwise careful copy deck.
-- "See What We All Loved" is the only Title Case button in the product; everything else is sentence case.
+- ~~The tribute closes with "Have a wonderful day."~~ FIXED 2026-07-28: now "With love, from all of us at Everlit." The intro no longer says "Enjoy remembering them." either.
+- ~~"See What We All Loved" is the only Title Case button.~~ FIXED, now sentence case.
 - The landing hardcodes `--accent: #C49A6C` rather than deriving from `constants/theme.ts`, in a 2756-line single file that inlines its whole design system. Palette drift between the two lanes is a matter of time.
 - `app.tsx` duplicates `PhotoGrid`'s `columnsFor` breakpoints so the tour's tile highlight stays correct. Two copies of one truth; they will drift.
 

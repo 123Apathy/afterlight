@@ -2542,14 +2542,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
   },
-  gateCondolence: {
-    fontFamily: 'PlayfairDisplay_500Medium',
-    fontSize: 19,
-    lineHeight: 26,
-    color: colors.goldWarm,
-    textAlign: 'center',
-    marginBottom: 10,
-  },
+
   // The condolence is the whole point of its own screen, so it carries the size
   // the title used to. At 19px, sandwiched in the old combined gate, it read as
   // a caption above a form.

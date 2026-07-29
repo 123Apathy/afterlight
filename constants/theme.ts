@@ -79,7 +79,6 @@ export const type = {
   overline: 11, // uppercase, letter-spaced section eyebrows. DESIGN.md says 11.
   label: 14, // a short word captioning an icon control.
   body: 16, // the floor for anything read as a sentence.
-  bodyLg: 17,
   action: 17, // buttons and primary links.
   title: 22,
   heading: 28,

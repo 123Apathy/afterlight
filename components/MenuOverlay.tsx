@@ -556,22 +556,6 @@ function IconPlay() {
   );
 }
 
-function IconAdd() {
-  if (Platform.OS === 'web') {
-    // A photo frame with a small sun/plus — "add pictures".
-    return lineIcon([
-      { d: 'M4 6.5 h20 v15 h-20 z' },
-      { d: 'M4 17 L11 11.5 L17 16.5 L21 13.5 L24 15.5', opacity: 0.75 },
-      { d: 'M19.5 9.5 h0.01' },
-    ]);
-  }
-  return (
-    <View style={styles.iconInner}>
-      <View style={styles.plusBar} />
-      <View style={[styles.plusBar, { transform: [{ rotate: '90deg' }] }]} />
-    </View>
-  );
-}
 
 function IconHeart() {
   if (Platform.OS === 'web') {
@@ -725,20 +709,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   // Round help button, same glass family as Close.
-  helpButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.glassMedium,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  helpText: {
-    fontFamily: 'Poppins_600SemiBold',
-    fontSize: 16,
-    lineHeight: 20,
-    color: colors.goldWarm,
-  },
+
+
   closeButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -813,13 +785,7 @@ const styles = StyleSheet.create({
     borderLeftColor: colors.goldWarm,
     marginLeft: 4,
   },
-  plusBar: {
-    position: 'absolute',
-    width: 24,
-    height: 3.5,
-    borderRadius: 2,
-    backgroundColor: colors.goldWarm,
-  },
+
   iconHeart: {
     fontSize: 26,
     lineHeight: 30,
