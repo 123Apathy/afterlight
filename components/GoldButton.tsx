@@ -30,11 +30,29 @@ export default function GoldButton({ label, onPress, style, textStyle, pill, foc
       tabIndex={focusable ? 0 : -1}
       aria-hidden={!focusable}
     >
+      {/* Three stops, not two. goldWarm -> goldDeep are both mid-tones, so the
+          gradient existed but the button still read as a flat slab. Starting at
+          the lighter `gold` gives it real range top to bottom, which is what
+          makes a surface look raised. All three are existing tokens; no new
+          colour was invented for this. */}
       <LinearGradient
-        colors={[colors.goldWarm, colors.goldDeep]}
+        colors={[colors.gold, colors.goldWarm, colors.goldDeep]}
+        locations={[0, 0.55, 1]}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
         style={StyleSheet.absoluteFill}
+      />
+      {/* A soft sheen across the top third, the way light actually falls on a
+          curved surface. Kept at 0.18 and fading to nothing by 60% so it reads
+          as light rather than gloss: the brief was to make it look like a
+          button, gently, not to make it shiny. */}
+      <LinearGradient
+        colors={['rgba(255, 255, 255, 0.18)', 'rgba(255, 255, 255, 0)']}
+        locations={[0, 0.6]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
       />
       <View pointerEvents="none">
         <Text style={[styles.label, textStyle]}>{label}</Text>

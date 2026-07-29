@@ -1684,6 +1684,11 @@ function PhotoDeck({
   // maybe say why?" rather than an unrelated animation.
   const commentPulse = useSharedValue(0);
   const commentGlow = useSharedValue(0);
+  // Bumped when the HEART BUTTON favourites, so the slide can play the same
+  // burst a double-tap plays. The burst lives inside PhotoSlide (it is drawn
+  // over the photograph), and the button lives out here in the fixed overlay,
+  // so a counter is the signal between them.
+  const [heartBurstSignal, setHeartBurstSignal] = useState(0);
   const commentPulseStyle = useAnimatedStyle(() => ({
     transform: [{ scale: 1 + commentPulse.value * 0.07 }],
   }));
@@ -1699,11 +1704,26 @@ function PhotoDeck({
         withTiming(0, { duration: 240, easing: Easing.out(Easing.cubic) })
       );
       if (newlyFavorited) {
+        // Favouriting from the button now bursts over the photo exactly as
+        // double-tapping it does. It was the same action with two different
+        // answers: the big heart only ever appeared for people who found the
+        // double-tap, and the labelled button, which is the path this app
+        // actively points older users at, gave the quieter response.
+        setHeartBurstSignal((n) => n + 1);
         // Two smooth breaths (up-down twice), not four separate hops -- a
         // single repeating in/out tween reads as one continuous pulse
         // instead of a mechanical stepped blink.
-        commentPulse.value = withRepeat(withTiming(1, { duration: 220, easing: Easing.inOut(Easing.quad) }), 4, true);
-        commentGlow.value = withRepeat(withTiming(1, { duration: 220, easing: Easing.inOut(Easing.quad) }), 4, true);
+        // 220ms -> 420ms per half-breath (Deon, 2026-07-28). At 220 the whole
+        // nudge was over in about 880ms, which is a blink: someone who has just
+        // favourited a photo is still looking AT the photo, and the hint that
+        // they can also say something about it had come and gone before their
+        // eye moved. At 420 the same two breaths run ~1.7s and read as
+        // breathing rather than flashing. Still inside DESIGN.md's 200-520ms
+        // band, so it stays in the house motion vocabulary.
+        // The two MUST keep identical timing: they are one nudge, and any drift
+        // desyncs the glow from the icon it is lighting.
+        commentPulse.value = withRepeat(withTiming(1, { duration: 420, easing: Easing.inOut(Easing.quad) }), 4, true);
+        commentGlow.value = withRepeat(withTiming(1, { duration: 420, easing: Easing.inOut(Easing.quad) }), 4, true);
       }
     }
     onToggleFavorite(currentPhoto);
@@ -1744,6 +1764,7 @@ function PhotoDeck({
               reduceMotion={reduceMotion}
               projectName={projectName}
               total={photos.length}
+              heartBurstSignal={heartBurstSignal}
             />
           ) : (
             <View key={photo.id} style={{ width, height }} />
@@ -1885,8 +1906,12 @@ function NavChevron({ direction }: { direction: 'left' | 'right' }) {
     return React.createElement(
       'svg',
       {
-        width: 34,
-        height: 34,
+        // 34 -> 44 inside the 80px discs. The comment icon fills its 50px
+        // circle and the heart fills its 56px one, while these read as empty
+        // glass coins with a tick in them. Only the glyph moves; the disc
+        // sizes are a deliberate hierarchy documented elsewhere.
+        width: 44,
+        height: 44,
         viewBox: '0 0 24 24',
         style: {
           filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.45))',
@@ -2070,6 +2095,9 @@ type PhotoSlideProps = {
   raterName: string;
   onToggleFavorite: (photo: Photo) => void;
   reduceMotion: boolean;
+  // Increments when the heart button favourites; the current slide answers by
+  // playing its burst. 0 means "nothing has happened yet".
+  heartBurstSignal?: number;
   // Both only used to build the screen-reader label for the photograph.
   projectName?: string | null;
   total: number;
@@ -2111,7 +2139,7 @@ function Ember({ progress, spec }: { progress: SharedValue<number>; spec: EmberS
 // animation. Everything else that used to live here (counter, comment
 // button, heart button) is now a fixed overlay in PhotoDeck instead, so it
 // doesn't slide away with the photo mid-swipe -- see PhotoDeck.
-function PhotoSlide({ photo, index, isCurrent, scrollX, width, height, raterName, onToggleFavorite, reduceMotion, projectName, total }: PhotoSlideProps) {
+function PhotoSlide({ photo, index, isCurrent, scrollX, width, height, raterName, onToggleFavorite, reduceMotion, projectName, total, heartBurstSignal = 0 }: PhotoSlideProps) {
   const favorited = isFavoritedBy(photo, raterName);
   const burst = useSharedValue(0);
   const emberP = useSharedValue(0);
@@ -2167,6 +2195,13 @@ function PhotoSlide({ photo, index, isCurrent, scrollX, width, height, raterName
       withTiming(0, { duration: 700, easing: Easing.in(Easing.quad) })
     );
   };
+
+  // Answer the heart button. Only the slide actually on screen bursts, and not
+  // on first mount: without the >0 guard every mounted neighbour would fire its
+  // burst the moment the deck loaded.
+  useEffect(() => {
+    if (heartBurstSignal > 0 && isCurrent) playBurst();
+  }, [heartBurstSignal]);
 
   // A single tap used to do nothing at all, so someone whose hands missed the
   // double-tap window got no response whatsoever and had no way to tell
@@ -2242,11 +2277,13 @@ function PhotoSlide({ photo, index, isCurrent, scrollX, width, height, raterName
         />
 
         <LinearGradient colors={['rgba(0,0,0,0.4)', 'transparent']} style={styles.topScrim} pointerEvents="none" />
-        <LinearGradient
-          colors={['transparent', 'rgba(16, 14, 12, 0.75)']}
-          style={styles.bottomScrim}
-          pointerEvents="none"
-        />
+        {/* The bottom scrim used to be painted here too, on TOP of the
+            deck-level one at the same edge, so the composite ran to about 90%
+            dark. Worse, this copy lives inside pageStyle, whose opacity drops
+            to 0.25 mid-swipe, so the dark band visibly lightened and
+            re-darkened on every single swipe. The deck-level scrim is the one
+            authored for label legibility, it is constant, and it also covers
+            the end slide and the letterbox bands. */}
 
         {/* Warm pulse over the whole slide when a favourite lands. */}
         <Animated.View style={[styles.vignettePulse, vignetteStyle]} pointerEvents="none">
@@ -2557,11 +2594,16 @@ const styles = StyleSheet.create({
     maxWidth: 340,
     height: 52,
     borderRadius: 14,
-    // Deon 2026-07-28: a touch less opaque, so more of the candle reads through
-    // the field instead of it sitting on top as a milky slab.
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    // Deon 2026-07-28, two passes. First: less opaque, so more of the candle
+    // reads through instead of the field sitting on top as a milky slab.
+    // Then: "easier to see". Those pull against each other only if you fix it
+    // with FILL. The field was hard to find because its EDGE was barely drawn,
+    // not because it was too transparent, so the fill drops a further notch and
+    // the border does the work of saying where the box is. You can still see
+    // the flame through it, and now you can tell it is a box.
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
-    borderColor: 'rgba(212, 169, 118, 0.2)',
+    borderColor: 'rgba(212, 169, 118, 0.38)',
     paddingHorizontal: 18,
     color: colors.white,
     fontFamily: 'Poppins_400Regular',

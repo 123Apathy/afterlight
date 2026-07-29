@@ -811,6 +811,18 @@
       grid-row: 3;
       grid-column: 1;
       justify-self: start;
+      /* Above .hero-content::before. That scrim is a near-black wash that fades
+         to the right, and it exists to keep the COPY legible over the bright
+         moving photo behind it. The button is a solid cream pill: it needs no
+         protection, and measured, the scrim was painting over 261px of its
+         311px width, which is the "fade over the button". The button was
+         position:static, so a positioned z-index:2 pseudo-element painted
+         straight over it.
+         Worth recording how this hid: elementsFromPoint() does not return
+         pseudo-elements, so probing the stack at the button reported nothing
+         above it and sent an earlier pass chasing the video mask instead. */
+      position: relative;
+      z-index: 3;
       display: inline-flex;
       align-items: center;
       gap: 8px;
@@ -1210,15 +1222,28 @@
       padding: 10px 12px;
     }
     .invfx-wa-text { font-family: 'Poppins', sans-serif; font-size: 9.5px; line-height: 1.5; color: var(--primary-80); }
-    .invfx-wa-link { font-family: 'Poppins', sans-serif; font-size: 9.5px; color: var(--accent); margin-top: 3px; text-decoration: underline; text-underline-offset: 2px; }
+    /* WhatsApp renders links inside your own outgoing bubble as a pale mint
+       green, not as the app's brand colour. It was Everlit gold, which is the
+       one thing a real screenshot never does, so the bubble read as a drawing
+       of WhatsApp rather than a photo of it. Simulating another product's UI,
+       so it uses their palette on purpose. */
+    .invfx-wa-link { font-family: 'Poppins', sans-serif; font-size: 9.5px; color: #8FE3B0; margin-top: 3px; text-decoration: underline; text-underline-offset: 2px; }
     .invfx-wa-meta { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 6px; }
     /* Lifted from var(--gray-500): 3.82:1 against the green bubble failed
        WCAG AA (axe); this grey-green reads the same muted way at ~5.6:1. */
     .invfx-wa-time { font-family: 'Poppins', sans-serif; font-size: 8px; color: #A5B3AA; }
+    /* Real WhatsApp read receipts are ONE glyph: two checks that overlap, in
+       WhatsApp's own blue (#53BDEB). Two separate ✓✓ characters sit side by
+       side with a gap and read as a tick-box, not a receipt, which is the tell
+       that gave the mockup away. An inline SVG gets the overlap exactly and
+       stays crisp at 10px where a font glyph goes mushy.
+       This is a simulation of another product's UI, so it deliberately uses
+       WhatsApp's palette rather than an Everlit token. */
     .invfx-wa-ticks {
-      font-size: 10px;
-      line-height: 1;
-      color: #34B7F1;
+      width: 15px;
+      height: 10px;
+      display: block;
+      color: #53BDEB;
       opacity: 0;
       animation: invTicksIn 14s -4s infinite;
     }
@@ -2278,17 +2303,8 @@
     @media (prefers-reduced-motion: reduce) {
       .film-grain { animation: none; }
     }
-    /* Static, fainter grain on the closing band -- same tile, no motion. */
-    .cta-band { position: relative; }
-    .cta-band::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: url('/grain.png') repeat;
-      opacity: 0.05;
-      mix-blend-mode: overlay;
-      pointer-events: none;
-    }
+    /* The .cta-band rules that lived here were removed with the section itself
+       on 2026-07-28: it duplicated the contact section directly above it. */
 
     /* Gold streak divider under section headings -- the same visual language
        as the app's StreakDivider (gates, favourites, film screens), revealed
@@ -2691,7 +2707,10 @@
                   <div class="invfx-wa-link">everlit.co.za/join/Ab3xY9</div>
                   <div class="invfx-wa-meta">
                     <span class="invfx-wa-time">09:24</span>
-                    <span class="invfx-wa-ticks">&#10003;&#10003;</span>
+                    <svg class="invfx-wa-ticks" viewBox="0 0 18 12" aria-hidden="true" focusable="false">
+                      <path d="M17.4 1.15 8.52 10.03 5.83 7.34l.79-.79 1.9 1.9 8.09-8.09z" fill="currentColor"/>
+                      <path d="M12.12 1.15 3.24 10.03.55 7.34l.79-.79 1.9 1.9 8.09-8.09z" fill="currentColor"/>
+                    </svg>
                   </div>
                 </div>
                 <div class="invfx-wa-send">
@@ -2856,39 +2875,37 @@
     </div>
   </section>
 
+  <!-- MERGED 2026-07-28. This section and the "cta-band" that followed it were
+       two consecutive WhatsApp call-to-actions saying the same thing, one after
+       the other, at the bottom of the page. Asking twice does not ask harder,
+       it just reads as a page that has run out of things to say.
+       Kept from here: the #contact anchor the nav points at, the QR card
+       (genuinely useful and unique to this block), and the phone number.
+       Kept from the band: "When you're ready, we're here.", which is warmer and
+       less transactional than "Talk to Deon.", and the "start with just their
+       name" promise. Deon is still named in the lead, so the personal note the
+       old headline carried is not lost, it just moved a line down. -->
   <section class="contact-section" id="contact">
     <div class="contact-wrap reveal-group">
       <span class="about-tag blur-up">Get in touch</span>
-      <h2 class="contact-title blur-up">Talk to Deon.</h2>
-      <p class="contact-lead blur-up">Have a question, or ready to begin? Message Deon directly on WhatsApp.</p>
+      <h2 class="contact-title blur-up">When you&rsquo;re <em>ready</em>, we&rsquo;re here.</h2>
+      <p class="contact-lead blur-up">Start with just their name. Message Deon directly on WhatsApp, and your family can be gathering photos and memories within minutes.</p>
       <div class="contact-row blur-up">
         <div class="qr-card">
           <img src="/qr-whatsapp.svg" alt="QR code that opens a WhatsApp message to Everlit" width="180" height="180" />
         </div>
         <div class="contact-actions">
-          <a class="contact-wa-btn" href="https://wa.me/27626607269?text=Hi%20Deon%2C%20I%27d%20like%20to%20create%20a%20memorial%20with%20Everlit.%20Could%20you%20help%20me%20get%20started%3F" target="_blank" rel="noopener">
-            Message Deon on WhatsApp
+          <!-- Same label and prefilled message as the hero. Every route into
+               a conversation should say the same thing; "Message Deon" and "Get a
+               quote" side by side read as two different offers. -->
+          <a class="contact-wa-btn" href="https://wa.me/27626607269?text=Hi%20Deon%2C%20I%27d%20like%20a%20quote%20for%20an%20Everlit%20memorial.%20Could%20you%20help%20me%20get%20started%3F" target="_blank" rel="noopener">
+            Get a quote on WhatsApp
             <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
           </a>
           <span class="contact-number">062 660 7269</span>
         </div>
       </div>
     </div>
-  </section>
-
-  <section class="cta-band reveal-group">
-    <h2 class="cta-band-title blur-up">When you're <em>ready</em>, we're here.</h2>
-    <p class="cta-band-sub blur-up">Start with just their name. Your family can be gathering photos and memories within minutes.</p>
-    <!-- Relabelled to match the hero (2026-07-28). The hero CTA was moved off
-         "Create a memorial" because creation is operator-led and this control
-         has always been a prefilled WhatsApp link, not a create action. This
-         closing band was missed in that pass, so the LAST thing a visitor read
-         still promised a self-serve flow that does not exist. The prefilled
-         message is aligned with the hero's too. -->
-    <a class="contact-wa-btn blur-up" href="https://wa.me/27626607269?text=Hi%20Deon%2C%20I%27d%20like%20a%20quote%20for%20an%20Everlit%20memorial.%20Could%20you%20help%20me%20get%20started%3F" target="_blank" rel="noopener">
-      Get a quote on WhatsApp
-      <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-    </a>
   </section>
 
   <div class="ember-dust" aria-hidden="true">
