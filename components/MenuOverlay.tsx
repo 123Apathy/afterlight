@@ -287,7 +287,7 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
               <ActionCard
                 icon={<IconHeart />}
                 title="See your favourites"
-                subtitle="The moments your family chose to hold onto"
+                subtitle="The moments your family loved"
                 onPress={handleSeeFavourites}
               />
             )}
@@ -296,7 +296,7 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
                 <ActionCard
                   icon={<IconWhatsApp />}
                   title="Share with family"
-                  subtitle="Opens WhatsApp with a message ready to send"
+                  subtitle="Opens WhatsApp, message ready"
                   onPress={handleWhatsAppShare}
                 />
                 <PressableScale
@@ -314,7 +314,7 @@ export default function MenuOverlay({ visible, onClose }: MenuOverlayProps) {
               <ActionCard
                 icon={<IconStory />}
                 title="Share your memories"
-                subtitle="Answer a few gentle questions for the tribute"
+                subtitle="A few gentle questions"
                 onPress={() => {
                   onClose();
                   router.push('/tribute');
@@ -613,7 +613,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.dark,
     overflow: 'hidden',
     zIndex: 100,
-    paddingTop: 44,
+    paddingTop: 26,
     paddingHorizontal: 20,
     // Desktop: the overlay still covers the window, but its content column
     // stays a comfortable phone-ish width, centered. No-op on phones.
@@ -738,19 +738,23 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_400Regular',
     fontSize: 16,
     color: colors.goldWarm,
-    marginTop: 8,
-    marginBottom: 20,
+    marginTop: 6,
+    marginBottom: 12,
   },
   cards: {
-    gap: 14,
+    gap: 10,
   },
+  // Compacted 2026-07-28. Publishing a film adds a fifth card, which pushed the
+  // panel 531px past a 667px screen with "More settings" 412px below the fold.
+  // The savings come from chrome (padding, icon, gaps), not from the copy: the
+  // subtitles are what stop a tap being a surprise and they stay at reading size.
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-    minHeight: 84,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
+    gap: 12,
+    minHeight: 68,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
     borderRadius: 18,
     backgroundColor: 'rgba(42, 35, 33, 0.82)',
     borderWidth: 1,
@@ -761,16 +765,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(212, 169, 118, 0.14)',
   },
   iconBox: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: 'rgba(212, 169, 118, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconInner: {
-    width: 28,
-    height: 28,
+    width: 24,
+    height: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -835,7 +839,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontFamily: 'Poppins_500Medium',
-    fontSize: 18,
+    fontSize: 17,
     color: colors.white,
   },
   cardSubtitle: {
@@ -844,7 +848,7 @@ const styles = StyleSheet.create({
     // with a message ready to send" is the sentence that stops a tap being a
     // surprise, so it is prose, not a caption.
     fontSize: type.body,
-    lineHeight: 22,
+    lineHeight: 20,
     color: colors.textFainter,
   },
   chevron: {
@@ -856,7 +860,7 @@ const styles = StyleSheet.create({
   // Groups the small "Add photos" pill + the switch-memorial link together
   // below the main action cards.
   bottomActions: {
-    marginTop: 24,
+    marginTop: 14,
     alignItems: 'center',
     gap: 6,
   },
@@ -917,7 +921,7 @@ const styles = StyleSheet.create({
     marginTop: 'auto',
     alignItems: 'center',
     gap: 8,
-    paddingBottom: 28,
+    paddingBottom: 16,
     opacity: 0.45,
   },
   footerMark: {

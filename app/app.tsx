@@ -1203,7 +1203,15 @@ export default function SwipeScreen() {
       <CoachMark
         visible={tourStep === 'menu'}
         title="The menu"
-        text="Everything else is in here: invite your family, see the favourites, and share your memories."
+        // Names the film only when there IS one. The card is gated on
+        // project.videoUrl, so promising a film on a memorial that has not been
+        // delivered yet would send someone hunting for a menu item that is not
+        // there. When it exists it leads, because it is what they are waiting for.
+        text={
+          projectDetails?.videoUrl
+            ? "Everything else is in here: watch the film, invite your family, see the favourites, and share your memories."
+            : "Everything else is in here: invite your family, see the favourites, and share your memories."
+        }
         anchor={{ x: width - 34, y: 33 }}
         ringSize={52}
         buttonLabel="Next"
