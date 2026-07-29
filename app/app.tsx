@@ -588,6 +588,25 @@ export default function SwipeScreen() {
   const WORD_LEFT0 = 80; // resting left edge (flame 42 + gap 8 + inset 19... +11 spacing)
   const wordScale0 = WORD_SMALL / endWordSize;
   const wordBigWidth = (74 * endWordSize) / 24; // "Everlit" width at 36px
+
+  // Optical centre for the photo counter.
+  // It used to sit on width / 2, which is mathematically centred and visually
+  // wrong. The brand lockup (flame at inset 19, then the wordmark) runs to
+  // about 145px, while the actions occupy only ~30px on the right, so a
+  // screen-centred counter landed 11px from the wordmark with 106px of void on
+  // the other side: a 10:1 asymmetry. The header's own comment says the intent
+  // was "equal visual weight on each side", and that intent was never met
+  // because the wordmark makes the left group four times the right one.
+  // Centring the counter in the space BETWEEN the two groups honours the intent
+  // that was written down. Derived from the same constants the fly animation
+  // uses, so it cannot drift out of sync with the wordmark's real width, and it
+  // widens correctly when the grid button appears on the right.
+  const HEADER_EDGE_INSET = 19;
+  const HEADER_ICON_W = 30;
+  const brandRestingEnd = WORD_LEFT0 + (74 * WORD_SMALL) / 24;
+  const actionsWidth =
+    HEADER_ICON_W + (gridUnlocked && photos.length > 0 ? HEADER_ICON_W + 18 : 0);
+  const counterCentreX = (brandRestingEnd + (width - HEADER_EDGE_INSET - actionsWidth)) / 2;
   const movingWordStyle = useAnimatedStyle(() => {
     const p = brandGrow.value;
     const txEnd = width / 2 - WORD_LEFT0 - wordBigWidth / 2; // centre it at the end
@@ -1294,7 +1313,7 @@ export default function SwipeScreen() {
             // flashes "07 / 06" while fading out on the closing slide.
             // Pressable (web): opens the drag-to-photo scrubber.
             <Animated.View
-              style={[styles.headerCounter, quarterCenterStyle(width / 2), counterStyle]}
+              style={[styles.headerCounter, quarterCenterStyle(counterCentreX), counterStyle]}
               pointerEvents={Platform.OS === 'web' ? 'box-none' : 'none'}
             >
               <PressableScale
