@@ -1941,6 +1941,17 @@
       }
     }
 
+    /* Narrow phones (Galaxy-class 360px and under): even slimmed, the mock is
+       ~225px tall at 308px viewport against the 220px pane -- the header went
+       under the clip again. zoom, not transform: the wa element's animation
+       keyframes own `transform`, and zoom reflows layout so the bottom anchor
+       and the send button's right-alignment stay true. Firefox pre-126
+       ignores zoom and degrades to today's small clip on a decorative,
+       aria-hidden mock. */
+    @media (max-width: 400px) {
+      .invfx-wa-head, .invfx-wa-bubble, .invfx-wa-send { zoom: 0.85; }
+    }
+
     @media (max-width: 768px) {
       .hero {
         padding: 16px;
