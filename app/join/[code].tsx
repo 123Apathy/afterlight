@@ -82,7 +82,7 @@ export default function JoinScreen() {
     <View style={styles.page}>
       {/* Same air as the gates this screen hands off to: candle, dark
           gradient, embers, horizon glow. A confused arrival moment is exactly
-          when the product should look most like itself — a flat dark page
+          when the product should look most like itself: a flat dark page
           here read as "something broke", not "you're in the right place". */}
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         <BackdropVideo />
@@ -104,7 +104,7 @@ export default function JoinScreen() {
         <Image source={images.logoGold} style={styles.flame} resizeMode="contain" />
         <Text style={styles.title}>This link isn&rsquo;t working</Text>
         <Text style={styles.body}>
-          Don&rsquo;t worry — nothing is lost.{'\n'}Tap the gold button and we&rsquo;ll help you
+          Don&rsquo;t worry, nothing is lost.{'\n'}Tap the gold button and we&rsquo;ll help you
           straight away.
         </Text>
         <GoldButton
