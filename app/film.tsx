@@ -7,6 +7,7 @@ import Animated, {
   useReducedMotion,
   useSharedValue,
   withDelay,
+  withRepeat,
   withTiming,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,7 +15,7 @@ import Atmosphere from '../components/Atmosphere';
 import BackdropVideo from '../components/BackdropVideo';
 import LoadingState from '../components/LoadingState';
 import PressableScale from '../components/PressableScale';
-import { colors, type } from '../constants/theme';
+import { colors, images, type } from '../constants/theme';
 import { api, type Project } from '../lib/api';
 import { useActiveProject } from '../lib/useActiveProject';
 
@@ -27,6 +28,23 @@ export default function FilmScreen() {
   const { projectId } = useActiveProject();
   const [project, setProject] = useState<Project | null>(null);
   const [loaded, setLoaded] = useState(false);
+  // The pending state's ringed emblem breathes like the loading screen's:
+  // the film being made is the app quietly at work, and the ring is the mark
+  // reserved for ceremony moments. Held still under reduced motion.
+  const breath = useSharedValue(0);
+  useEffect(() => {
+    if (reduceMotion) return;
+    breath.value = withRepeat(
+      withTiming(1, { duration: 2600, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      true
+    );
+  }, [reduceMotion]);
+  const emblemStyle = useAnimatedStyle(() => ({
+    opacity: 0.55 + breath.value * 0.25,
+    transform: [{ scale: 1 + breath.value * 0.04 }],
+  }));
+
   // The film opens from black, so without a poster the player sat as a dead
   // black rectangle until someone pressed play. The memorial's first photo is
   // its cover art (the same image the deck opens on), which is exactly what a
@@ -133,17 +151,37 @@ export default function FilmScreen() {
             })}
           </Animated.View>
         ) : (
-          <Animated.Text style={[styles.pending, bodyStyle]}>
-            {projectId
-              // Was a 43-word delivery clause naming a "due date" and a
-              // "deadline" the product never collects or shows, and promising a
-              // download on a screen with no download control. It read like a
-              // courier contract on the screen that sells the whole thing.
-              // No name here: the title directly above already says "<name>'s
-              // film", and repeating it read as a stutter.
-              ? 'It’s being made now. We’ll place it right here, and let you know the moment it’s ready.'
-              : 'Open your memorial first, then come back here.'}
-          </Animated.Text>
+          <Animated.View style={[styles.pendingWrap, bodyStyle]}>
+            {/* The ceremony ring, breathing: the wait IS the product working,
+                so it borrows the loading screen's language instead of leaving
+                a bare sentence alone in the dark. */}
+            <Animated.Image
+              source={images.logoRing}
+              style={[styles.pendingEmblem, emblemStyle]}
+              resizeMode="contain"
+            />
+            <Text style={styles.pending}>
+              {projectId
+                // Was a 43-word delivery clause naming a "due date" and a
+                // "deadline" the product never collects or shows, and promising a
+                // download on a screen with no download control. It read like a
+                // courier contract on the screen that sells the whole thing.
+                // No name here: the title directly above already says "<name>'s
+                // film", and repeating it read as a stutter.
+                ? 'It’s being made now. We’ll place it right here, and let you know the moment it’s ready.'
+                : 'Open your memorial first, then come back here.'}
+            </Text>
+            {/* The custom song is the offer's crown jewel (the landing leads
+                with it) and this screen never mentioned it. Only when a film
+                is actually coming. */}
+            {/* !! not just &&: an empty-string projectId would render as a
+                bare text node, which react-native-web hard-errors on. */}
+            {!!projectId && (
+              <Text style={styles.pendingSong}>
+                An original song, written from your memories, is being composed for it.
+              </Text>
+            )}
+          </Animated.View>
         )}
 
         <Animated.View style={bodyStyle}>
@@ -183,14 +221,14 @@ const styles = StyleSheet.create({
   },
   overline: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 11,
+    fontSize: type.overline,
     letterSpacing: 3,
     textTransform: 'uppercase',
     color: colors.goldWarm,
   },
   title: {
     fontFamily: 'PlayfairDisplay_500Medium',
-    fontSize: 34,
+    fontSize: type.display,
     letterSpacing: -0.4,
     color: colors.white,
     textAlign: 'center',
@@ -206,6 +244,15 @@ const styles = StyleSheet.create({
     aspectRatio: 16 / 9,
     marginTop: 10,
   },
+  pendingWrap: {
+    alignItems: 'center',
+    gap: 16,
+    marginTop: 8,
+  },
+  pendingEmblem: {
+    width: 72,
+    height: 72,
+  },
   pending: {
     fontFamily: 'Poppins_400Regular',
     fontSize: type.body,
@@ -213,7 +260,14 @@ const styles = StyleSheet.create({
     color: colors.textFaint,
     textAlign: 'center',
     maxWidth: 420,
-    marginTop: 8,
+  },
+  pendingSong: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: type.body,
+    lineHeight: 26,
+    color: colors.textFainter,
+    textAlign: 'center',
+    maxWidth: 380,
   },
   backLink: {
     marginTop: 20,
@@ -222,7 +276,9 @@ const styles = StyleSheet.create({
   },
   backText: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 15,
+    // Scale migration: was a stray 15. The only exit on this screen, read by
+    // elderly eyes in the dark — rounded up to the sentence floor, not down.
+    fontSize: type.body,
     color: colors.textFainter,
     textDecorationLine: 'underline',
   },
