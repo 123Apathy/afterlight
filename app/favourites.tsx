@@ -151,10 +151,13 @@ export default function FavouritesScreen() {
                     </View>
                     {photo.comments.length > 0 && (
                       <View style={styles.commentStack}>
+                        {/* The words first, the name as attribution after — a
+                            remembered thing said about them, not a chat log
+                            with author prefixes. */}
                         {photo.comments.map((c) => (
                           <Text key={c.id} style={styles.cardComment}>
-                            <Text style={styles.cardCommentAuthor}>{c.author}</Text>{'  '}
                             {c.text}
+                            <Text style={styles.cardCommentAuthor}>{'  — '}{c.author}</Text>
                           </Text>
                         ))}
                       </View>
@@ -488,13 +491,15 @@ const styles = StyleSheet.create({
   },
   heartCountText: {
     fontFamily: 'Poppins_500Medium',
-    fontSize: 15,
+    fontSize: type.body,
     color: colors.white,
   },
+  // WHO loved the photo is this screen's whole point; it was 13px meta.
+  // Sentence floor, and a step brighter than the comment prose around it.
   lovedBy: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 13,
-    color: colors.textFaint,
+    fontSize: type.body,
+    color: 'rgba(255, 255, 255, 0.88)',
     flexShrink: 1,
   },
   commentStack: {
@@ -509,7 +514,8 @@ const styles = StyleSheet.create({
   },
   cardCommentAuthor: {
     fontFamily: 'Poppins_500Medium',
-    color: colors.white,
+    fontSize: type.label,
+    color: colors.goldWarm,
   },
   backScrim: {
     position: 'absolute',
