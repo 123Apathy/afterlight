@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useReducedMotion } from 'react-native-reanimated';
+import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import Atmosphere from '../components/Atmosphere';
 import LoadingState from '../components/LoadingState';
@@ -56,11 +56,12 @@ export default function FavouritesScreen() {
 
   return (
     <View style={styles.page}>
-      {/* The afterglow sky under a dark scrim, with embers drifting: the same
-          atmosphere as the loading screen so the whole app breathes one air.
-          A still image on purpose (long scrolling list, keep paint cheap);
-          it sits outside the ScrollView so it never scrolls or blocks touches. */}
-      <Image source={images.landingSky} style={styles.bgImage} resizeMode="cover" blurRadius={3} />
+      {/* The candle under a dark scrim, with embers drifting. Every other
+          destination screen is lit by the candle (BackdropVideo); this one was
+          lit by sky, the only screen in a different light. A still frame, not
+          the video, on purpose (long scrolling list, keep paint cheap); it
+          sits outside the ScrollView so it never scrolls or blocks touches. */}
+      <Image source={images.candleStill} style={styles.bgImage} resizeMode="cover" blurRadius={3} />
       <LinearGradient
         colors={['rgba(20, 16, 14, 0.9)', 'rgba(24, 19, 16, 0.82)', 'rgba(20, 16, 14, 0.96)']}
         locations={[0, 0.5, 1]}
@@ -105,10 +106,21 @@ export default function FavouritesScreen() {
               </Text>
             </View>
           ) : (
-            hearted.map((photo) => {
+            hearted.map((photo, i) => {
               const raters = photo.ratings.map((r) => r.rater);
+              // The list is ranked by hearts but every card looked the same,
+              // so the ranking was invisible. One quiet accent on #1 only,
+              // and only when there is actually a competition to win.
+              const mostLoved = i === 0 && hearted.length > 1;
               return (
-                <View key={photo.id} style={styles.card}>
+                <Animated.View
+                  key={photo.id}
+                  // Same soft staggered arrival the grid tiles get; the first
+                  // cards lead, the tail never waits (delay capped, and the
+                  // cards below the fold enter as they're scrolled to anyway).
+                  entering={reduceMotion ? undefined : FadeIn.duration(320).delay(Math.min(i, 6) * 70)}
+                  style={[styles.card, mostLoved && styles.cardMostLoved]}
+                >
                   <View style={styles.cardImageWrap}>
                     <Image
                       source={photo.localSource ?? { uri: photoThumbUrl(photo) }}
@@ -118,6 +130,7 @@ export default function FavouritesScreen() {
                     />
                   </View>
                   <View style={styles.cardBody}>
+                    {mostLoved && <Text style={styles.mostLovedLabel}>Most loved</Text>}
                     <View style={styles.heartRow}>
                       <Text style={styles.heartCountText}>
                         <Text style={styles.heartGlyph}>♥</Text> {heartCount(photo)}
@@ -139,7 +152,7 @@ export default function FavouritesScreen() {
                       </View>
                     )}
                   </View>
-                </View>
+                </Animated.View>
               );
             })
           )}
@@ -385,6 +398,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(32, 26, 24, 0.52)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  // The #1 card swaps its white hairline for a gold one. Border only — no
+  // glow, no scale; the ranking should be felt, not announced.
+  cardMostLoved: {
+    borderColor: 'rgba(212, 169, 118, 0.45)',
+  },
+  mostLovedLabel: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: type.overline,
+    letterSpacing: 3,
+    textTransform: 'uppercase',
+    color: 'rgba(212, 169, 118, 0.78)',
   },
   cardImageWrap: {
     width: '100%',
