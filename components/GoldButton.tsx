@@ -13,18 +13,21 @@ type GoldButtonProps = {
   // Keyboard focusability, on by default. The end-of-deck slide passes false
   // while it is offscreen so Tab cannot land on an invisible button.
   focusable?: boolean;
+  // Defaults to the label; pass when a screen reader needs more than the
+  // visible text says (e.g. "opens a chat with a message already written").
+  accessibilityLabel?: string;
 };
 
 // The primary action, everywhere. A soft top-to-bottom gold gradient with a
 // warm shadow reads more refined than a flat bright fill.
-export default function GoldButton({ label, onPress, style, textStyle, pill, focusable = true }: GoldButtonProps) {
+export default function GoldButton({ label, onPress, style, textStyle, pill, focusable = true, accessibilityLabel }: GoldButtonProps) {
   return (
     <PressableScale
       onPress={onPress}
       scaleTo={0.98}
       style={[styles.wrap, pill && styles.pill, style]}
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel ?? label}
       // tabIndex, not focusable: react-native-web's Pressable keeps its
       // rendered tabindex at 0 regardless of focusable={false}.
       tabIndex={focusable ? 0 : -1}

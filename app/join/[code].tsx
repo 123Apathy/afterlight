@@ -63,9 +63,16 @@ export default function JoinScreen() {
     };
   }, [code, m, attempt]);
 
+  // The chat opens with the message already written (and carrying the link
+  // code, so the operator can fix things without asking the person to read
+  // out a URL). For an 85-year-old the whole recovery is: tap the gold
+  // button, tap send.
   const openWhatsApp = useCallback(() => {
-    Linking.openURL(WHATSAPP_URL).catch(() => {});
-  }, []);
+    const text =
+      'Hello, my Everlit link isn’t working. Can you help me?' +
+      (typeof code === 'string' && code ? ` (link code: ${code})` : '');
+    Linking.openURL(`${WHATSAPP_URL}?text=${encodeURIComponent(text)}`).catch(() => {});
+  }, [code]);
 
   if (!error) {
     return <LoadingState reduceMotion={reduceMotion} label="Opening the memorial" />;
@@ -90,26 +97,33 @@ export default function JoinScreen() {
       </View>
       <HorizonGlow />
       <View style={styles.inner}>
+        {/* Written for the oldest person who will ever stand here, often
+            minutes after a funeral. No diagnosis, no jargon, no homework
+            ("ask whoever sent it..."), no choosing between fixes. One calm
+            reassurance and ONE gold button that gets them a human. */}
         <Image source={images.logoGold} style={styles.flame} resizeMode="contain" />
-        <Text style={styles.overline}>Everlit · Memorial Films</Text>
-        <Text style={styles.title}>We couldn't open this link</Text>
+        <Text style={styles.title}>This link isn&rsquo;t working</Text>
         <Text style={styles.body}>
-          {error === 'invalid'
-            ? 'The link may have been cut short when it was shared. Ask whoever sent it to send it again, and tap it straight from the message.'
-            : 'This link is missing its invite code. Ask whoever sent it to send the whole link again.'}
+          Don&rsquo;t worry — nothing is lost.{'\n'}Tap the gold button and we&rsquo;ll help you
+          straight away.
         </Text>
-        {error === 'invalid' ? (
-          <GoldButton label="Try again" onPress={() => setAttempt((n) => n + 1)} style={styles.button} />
-        ) : null}
-        <PressableScale
+        <GoldButton
+          label="Get help on WhatsApp"
           onPress={openWhatsApp}
-          scaleTo={0.98}
-          style={styles.helpRow}
-          accessibilityRole="button"
-          accessibilityLabel="Message us on WhatsApp for help with this link"
-        >
-          <Text style={styles.help}>Still stuck? Message us on WhatsApp</Text>
-        </PressableScale>
+          style={styles.button}
+          accessibilityLabel="Get help on WhatsApp. This opens a chat with a message already written for you."
+        />
+        {error === 'invalid' && (
+          <PressableScale
+            onPress={() => setAttempt((n) => n + 1)}
+            scaleTo={0.98}
+            style={styles.helpRow}
+            accessibilityRole="button"
+            accessibilityLabel="Try opening the link again"
+          >
+            <Text style={styles.help}>Or try the link again</Text>
+          </PressableScale>
+        )}
       </View>
     </View>
   );
@@ -133,13 +147,6 @@ const styles = StyleSheet.create({
     height: 46,
     marginBottom: 6,
   },
-  overline: {
-    fontFamily: 'Poppins_400Regular',
-    fontSize: type.overline,
-    letterSpacing: 3,
-    textTransform: 'uppercase',
-    color: colors.goldWarm,
-  },
   title: {
     fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: type.heading,
@@ -150,18 +157,20 @@ const styles = StyleSheet.create({
   },
   body: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: type.body,
-    lineHeight: 26,
+    // One rung above the sentence floor, with generous leading: this exact
+    // screen is read by the oldest eyes the product ever meets.
+    fontSize: type.action,
+    lineHeight: 30,
     color: colors.white,
     textShadowColor: 'rgba(0, 0, 0, 0.6)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 12,
     textAlign: 'center',
-    maxWidth: 360,
-    marginBottom: 6,
+    maxWidth: 340,
+    marginBottom: 10,
   },
   button: {
-    minWidth: 200,
+    minWidth: 250,
   },
   // 44 high so the secondary action is a real tap target, not just underlined
   // text. hitSlop would not help here: RNW's Pressable drops it.
