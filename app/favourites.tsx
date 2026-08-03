@@ -153,12 +153,12 @@ export default function FavouritesScreen() {
                       <View style={styles.commentStack}>
                         {/* The words first, the name as attribution after: a
                             remembered thing said about them, not a chat log
-                            with author prefixes. Dash-free, per the house
-                            copy rule. */}
+                            with author prefixes. Plain hyphen by request
+                            (em dashes are banned in copy). */}
                         {photo.comments.map((c) => (
                           <Text key={c.id} style={styles.cardComment}>
                             {c.text}
-                            <Text style={styles.cardCommentAuthor}>{'   '}{c.author}</Text>
+                            <Text style={styles.cardCommentAuthor}>{'  - '}{c.author}</Text>
                           </Text>
                         ))}
                       </View>
