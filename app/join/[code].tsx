@@ -2,6 +2,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Image, Linking, StyleSheet, Text, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import Atmosphere from '../../components/Atmosphere';
+import BackdropVideo from '../../components/BackdropVideo';
 import GoldButton from '../../components/GoldButton';
 import HorizonGlow from '../../components/HorizonGlow';
 import LoadingState from '../../components/LoadingState';
@@ -70,9 +73,25 @@ export default function JoinScreen() {
 
   return (
     <View style={styles.page}>
+      {/* Same air as the gates this screen hands off to: candle, dark
+          gradient, embers, horizon glow. A confused arrival moment is exactly
+          when the product should look most like itself — a flat dark page
+          here read as "something broke", not "you're in the right place". */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <BackdropVideo />
+        <LinearGradient
+          colors={['rgba(20, 16, 14, 0.92)', 'rgba(24, 19, 16, 0.8)', 'rgba(20, 16, 14, 0.95)']}
+          locations={[0, 0.5, 1]}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <Atmosphere />
+      </View>
       <HorizonGlow />
       <View style={styles.inner}>
         <Image source={images.logoGold} style={styles.flame} resizeMode="contain" />
+        <Text style={styles.overline}>Everlit · Memorial Films</Text>
         <Text style={styles.title}>We couldn't open this link</Text>
         <Text style={styles.body}>
           {error === 'invalid'
@@ -114,9 +133,16 @@ const styles = StyleSheet.create({
     height: 46,
     marginBottom: 6,
   },
+  overline: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: type.overline,
+    letterSpacing: 3,
+    textTransform: 'uppercase',
+    color: colors.goldWarm,
+  },
   title: {
     fontFamily: 'PlayfairDisplay_500Medium',
-    fontSize: 28,
+    fontSize: type.heading,
     lineHeight: 36,
     letterSpacing: -0.3,
     color: colors.white,
@@ -146,7 +172,7 @@ const styles = StyleSheet.create({
   },
   help: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 14,
+    fontSize: type.label,
     lineHeight: 20,
     color: colors.goldWarm,
     textDecorationLine: 'underline',
