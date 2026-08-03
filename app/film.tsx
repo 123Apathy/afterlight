@@ -184,7 +184,20 @@ export default function FilmScreen() {
           </Animated.View>
         )}
 
-        <Animated.View style={bodyStyle}>
+        <Animated.View style={[styles.linksCol, bodyStyle]}>
+          {/* After the film, back to the people: the favourites are what the
+              film was cut from. Only once there is a film to have watched. */}
+          {!!project?.videoUrl && (
+            <PressableScale
+              onPress={() => router.push('/favourites')}
+              style={styles.favLink}
+              scaleTo={0.97}
+              accessibilityRole="button"
+              accessibilityLabel="See everyone's favourites"
+            >
+              <Text style={styles.favLinkText}>See everyone&rsquo;s favourites</Text>
+            </PressableScale>
+          )}
           <PressableScale
             onPress={back}
             style={styles.backLink}
@@ -269,8 +282,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: 380,
   },
+  linksCol: {
+    alignItems: 'center',
+    gap: 2,
+    marginTop: 8,
+  },
+  favLink: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  favLinkText: {
+    fontFamily: 'Poppins_500Medium',
+    fontSize: type.body,
+    color: colors.goldWarm,
+  },
   backLink: {
-    marginTop: 20,
     paddingVertical: 12,
     paddingHorizontal: 16,
   },

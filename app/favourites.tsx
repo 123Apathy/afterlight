@@ -8,7 +8,7 @@ import LoadingState from '../components/LoadingState';
 import PressableScale from '../components/PressableScale';
 import { colors, images, type } from '../constants/theme';
 import { DEMO, DEMO_PHOTOS } from '../constants/demo';
-import { api, heartCount, photoAltText, photoThumbUrl, type Photo } from '../lib/api';
+import { api, heartCount, photoAltText, photoThumbUrl, type Photo, type Project } from '../lib/api';
 import { glassBlur } from '../lib/glass';
 import { useActiveProject } from '../lib/useActiveProject';
 
@@ -23,6 +23,10 @@ export default function FavouritesScreen() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  // Only to know whether a tribute film exists yet: the footer invites the
+  // family onward to it, but never advertises a film that isn't there
+  // (honest posture — no dead destinations). Best-effort, null on failure.
+  const [project, setProject] = useState<Project | null>(null);
 
   useEffect(() => {
     if (DEMO) {
@@ -44,6 +48,10 @@ export default function FavouritesScreen() {
       .catch(() => setLoadError(true))
       .then((p) => { if (p) setPhotos(p); })
       .finally(() => setLoaded(true));
+    api
+      .getProject(projectId)
+      .then(setProject)
+      .catch(() => setProject(null));
   }, [projectId]);
 
   const hearted = photos
@@ -174,6 +182,20 @@ export default function FavouritesScreen() {
               <Text style={styles.footerMeta}>
                 {hearted.length} {hearted.length === 1 ? 'memory' : 'memories'} loved
               </Text>
+              {/* The payoff chain's next step: these favourites become the
+                  film. Only offered once a film actually exists to watch. */}
+              {!!project?.videoUrl && (
+                <PressableScale
+                  onPress={() => router.push('/film')}
+                  scaleTo={0.97}
+                  style={styles.filmLink}
+                  accessibilityRole="button"
+                  accessibilityLabel="Watch the tribute film"
+                >
+                  <Text style={styles.filmLinkText}>Watch the tribute film</Text>
+                  <Text style={styles.filmLinkChevron}>›</Text>
+                </PressableScale>
+              )}
             </View>
           )}
 
@@ -372,6 +394,30 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     // Same AA-checked dim gold the grid footer settled on (~4.9:1).
     color: 'rgba(212, 169, 118, 0.78)',
+  },
+  // Same quiet gold-tinted control language as PhotoGrid's "Open comments" row.
+  filmLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    height: 44,
+    paddingHorizontal: 20,
+    marginTop: 8,
+    borderRadius: 22,
+    backgroundColor: 'rgba(212, 169, 118, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(212, 169, 118, 0.3)',
+  },
+  filmLinkText: {
+    fontFamily: 'Poppins_500Medium',
+    fontSize: type.label,
+    color: colors.goldWarm,
+  },
+  filmLinkChevron: {
+    fontFamily: 'Poppins_500Medium',
+    fontSize: 18,
+    color: colors.goldWarm,
+    marginTop: -2,
   },
   emptyWrap: {
     alignItems: 'center',
