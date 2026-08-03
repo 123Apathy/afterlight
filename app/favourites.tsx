@@ -144,8 +144,62 @@ export default function FavouritesScreen() {
             })
           )}
 
+          {/* Sign-off, mirroring the grid's footer: the payoff screen used to
+              just stop scrolling while the grid closed with a streak, the name
+              and a count. The most emotional list in the app now ends on
+              purpose. */}
+          {hearted.length > 0 && (
+            <View style={styles.footer}>
+              <LinearGradient
+                colors={['rgba(196,154,108,0)', 'rgba(212,169,118,0.9)', 'rgba(196,154,108,0)']}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={styles.footerStreak}
+              />
+              <Text style={styles.footerBrand}>{projectName || 'Everlit'}</Text>
+              <Text style={styles.footerLine}>The moments your family holds closest.</Text>
+              <Text style={styles.footerMeta}>
+                {hearted.length} {hearted.length === 1 ? 'memory' : 'memories'} loved
+              </Text>
+            </View>
+          )}
+
         </View>
       </ScrollView>
+
+      {/* Floating app header: this was the only content screen with no
+          wordmark, so arriving here read like leaving the product. Same
+          scrim + lockup language as the deck and the gates; the lockup is a
+          second, always-visible way back. */}
+      <View style={styles.headerOverlay} pointerEvents="box-none">
+        <LinearGradient
+          colors={['rgba(20, 16, 14, 0.9)', 'rgba(20, 16, 14, 0.6)', 'rgba(20, 16, 14, 0)']}
+          locations={[0, 0.55, 1]}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+        <View style={styles.headerRow}>
+          <PressableScale
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/app'))}
+            scaleTo={0.96}
+            hitSlop={8}
+            style={styles.brand}
+            accessibilityRole="button"
+            accessibilityLabel="Back to the photos"
+          >
+            <Image source={images.logoGold} style={styles.brandFlame} resizeMode="contain" />
+            <Text style={styles.brandText}>Everlit</Text>
+          </PressableScale>
+          {hearted.length > 0 && (
+            <Text
+              style={styles.headerCount}
+              accessibilityLabel={`${hearted.length} favourite ${hearted.length === 1 ? 'photo' : 'photos'}`}
+            >
+              <Text style={styles.headerCountHeart}>♥</Text> {hearted.length}
+            </Text>
+          )}
+        </View>
+      </View>
 
       {/* The pill floats over a scrolling list, so whatever happens to be at
           that height sits behind it. Without this scrim a card's "Loved by
@@ -191,7 +245,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.dark,
   },
   scroll: {
-    paddingTop: 56,
+    // Clears the 84px floating header (the deck and grid use the same figure).
+    paddingTop: 104,
     // Extra bottom room so the last card scrolls clear of the floating pill.
     paddingBottom: 120,
     paddingHorizontal: 20,
@@ -232,6 +287,78 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: '100%',
     height: '100%',
+  },
+  headerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 84,
+    zIndex: 20,
+  },
+  headerRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 19,
+  },
+  brand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  brandFlame: {
+    width: 42,
+    height: 42,
+  },
+  brandText: {
+    fontFamily: 'PlayfairDisplay_600SemiBold',
+    fontSize: 21,
+    letterSpacing: 0.2,
+    color: colors.white,
+  },
+  // Glanceable meta (icon + digits), so type.label rather than body.
+  headerCount: {
+    fontFamily: 'Poppins_500Medium',
+    fontSize: type.label,
+    color: colors.white,
+  },
+  headerCountHeart: {
+    fontSize: type.label,
+    color: colors.heart,
+  },
+  footer: {
+    alignItems: 'center',
+    paddingTop: 44,
+    gap: 10,
+  },
+  footerStreak: {
+    width: 170,
+    height: 1.5,
+    borderRadius: 1,
+    marginBottom: 6,
+  },
+  footerBrand: {
+    fontFamily: 'PlayfairDisplay_600SemiBold',
+    fontSize: 18,
+    letterSpacing: 0.3,
+    color: colors.white,
+  },
+  footerLine: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: type.label,
+    lineHeight: 22,
+    color: colors.textFainter,
+    textAlign: 'center',
+  },
+  footerMeta: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: type.overline,
+    letterSpacing: 3,
+    textTransform: 'uppercase',
+    // Same AA-checked dim gold the grid footer settled on (~4.9:1).
+    color: 'rgba(212, 169, 118, 0.78)',
   },
   emptyWrap: {
     alignItems: 'center',
