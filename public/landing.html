@@ -947,8 +947,13 @@
       margin-top: clamp(16px, 3vw, 28px);
     }
 
+    /* Hidden only under html.js -- same no-JS reasoning as .blur-up below:
+       these words are revealed by an IntersectionObserver, so if JS never
+       runs the heading must simply be visible. */
     .about-heading .word {
       display: inline-block;
+    }
+    html.js .about-heading .word {
       opacity: 0;
       transform: translateY(20px);
     }
@@ -974,11 +979,14 @@
     }
 
     .about-body .char {
+      transition: opacity 0.18s;
+    }
+    html.js .about-body .char {
       /* Unlit floor raised from 0.3 -- at 0.3 the not-yet-revealed words
          were nearly invisible on the dark card. 0.5 keeps a clear
-         dim-to-bright reveal contrast while staying readable throughout. */
+         dim-to-bright reveal contrast while staying readable throughout.
+         Dimmed only under html.js: without JS nothing would relight them. */
       opacity: 0.5;
-      transition: opacity 0.18s;
     }
 
     .about-body .char.lit {
@@ -1042,9 +1050,13 @@
       color: var(--gray-500);
     }
 
+    /* Same html.js gating as .about-heading .word above. */
     .features-title .word,
     .features-subtitle .word {
       display: inline-block;
+    }
+    html.js .features-title .word,
+    html.js .features-subtitle .word {
       opacity: 0;
       transform: translateY(20px);
     }
@@ -1886,15 +1898,15 @@
     .contact-section { background: var(--about-bg); padding: clamp(64px, 7vw, 96px) 32px clamp(72px, 9vw, 120px); text-align: center; }
     .contact-wrap { max-width: 720px; margin: 0 auto; }
     .contact-title { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2rem, 5vw, 3.4rem); color: var(--primary); margin-top: 12px; line-height: 1; }
-    .contact-lead { margin-top: 20px; font-size: 15px; color: var(--primary-70); line-height: 1.6; }
+    .contact-lead { margin-top: 20px; font-size: 16px; color: var(--primary-70); line-height: 1.6; }
     .contact-row { margin-top: clamp(44px, 6vw, 64px); display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: clamp(28px, 5vw, 56px); }
     .qr-card { background: var(--primary); padding: 14px; border-radius: 16px; box-shadow: 0 16px 40px rgba(0,0,0,0.4); }
     .qr-card img { display: block; width: 180px; height: 180px; }
     .contact-actions { display: flex; flex-direction: column; align-items: center; gap: 14px; }
-    .contact-wa-btn { display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(160deg, #FAF4E8, #E8D7BA); color: var(--ink); font-weight: 500; font-size: 15px; padding: 14px 26px; border-radius: 9999px; text-decoration: none; transition: transform 0.2s; }
+    .contact-wa-btn { display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(160deg, #FAF4E8, #E8D7BA); color: var(--ink); font-weight: 500; font-size: 16px; padding: 14px 26px; border-radius: 9999px; text-decoration: none; transition: transform 0.2s; }
     .contact-wa-btn:hover { transform: translateY(-1px); }
     .contact-wa-btn svg { width: 18px; height: 18px; stroke: var(--ink); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .contact-number { font-size: 15px; color: var(--primary-70); letter-spacing: 0.5px; }
+    .contact-number { font-size: 16px; color: var(--primary-70); letter-spacing: 0.5px; }
     /* The QR exists so a DESKTOP visitor can jump to WhatsApp on their phone.
        On a phone it is pointless (you cannot scan your own screen) and it was
        eating a large block of prime space under the button -- hide it; the
@@ -2289,7 +2301,9 @@
       justify-content: space-between;
       gap: 16px;
       padding: 16px 20px;
-      font-size: 15px;
+      /* 15 -> 16: the questions a grieving family came to ask, matching the
+         16px answers beneath them. */
+      font-size: 16px;
       font-weight: 400;
       color: var(--primary);
     }
@@ -2317,35 +2331,9 @@
 
     /* Closing CTA band: the page's last action repeats the primary one, so
        the journey doesn't end on the (higher-friction) contact ask. */
-    .cta-band {
-      padding: clamp(64px, 8vw, 110px) 32px;
-      text-align: center;
-      background:
-        radial-gradient(ellipse 60% 80% at 50% 100%, rgba(212, 169, 118, 0.12), transparent 70%),
-        rgb(14, 11, 10);
-    }
-    .cta-band-title {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-weight: 500;
-      /* Editorial scale: one big serif line with a single italic accent word
-         carries the close; sub and button stay quiet beneath it. */
-      font-size: clamp(2.1rem, 5.5vw, 4.2rem);
-      line-height: 1.05;
-      letter-spacing: -0.02em;
-      color: var(--primary);
-      margin-bottom: 16px;
-    }
-    .cta-band-sub {
-      font-size: 15px;
-      line-height: 1.7;
-      color: var(--primary-70);
-      max-width: 30rem;
-      margin: 0 auto clamp(26px, 4vw, 36px);
-    }
-    .cta-band-title em {
-      font-style: italic;
-      color: var(--accent);
-    }
+    /* The .cta-band styles that lived here were removed 2026-08-03: their
+       section was cut 2026-07-28 (merged into the contact section), so they
+       were dead CSS. */
 
     /* Cinematic film grain: a rendered 128px noise tile (public/grain.png)
        stepped through discrete offsets like projected film. Blend-overlay at
@@ -2395,6 +2383,22 @@
     .streak-divider.revealed { transform: scaleX(1); }
     @media (prefers-reduced-motion: reduce) {
       .streak-divider { transform: none; transition: none; }
+    }
+
+    /* Entrance pulls and word/char reveals settle instantly under reduced
+       motion -- the content simply is there. */
+    @media (prefers-reduced-motion: reduce) {
+      .hero-title .word,
+      .hero-title .i-flame,
+      .hero-description,
+      html.js .about-heading .word,
+      html.js .features-title .word,
+      html.js .features-subtitle .word {
+        animation: none;
+        opacity: 1;
+        transform: none;
+      }
+      html.js .about-body .char { opacity: 1; transition: none; }
     }
 
     /* Blur-up reveal: opacity + lift + unblur together (the unblur is what
