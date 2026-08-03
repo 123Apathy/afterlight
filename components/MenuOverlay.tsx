@@ -657,8 +657,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   // Terms and "Run the tutorial again" moved into More settings, so the
-  // 12px footer row they lived in is gone. They now share switchText's 14px,
-  // which is also the better size for this audience.
+  // 12px footer row they lived in is gone. They now share switchText's
+  // type.body size, which is also the better size for this audience.
   confirmBox: {
     marginTop: 6,
     maxWidth: 320,
@@ -908,7 +908,7 @@ const styles = StyleSheet.create({
   },
   uploadPillText: {
     fontFamily: 'Poppins_500Medium',
-    fontSize: 15,
+    fontSize: type.action,
     color: colors.white,
   },
   uploadPrivacy: {
@@ -931,7 +931,7 @@ const styles = StyleSheet.create({
   },
   switchText: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 15,
+    fontSize: type.body,
     color: colors.textFainter,
     textDecorationLine: 'underline',
   },
@@ -948,7 +948,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontFamily: 'PlayfairDisplay_500Medium',
-    fontSize: 15,
+    fontSize: 18,
     letterSpacing: 0.3,
     color: colors.white,
   },
@@ -966,7 +966,7 @@ const styles = StyleSheet.create({
   },
   demoNote: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 15,
+    fontSize: type.body,
     lineHeight: 23,
     color: colors.textFainter,
   },

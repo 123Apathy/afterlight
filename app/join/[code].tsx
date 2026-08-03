@@ -6,7 +6,7 @@ import GoldButton from '../../components/GoldButton';
 import HorizonGlow from '../../components/HorizonGlow';
 import LoadingState from '../../components/LoadingState';
 import PressableScale from '../../components/PressableScale';
-import { colors, images } from '../../constants/theme';
+import { colors, images, type } from '../../constants/theme';
 import { api } from '../../lib/api';
 import { useActiveProject } from '../../lib/useActiveProject';
 
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
   },
   body: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 15,
+    fontSize: type.body,
     lineHeight: 26,
     color: colors.white,
     textShadowColor: 'rgba(0, 0, 0, 0.6)',

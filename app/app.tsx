@@ -2528,7 +2528,7 @@ const styles = StyleSheet.create({
   },
   endSubtitle: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 15,
+    fontSize: type.body,
     lineHeight: 26,
     color: colors.white,
     textShadowColor: 'rgba(0, 0, 0, 0.6)',
@@ -2629,7 +2629,7 @@ const styles = StyleSheet.create({
     maxWidth: 330,
     textAlign: 'center',
     fontFamily: 'Poppins_400Regular',
-    fontSize: 13,
+    fontSize: type.label,
     lineHeight: 20,
     color: colors.textFaint,
     textShadowColor: 'rgba(0, 0, 0, 0.6)',
@@ -2638,14 +2638,14 @@ const styles = StyleSheet.create({
   },
   // Carries the only Terms link on the gate, and sat at 11.5px / 0.42 white
   // (~4.1:1) over a *moving* candle video, so its real contrast was worse than
-  // the static figure. 13px at 0.62 clears AA against the gate's darkest band
-  // with the shadow doing the rest.
+  // the static figure. 0.62 white clears AA against the gate's darkest band
+  // with the shadow doing the rest (now type.label on the scale).
   gateTerms: {
     marginTop: 16,
     maxWidth: 320,
     textAlign: 'center',
     fontFamily: 'Poppins_400Regular',
-    fontSize: 13,
+    fontSize: type.label,
     lineHeight: 20,
     color: 'rgba(255, 255, 255, 0.62)',
     textShadowColor: 'rgba(0, 0, 0, 0.6)',
@@ -2857,7 +2857,7 @@ const styles = StyleSheet.create({
   },
   emptySubtitle: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 15,
+    fontSize: type.body,
     lineHeight: 24,
     color: colors.textFainter,
     textAlign: 'center',
@@ -2868,7 +2868,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
   },
   emptyButtonText: {
-    fontSize: 15,
+    fontSize: type.action,
     letterSpacing: 0.2,
   },
   fillDim: {
@@ -2903,7 +2903,7 @@ const styles = StyleSheet.create({
   },
   counterSeparator: {
     fontFamily: 'Courier New',
-    fontSize: 13,
+    fontSize: type.label,
     letterSpacing: 1,
     color: 'rgba(255, 255, 255, 0.5)',
   },
@@ -3126,7 +3126,7 @@ const styles = StyleSheet.create({
   },
   tapHintText: {
     fontFamily: 'Poppins_500Medium',
-    fontSize: 15,
+    fontSize: type.body,
     color: colors.white,
     textShadowColor: 'rgba(0, 0, 0, 0.6)',
     textShadowOffset: { width: 0, height: 1 },

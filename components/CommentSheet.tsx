@@ -10,7 +10,7 @@ import Animated, {
 import { hasReadableYear } from '../constants/photo-date';
 import useEscapeToClose from '../lib/useEscapeToClose';
 import useKeyboardInset from '../lib/useKeyboardInset';
-import { colors } from '../constants/theme';
+import { colors, type } from '../constants/theme';
 import { COMMENT_REACTION_EMOJI, reactionSummary, type Photo } from '../lib/api';
 import { glassBlur, glassSurface } from '../lib/glass';
 import PressableScale from './PressableScale';
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
   },
   closeText: {
     fontFamily: 'Poppins_500Medium',
-    fontSize: 13,
+    fontSize: type.label,
     color: colors.white,
     marginLeft: 14,
   },
@@ -459,7 +459,7 @@ const styles = StyleSheet.create({
   detailsSummary: {
     flex: 1,
     fontFamily: 'Poppins_500Medium',
-    fontSize: 13.5,
+    fontSize: type.label,
     color: colors.goldWarm,
   },
   detailsEdit: {
@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
   detailsInvite: {
     flex: 1,
     fontFamily: 'Poppins_400Regular',
-    fontSize: 13.5,
+    fontSize: type.body,
     lineHeight: 20,
     color: colors.textFainter,
   },
@@ -488,13 +488,13 @@ const styles = StyleSheet.create({
   },
   detailsAddPlus: {
     fontFamily: 'Poppins_500Medium',
-    fontSize: 15,
+    fontSize: type.body,
     lineHeight: 17,
     color: colors.goldWarm,
   },
   detailsAddLabel: {
     fontFamily: 'Poppins_500Medium',
-    fontSize: 13.5,
+    fontSize: type.label,
     color: colors.goldWarm,
   },
   detailsForm: {
@@ -502,7 +502,7 @@ const styles = StyleSheet.create({
   },
   detailsLabel: {
     fontFamily: 'Poppins_500Medium',
-    fontSize: 13,
+    fontSize: type.body,
     color: colors.goldWarm,
     marginBottom: 7,
   },
@@ -545,11 +545,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   detailsSaveText: {
-    fontSize: 15,
+    fontSize: type.action,
   },
   detailsCancel: {
     fontFamily: 'Poppins_500Medium',
-    fontSize: 13,
+    fontSize: type.label,
     color: colors.textFainter,
   },
   detailsDivider: {
@@ -582,7 +582,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 15,
+    fontSize: type.body,
     lineHeight: 21,
     color: colors.white,
   },
@@ -669,6 +669,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
   },
   sendText: {
-    fontSize: 15,
+    fontSize: type.action,
   },
 });
