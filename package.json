@@ -41,7 +41,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "server": "node --env-file=server/.env server/index.js",
-    "sync-landing-tokens": "node scripts/sync-landing-tokens.mjs"
+    "sync-landing-tokens": "node scripts/sync-landing-tokens.mjs",
+    "postinstall": "node scripts/prepare-demo-photos.mjs"
   },
   "private": true
 }

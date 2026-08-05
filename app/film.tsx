@@ -25,7 +25,7 @@ import { useActiveProject } from '../lib/useActiveProject';
 export default function FilmScreen() {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
-  const { projectId } = useActiveProject();
+  const { projectId, projectName } = useActiveProject();
   const [project, setProject] = useState<Project | null>(null);
   const [loaded, setLoaded] = useState(false);
   // The pending state's ringed emblem breathes like the loading screen's:
@@ -128,7 +128,11 @@ export default function FilmScreen() {
       <View style={styles.content}>
         <Animated.Text style={[styles.overline, overlineStyle]}>Everlit · Memorial Films</Animated.Text>
         <Animated.Text style={[styles.title, titleStyle]}>
-          {project ? `${project.name}’s film` : 'The film'}
+          {/* Falls back to the remembered name (also how the sales demo
+              titles itself) so a failed lookup still says whose film it is. */}
+          {project?.name || projectName
+            ? `${project?.name || projectName}’s film`
+            : 'The film'}
         </Animated.Text>
         <Animated.View style={streakStyle}>
           <LinearGradient
