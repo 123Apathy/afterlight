@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
   },
   footerLine: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 13,
+    fontSize: type.label,
     lineHeight: 20,
     color: colors.textFainter,
     textAlign: 'center',
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
   },
   popupTitle: {
     fontFamily: 'PlayfairDisplay_500Medium',
-    fontSize: 15,
+    fontSize: type.body,
     color: colors.white,
     textDecorationLine: 'underline',
     textDecorationColor: colors.goldWarm,
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
   },
   popupEmpty: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 13,
+    fontSize: type.label,
     color: colors.textFainter,
     paddingHorizontal: 8,
     paddingVertical: 10,

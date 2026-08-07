@@ -37,7 +37,7 @@ has to ship, from any machine with Node 22+:
 
 ```
 git clone https://github.com/123Apathy/afterlight.git && cd afterlight
-git checkout netlify-migration
+git checkout main
 npm ci && npm --prefix server ci
 npx netlify login          # one-time browser auth
 npx expo export --platform web
@@ -45,6 +45,16 @@ npx netlify deploy --prod --dir dist
 ```
 
 Check `.env` has no `EXPO_PUBLIC_DEMO=1` and no dev API base before exporting.
+
+**Branch corrected 2026-08-06:** this said `netlify-migration`, which is now
+~20 commits behind `main` — following it would have deployed a stale site.
+`main` is the live line of development; `netlify-migration` is history.
+
+**`npm ci` matters here:** its `postinstall` runs
+`scripts/prepare-demo-photos.mjs`, which fills `assets/demo/01..08.jpg` from
+the committed fallbacks. Those files are gitignored (a real demo set is family
+PII) but `constants/demo.ts` requires them statically, so an export without
+them fails. `Deploy Everlit.cmd` now runs that script itself before exporting.
 The Netlify env already holds `SUPABASE_SERVICE_ROLE_KEY` and `ADMIN_SECRET`, so
 nothing secret needs to exist on the temporary machine.
 

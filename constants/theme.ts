@@ -101,6 +101,10 @@ export const images = {
   // Landing backdrop: golden-hour glow through cloud (Pexels #29150580,
   // free/commercial, no attribution required). The "afterglow" the name means.
   landingSky: require('../assets/images/landing-sky.jpg'),
+  // Still frame of the candle loop (same file as public/hero-poster.jpg, the
+  // landing's video poster). For screens that want the app's candlelight but
+  // can't afford a playing video behind a long scrolling list.
+  candleStill: require('../assets/images/candle-still.jpg'),
   // Full brand lockup (icon + wordmark + "Memorial Films"), transparent.
   lockup: require('../assets/images/lockup.png'),
 };

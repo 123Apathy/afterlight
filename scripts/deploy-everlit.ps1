@@ -74,6 +74,15 @@ Write-Host 'Building locally (expo export) and uploading -- no Netlify build cre
 $envMoved = $false
 if (Test-Path '.env') { Rename-Item '.env' '.env.deploy-bak'; $envMoved = $true }
 try {
+    # assets/demo/01..08.jpg are gitignored (a real demo set would be family
+    # PII), but constants/demo.ts requires them statically, so a fresh clone
+    # or a machine that has not run `npm install` since they were added would
+    # fail the export with "Unable to resolve ../assets/demo/01.jpg". This
+    # fills any missing slot from the committed assets/demo-fallback/ set and
+    # is a no-op once they exist. It does NOT overwrite real demo photos.
+    node scripts/prepare-demo-photos.mjs
+    if ($LASTEXITCODE -ne 0) { throw 'demo asset preparation failed' }
+
     npx expo export --platform web --clear
     if ($LASTEXITCODE -ne 0) { throw 'expo export failed' }
     # Landing page + legal pages + card images live in public/, overlaid onto

@@ -63,10 +63,23 @@
     :root {
       /* Everlit palette. Backgrounds/videos/images are intentionally left as
          the template's originals -- only fonts and text colour are ours. */
-      --primary: #F5F0EB;
+      /* everlit-tokens:start -- GENERATED from constants/theme.ts by
+         scripts/sync-landing-tokens.mjs; edit the theme, not these. */
+      --gold: #D4A976;
+      --gold-warm: #C49A6C;
+      --gold-deep: #A6794A;
+      --heart: #E8536B;
+      --comment: #4FCE7E;
+      --detail: #5AA9F0;
+      --ink: #1A1613;
+      --cream: #F5F0EB;
+      --dark: rgb(25, 20, 19);
+      --dark-warm: rgb(32, 26, 24);
+      /* everlit-tokens:end */
+      --primary: var(--cream);
       --primary-70: rgba(245, 240, 235, 0.7);
       --primary-80: rgba(245, 240, 235, 0.8);
-      --accent: #C49A6C;
+      --accent: var(--gold-warm);
       --bg: #000000;
       --card-bg: #212121;
       --about-bg: #101010;
@@ -110,7 +123,7 @@
       align-items: center;
       gap: 6px;
     }
-    .navbar-links .nav-back a:hover { color: #D4A976; }
+    .navbar-links .nav-back a:hover { color: var(--gold); }
     .navbar-links .nav-back svg {
       width: 14px;
       height: 14px;
@@ -231,7 +244,7 @@
       width: 100%;
       height: 100%;
       border-radius: 13% / 6%;
-      background: #1A1613;
+      background: var(--ink);
       border: 3px solid rgba(255, 255, 255, 0.08);
       overflow: hidden;
       position: relative;
@@ -353,7 +366,7 @@
       /* Was 15vw -- viewport-relative, so it rendered enormous on the small
          mobile-hero phone. cqw ties it to the phone's own width. */
       font-size: 22cqw;
-      color: #E8536B;
+      color: var(--heart);
       transform: translate(-50%, -50%) scale(0.5);
       opacity: 0;
       animation: mockBurst 7s infinite;
@@ -382,7 +395,7 @@
     .mock-bubble-heading { display: inline-block; font-family: 'Playfair Display', Georgia, serif; font-size: 3.4cqw; color: #F5F0EB; }
     .mock-bubble-rule { width: 8cqw; height: 0.35cqw; margin: 1cqw 0 2.6cqw; background: linear-gradient(to right, rgba(212, 169, 118, 0.95), rgba(212, 169, 118, 0)); }
     .mock-bubble-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 2cqw; }
-    .mock-bubble-author { display: block; font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 2.7cqw; color: #C49A6C; }
+    .mock-bubble-author { display: block; font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 2.7cqw; color: var(--gold-warm); }
     .mock-bubble-text { display: block; font-family: 'Poppins', sans-serif; font-size: 2.95cqw; line-height: 1.35; color: rgba(255, 255, 255, 0.9); margin-top: 0.5cqw; }
     .mock-bubble-react {
       flex-shrink: 0;
@@ -519,7 +532,7 @@
       color: rgba(255, 255, 255, 0.85);
     }
     .mock-heart-outline { animation: mockHeartOutline 7s infinite; }
-    .mock-heart-filled { color: #E8536B; opacity: 0; animation: mockHeartFilled 7s infinite; }
+    .mock-heart-filled { color: var(--heart); opacity: 0; animation: mockHeartFilled 7s infinite; }
 
     @keyframes mockMasterFade {
       0%, 75% { opacity: 1; }
@@ -552,7 +565,7 @@
     }
     @keyframes mockCommentActive {
       0%, 38% { color: rgba(255, 255, 255, 0.85); }
-      42%, 78% { color: #4FCE7E; }
+      42%, 78% { color: var(--comment); }
       86%, 100% { color: rgba(255, 255, 255, 0.85); }
     }
     @keyframes mockCommentCountShow {
@@ -587,7 +600,7 @@
         opacity: 1 !important;
         transform: none !important;
       }
-      .mock-comment-btn .mock-ctrl-circle svg { color: #4FCE7E !important; }
+      .mock-comment-btn .mock-ctrl-circle svg { color: var(--comment) !important; }
     }
 
     /* Navbar. Fixed so the pill (which carries its own dark blur background)
@@ -850,7 +863,7 @@
       padding-left: 32px;
       padding-right: 8px;
       font-size: 17px;
-      color: #1A1613;
+      color: var(--ink);
       font-weight: 600;
       letter-spacing: 0.01em;
     }
@@ -862,7 +875,7 @@
       justify-content: center;
       width: 44px;
       height: 44px;
-      background: linear-gradient(150deg, #C49A6C, #A47C4F);
+      background: linear-gradient(150deg, var(--gold-warm), #A47C4F);
       border-radius: 50%;
       transition: transform 0.3s;
     }
@@ -874,7 +887,7 @@
     .hero-btn-icon svg {
       width: 20px;
       height: 20px;
-      stroke: #1A1613;
+      stroke: var(--ink);
       fill: none;
       stroke-width: 2;
       stroke-linecap: round;
@@ -934,8 +947,13 @@
       margin-top: clamp(16px, 3vw, 28px);
     }
 
+    /* Hidden only under html.js -- same no-JS reasoning as .blur-up below:
+       these words are revealed by an IntersectionObserver, so if JS never
+       runs the heading must simply be visible. */
     .about-heading .word {
       display: inline-block;
+    }
+    html.js .about-heading .word {
       opacity: 0;
       transform: translateY(20px);
     }
@@ -961,11 +979,14 @@
     }
 
     .about-body .char {
+      transition: opacity 0.18s;
+    }
+    html.js .about-body .char {
       /* Unlit floor raised from 0.3 -- at 0.3 the not-yet-revealed words
          were nearly invisible on the dark card. 0.5 keeps a clear
-         dim-to-bright reveal contrast while staying readable throughout. */
+         dim-to-bright reveal contrast while staying readable throughout.
+         Dimmed only under html.js: without JS nothing would relight them. */
       opacity: 0.5;
-      transition: opacity 0.18s;
     }
 
     .about-body .char.lit {
@@ -1029,9 +1050,13 @@
       color: var(--gray-500);
     }
 
+    /* Same html.js gating as .about-heading .word above. */
     .features-title .word,
     .features-subtitle .word {
       display: inline-block;
+    }
+    html.js .features-title .word,
+    html.js .features-subtitle .word {
       opacity: 0;
       transform: translateY(20px);
     }
@@ -1195,14 +1220,14 @@
       width: 24px;
       height: 24px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #C49A6C, #7c5a38);
+      background: linear-gradient(135deg, var(--gold-warm), #7c5a38);
       display: flex;
       align-items: center;
       justify-content: center;
       font-family: 'Poppins', sans-serif;
       font-weight: 600;
       font-size: 11px;
-      color: #1A1613;
+      color: var(--ink);
       flex-shrink: 0;
     }
     .invfx-wa-headtext { display: flex; flex-direction: column; line-height: 1.15; }
@@ -1371,7 +1396,7 @@
       top: 30%;
       left: 50%;
       font-size: 17cqw;
-      color: #E8536B;
+      color: var(--heart);
       transform: translate(-50%, -50%) scale(0.4);
       opacity: 0;
       text-shadow: 0 1.4cqw 5cqw rgba(0, 0, 0, 0.4);
@@ -1398,7 +1423,7 @@
       opacity: 0;
       transform: translateY(3cqw);
     }
-    .pm-author { display: block; font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 2.5cqw; color: #C49A6C; }
+    .pm-author { display: block; font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 2.5cqw; color: var(--gold-warm); }
     .pm-text { display: block; font-family: 'Poppins', sans-serif; font-size: 2.95cqw; line-height: 1.35; color: rgba(255, 255, 255, 0.92); margin-top: 0.4cqw; }
     /* Reaction chip clinging to the bubble's bottom-right, like a chat reaction. */
     .pm-react {
@@ -1520,7 +1545,7 @@
       opacity: 0;
       animation: tfxOpen 10.2s infinite;
     }
-    .tfx-kicker { font-family: 'Poppins', sans-serif; font-size: 2.6cqw; letter-spacing: 0.6cqw; text-transform: uppercase; color: #C49A6C; text-shadow: 0 0.5cqw 2cqw rgba(0, 0, 0, 0.6); }
+    .tfx-kicker { font-family: 'Poppins', sans-serif; font-size: 2.6cqw; letter-spacing: 0.6cqw; text-transform: uppercase; color: var(--gold-warm); text-shadow: 0 0.5cqw 2cqw rgba(0, 0, 0, 0.6); }
     .tfx-open-line { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: 5.6cqw; color: #F5F0EB; text-shadow: 0 1cqw 4cqw rgba(0, 0, 0, 0.6); }
     /* Persistent "original song" bar: an animated gold waveform + the line, the
        visual proof that a custom song rides along with the film. */
@@ -1542,7 +1567,7 @@
     .tfx-wave { display: flex; align-items: flex-end; gap: 0.8cqw; height: 6cqw; flex-shrink: 0; }
     .tfx-wave span {
       width: 0.9cqw;
-      background: linear-gradient(to top, rgba(196, 154, 108, 0.7), #D4A976);
+      background: linear-gradient(to top, rgba(196, 154, 108, 0.7), var(--gold));
       border-radius: 0.5cqw;
       transform-origin: bottom;
       animation: tfxWave 1.1s ease-in-out infinite;
@@ -1627,8 +1652,8 @@
       border-radius: 12px;
       background:
         linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 60%),
-        linear-gradient(180deg, #D4A976 0%, #C49A6C 55%, #A6794A 100%);
-      color: #1A1613;
+        linear-gradient(180deg, var(--gold) 0%, var(--gold-warm) 55%, #A6794A 100%);
+      color: var(--ink);
       font-family: 'Poppins', sans-serif;
       font-weight: 500;
       font-size: 14px;
@@ -1873,15 +1898,15 @@
     .contact-section { background: var(--about-bg); padding: clamp(64px, 7vw, 96px) 32px clamp(72px, 9vw, 120px); text-align: center; }
     .contact-wrap { max-width: 720px; margin: 0 auto; }
     .contact-title { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2rem, 5vw, 3.4rem); color: var(--primary); margin-top: 12px; line-height: 1; }
-    .contact-lead { margin-top: 20px; font-size: 15px; color: var(--primary-70); line-height: 1.6; }
+    .contact-lead { margin-top: 20px; font-size: 16px; color: var(--primary-70); line-height: 1.6; }
     .contact-row { margin-top: clamp(44px, 6vw, 64px); display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: clamp(28px, 5vw, 56px); }
     .qr-card { background: var(--primary); padding: 14px; border-radius: 16px; box-shadow: 0 16px 40px rgba(0,0,0,0.4); }
     .qr-card img { display: block; width: 180px; height: 180px; }
     .contact-actions { display: flex; flex-direction: column; align-items: center; gap: 14px; }
-    .contact-wa-btn { display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(160deg, #FAF4E8, #E8D7BA); color: #1A1613; font-weight: 500; font-size: 15px; padding: 14px 26px; border-radius: 9999px; text-decoration: none; transition: transform 0.2s; }
+    .contact-wa-btn { display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(160deg, #FAF4E8, #E8D7BA); color: var(--ink); font-weight: 500; font-size: 16px; padding: 14px 26px; border-radius: 9999px; text-decoration: none; transition: transform 0.2s; }
     .contact-wa-btn:hover { transform: translateY(-1px); }
-    .contact-wa-btn svg { width: 18px; height: 18px; stroke: #1A1613; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .contact-number { font-size: 15px; color: var(--primary-70); letter-spacing: 0.5px; }
+    .contact-wa-btn svg { width: 18px; height: 18px; stroke: var(--ink); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .contact-number { font-size: 16px; color: var(--primary-70); letter-spacing: 0.5px; }
     /* The QR exists so a DESKTOP visitor can jump to WhatsApp on their phone.
        On a phone it is pointless (you cannot scan your own screen) and it was
        eating a large block of prime space under the button -- hide it; the
@@ -2276,7 +2301,9 @@
       justify-content: space-between;
       gap: 16px;
       padding: 16px 20px;
-      font-size: 15px;
+      /* 15 -> 16: the questions a grieving family came to ask, matching the
+         16px answers beneath them. */
+      font-size: 16px;
       font-weight: 400;
       color: var(--primary);
     }
@@ -2304,35 +2331,9 @@
 
     /* Closing CTA band: the page's last action repeats the primary one, so
        the journey doesn't end on the (higher-friction) contact ask. */
-    .cta-band {
-      padding: clamp(64px, 8vw, 110px) 32px;
-      text-align: center;
-      background:
-        radial-gradient(ellipse 60% 80% at 50% 100%, rgba(212, 169, 118, 0.12), transparent 70%),
-        rgb(14, 11, 10);
-    }
-    .cta-band-title {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-weight: 500;
-      /* Editorial scale: one big serif line with a single italic accent word
-         carries the close; sub and button stay quiet beneath it. */
-      font-size: clamp(2.1rem, 5.5vw, 4.2rem);
-      line-height: 1.05;
-      letter-spacing: -0.02em;
-      color: var(--primary);
-      margin-bottom: 16px;
-    }
-    .cta-band-sub {
-      font-size: 15px;
-      line-height: 1.7;
-      color: var(--primary-70);
-      max-width: 30rem;
-      margin: 0 auto clamp(26px, 4vw, 36px);
-    }
-    .cta-band-title em {
-      font-style: italic;
-      color: var(--accent);
-    }
+    /* The .cta-band styles that lived here were removed 2026-08-03: their
+       section was cut 2026-07-28 (merged into the contact section), so they
+       were dead CSS. */
 
     /* Cinematic film grain: a rendered 128px noise tile (public/grain.png)
        stepped through discrete offsets like projected film. Blend-overlay at
@@ -2382,6 +2383,22 @@
     .streak-divider.revealed { transform: scaleX(1); }
     @media (prefers-reduced-motion: reduce) {
       .streak-divider { transform: none; transition: none; }
+    }
+
+    /* Entrance pulls and word/char reveals settle instantly under reduced
+       motion -- the content simply is there. */
+    @media (prefers-reduced-motion: reduce) {
+      .hero-title .word,
+      .hero-title .i-flame,
+      .hero-description,
+      html.js .about-heading .word,
+      html.js .features-title .word,
+      html.js .features-subtitle .word {
+        animation: none;
+        opacity: 1;
+        transform: none;
+      }
+      html.js .about-body .char { opacity: 1; transition: none; }
     }
 
     /* Blur-up reveal: opacity + lift + unblur together (the unblur is what
@@ -2512,7 +2529,7 @@
       margin-bottom: 14px;
     }
     .site-footer-links a {
-      color: #C49A6C;
+      color: var(--gold-warm);
       text-decoration: none;
       white-space: nowrap;
     }
@@ -2636,10 +2653,10 @@
                   <span class="mock-ctrl-label">Comment</span>
                 </div>
                 <div class="mock-ctrl">
-                  <div class="mock-nav-btn"><svg viewBox="0 0 28 24" style="transform:scaleX(-1)"><path d="M9 6 C 14 9, 19 11, 24 12 C 19 13, 14 15, 9 18" stroke="#D4A976" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></div>
+                  <div class="mock-nav-btn"><svg viewBox="0 0 28 24" style="transform:scaleX(-1)"><path d="M9 6 C 14 9, 19 11, 24 12 C 19 13, 14 15, 9 18" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></div>
                 </div>
                 <div class="mock-ctrl">
-                  <div class="mock-nav-btn"><svg viewBox="0 0 28 24"><path d="M9 6 C 14 9, 19 11, 24 12 C 19 13, 14 15, 9 18" stroke="#D4A976" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></div>
+                  <div class="mock-nav-btn"><svg viewBox="0 0 28 24"><path d="M9 6 C 14 9, 19 11, 24 12 C 19 13, 14 15, 9 18" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></div>
                 </div>
                 <div class="mock-ctrl mock-heart-btn">
                   <div class="mock-ctrl-circle mock-ctrl-circle-fav">
@@ -2789,7 +2806,7 @@
                   </div>
                 </div>
                 <div class="invfx-wa-send">
-                  <svg width="14" height="14" viewBox="0 0 24 24"><path d="M3 20 L21 12 L3 4 L3 10 L15 12 L3 14 Z" fill="#1A1613"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24"><path d="M3 20 L21 12 L3 4 L3 10 L15 12 L3 14 Z" fill="var(--ink)"/></svg>
                 </div>
               </div>
               <div class="card-bgfx-scrim"></div>

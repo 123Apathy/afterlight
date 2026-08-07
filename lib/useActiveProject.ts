@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import { setInviteCode, type Member, type Project } from './api';
+import { DEMO, DEMO_PROJECT_NAME } from '../constants/demo';
 
 export type KnownProject = {
   id: string;
@@ -100,6 +101,23 @@ export function useActiveProject() {
     setProjectId('');
     setProjectName('');
   };
+
+  // Sales demo: present the fictional memorial as the active project so every
+  // screen titles itself for Margaret, without touching this device's real
+  // localStorage state (a rep's phone may hold real memorials too). Screens
+  // that talk to the backend all branch on DEMO before using projectId.
+  if (DEMO) {
+    return {
+      projectId: 'demo',
+      projectName: DEMO_PROJECT_NAME,
+      known,
+      activeEntry: undefined,
+      setProject,
+      clearProject,
+      remember,
+      rememberMember,
+    };
+  }
 
   return { projectId, projectName, known, activeEntry, setProject, clearProject, remember, rememberMember };
 }

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { photoThumbUrl, type Photo } from '../lib/api';
-import { colors } from '../constants/theme';
+import { colors, type } from '../constants/theme';
 
 // Full-screen photo scrubber: a drag-driven 3D cylinder of the memorial's
 // photos (technique harvested from a motionsites carousel reference,
@@ -267,7 +267,7 @@ export default function PhotoScrubber({ photos, index, onPick, onClose }: Props)
     D('div', {
       style: {
         position: 'absolute', bottom: 28, left: 0, right: 0, textAlign: 'center',
-        fontFamily: 'Poppins_400Regular', fontSize: 13,
+        fontFamily: 'Poppins_400Regular', fontSize: type.label,
         color: 'rgba(255,255,255,0.55)',
       },
     }, 'Drag to browse · tap a photo to open it')

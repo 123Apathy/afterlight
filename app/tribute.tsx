@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
   },
   nameHint: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 13,
+    fontSize: type.label,
     color: colors.goldWarm,
     marginTop: 12,
     textAlign: 'center',
@@ -400,9 +400,9 @@ const styles = StyleSheet.create({
   progressFill: { height: 3, borderRadius: 2, backgroundColor: colors.goldWarm },
   progressSaveNote: {
     fontFamily: 'Poppins_400Regular',
-    // 13px / textFainter, matching the gateTerms contrast fix rather than the
-    // textFaintest the earlier a11y pass deliberately moved small copy off.
-    fontSize: 13,
+    // type.label / textFainter, matching the gateTerms contrast fix rather than
+    // the textFaintest the earlier a11y pass deliberately moved small copy off.
+    fontSize: type.label,
     lineHeight: 18,
     color: colors.textFainter,
     marginBottom: 30,
@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
   },
   skipText: {
     fontFamily: 'Poppins_400Regular',
-    fontSize: 15,
+    fontSize: type.body,
     color: colors.textFainter,
   },
   nextButton: {
